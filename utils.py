@@ -1,6 +1,8 @@
 import torch
 import networkx as nx
-from typing import Dict
+from typing import Dict, Tuple, List
+import pandas as pd
+from torch.utils.data import random_split
 
 
 def pretty_print_graph_data(
@@ -104,3 +106,34 @@ def draw_graph(nx_graph: nx.Graph, filename: str = "debug_graph.png"):
     plt.title("2-Hop Graph Structure")
     plt.savefig(filename)
     plt.close()
+
+
+def get_data_split_indices(split_number: int, val_ratio: float = 0.2) -> Tuple[List[int], List[int], List[int]]:
+    """
+    Splits indices for train, validation, and test sets based on index files.
+
+    Args:
+        split_number (int): The split number (e.g., 1 for index_test_01 and index_train_01).
+        val_ratio (float): The proportion of the training set to use for validation.
+
+    Returns:
+        Tuple[List[int], List[int], List[int]]: Train, validation, and test indices.
+    """
+    # Construct file names for the split
+    test_file = f"data/splits/index_test_0{split_number}.csv"
+    train_file = f"data/splits/index_train_0{split_number}.csv"
+
+    # Load indices
+    test_indices = pd.read_csv(test_file, header=None).iloc[:, 0].tolist()
+    train_indices = pd.read_csv(train_file, header=None).iloc[:, 0].tolist()
+
+    # Split train indices into train and validation subsets
+    num_train = int((1 - val_ratio) * len(train_indices))
+    num_val = len(train_indices) - num_train
+    train_indices_split, val_indices_split = random_split(train_indices, [num_train, num_val])
+
+    # Convert splits to lists (random_split returns Subset objects)
+    train_indices_split = list(train_indices_split)
+    val_indices_split = list(val_indices_split)
+
+    return train_indices_split, val_indices_split, test_indices

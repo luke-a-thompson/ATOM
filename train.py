@@ -3,20 +3,27 @@ import torch.nn as nn
 import torch.optim as optim
 import tensordict
 from custom_dataloader import MD17Dataset
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
 from model import IMPGTNO
 from modules.activations import FFNActivation
 from model import NormType, GraphAttentionType
 from tqdm import tqdm
+from utils import get_data_split_indices
+import datetime
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 dataset = MD17Dataset("data/rmd17_cleaned/rmd17_aspirin.csv")
 dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
 
-train_loader = DataLoader(dataset, batch_size=1, shuffle=True)
-val_loader = DataLoader(dataset, batch_size=1, shuffle=True)
-test_loader = DataLoader(dataset, batch_size=1, shuffle=True)
+train_indices, val_indices, test_indices = get_data_split_indices(1)
+train_dataset = Subset(dataset, train_indices)
+val_dataset = Subset(dataset, val_indices)
+test_dataset = Subset(dataset, test_indices)
+
+train_loader = DataLoader(train_dataset, batch_size=1, shuffle=True)
+val_loader = DataLoader(val_dataset, batch_size=1, shuffle=True)
+test_loader = DataLoader(test_dataset, batch_size=1, shuffle=True)
 
 model = IMPGTNO(
     node_feature_dim=7,
@@ -38,23 +45,22 @@ match optimizer_type:
     case _:
         raise ValueError(f"Invalid optimizer: {optimizer}")
 
-# for batch in dataloader:
-#     from utils import pretty_print_graph_data
+for batch in dataloader:
+    from utils import pretty_print_graph_data
 
-#     pretty_print_graph_data(batch, print_node_features=True)
-#     break
+    pretty_print_graph_data(batch, print_node_features=True)
+    break
 
 criterion = nn.L1Loss()
 
 
 def train_step(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoader):
     model.train()
-    for batch in tqdm(dataloader, desc="Training"):
+    for batch in tqdm(dataloader, desc="Training", leave=False):
         batch = tensordict.from_dict(batch).to(device)
-        print(batch)
-        # break
         optimizer.zero_grad()
-        loss = criterion(model(batch), batch["Coordinates"])
+
+        loss = criterion(model(batch), batch["coords"])
         loss.backward()
         optimizer.step()
 
@@ -64,23 +70,26 @@ def train_step(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoa
 @torch.no_grad()
 def evaluate_step(model: nn.Module, dataloader: DataLoader):
     model.eval()
-    for batch in tqdm(dataloader, desc="Evaluating"):
+    for batch in tqdm(dataloader, desc="Evaluating", leave=False):
         batch = tensordict.from_dict(batch).to(device)
-        loss = criterion(model(batch), batch["Coordinates"])
+        loss = criterion(model(batch), batch["coords"])
         return loss
 
 
 num_epochs = 50
 best_eval_loss = float("inf")
+eval_losses: list[float] = []
 for epoch in range(num_epochs):
     train_loss = train_step(model, optimizer, train_loader)
     val_loss = evaluate_step(model, val_loader)
-    print(f"Epoch {epoch+1}/{num_epochs} - Train Loss: {train_loss:.4f} - Val Loss: {val_loss:.4f}")
-
+    eval_losses.append(val_loss)
+    print(f"Epoch {epoch+1}/{num_epochs}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}")
     if val_loss < best_eval_loss:
         best_eval_loss = val_loss
-        torch.save(model.state_dict(), "best_model.pth")
+        date = datetime.datetime.now().strftime("%Y%m%d")
+        torch.save(model.state_dict(), f"trained_models/best_model_{best_eval_loss:.4f}_{date}.pth")
 
-        print(f"Epoch {epoch+1}/{num_epochs}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}")
+test_loss = evaluate_step(model, test_loader)
+print(f"Test Loss: {test_loss:.4f}")
 
 print(f"Best validation loss: {best_eval_loss:.4f}")

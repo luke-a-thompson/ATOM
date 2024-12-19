@@ -93,6 +93,7 @@ class GraphHeterogenousCrossAttention(nn.Module):
         # 4. Project output back
         out = out.transpose(1, 2).contiguous().view(B, N, self.lifting_dim)
         out = self.out_proj(out)
+
         batch["node_features"] = out
 
         return batch
@@ -172,9 +173,9 @@ class IMPGTNOBlock(nn.Module):
         node_features = self.pre_norm(batch["node_features"])
 
         graph_attended_nodes = node_features + self.graph_attention(node_features, node_features, node_features)[0]
-        graph_attended_nodes = self.ffn(graph_attended_nodes)
+        graph_attended_nodes: torch.Tensor = self.ffn(graph_attended_nodes)
 
-        hetero_attended_nodes = graph_attended_nodes + self.heterogenous_attention(batch)
+        hetero_attended_nodes = graph_attended_nodes + self.heterogenous_attention(batch)["node_features"]
         hetero_attended_nodes = self.ffn(hetero_attended_nodes)
 
         batch["Coordinates"] = hetero_attended_nodes[:, :-3]
@@ -223,6 +224,6 @@ class IMPGTNO(nn.Module):
         for layer in self.layers:
             batch = layer(batch)
 
-        out = self.projection_layer(batch["node_features"])
-        out = out[:, :-3]
+        out: torch.Tensor = self.projection_layer(batch["node_features"])
+        out = out[:, :, -3:]  # Get last 3 elements of last dimension
         return out
