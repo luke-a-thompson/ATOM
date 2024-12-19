@@ -1,0 +1,35 @@
+[tool.poetry]
+name = "gtno-py"
+version = "0.1.0"
+description = ""
+authors = ["Luke Thompson <luke-a-thompson@outlook.com>"]
+readme = "README.md"
+keywords = ["graph transformer", "quantum chemistry", "molecular property prediction", "neural operator"]
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.12"
+numpy = "^2.0.0"
+pandas = "^2.1.0"
+matplotlib = "^3.10.0"
+torch = "^2.5.1"
+tensordict = "^0.6.2"
+wandb = "0.18.3"
+tqdm = "^4.67.1"
+networkx = "^3.4.2"
+
+[tool.poetry.dev-dependencies]
+types-tqdm = "^4.67.0.20241119"
+types-networkx = "^3.4.2.20241115"
+pandas-stubs = "^2.2.3.241126"
+
+[tool.black]
+line-length = 120
+target-version = ["py312"]
+
+[tool.isort]
+profile = "black"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
