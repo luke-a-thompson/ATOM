@@ -55,7 +55,8 @@ class GraphHeterogenousCrossAttention(nn.Module):
         # 1. Lift all features once
         lifted_nodes = self.node_lifting(batch["node_features"])  # (B, N, C)
         lifted_edges = self.edge_lifting(batch["edge_features"])  # (B, E, C)
-        lifted_graph = self.graph_lifting(batch["energy"].unsqueeze(0).expand(B, -1).unsqueeze(1))  # (B, 1, C)
+        # Graph feature shape: [B] -> [B, 1] -> [B, 1, C]
+        lifted_graph = self.graph_lifting(batch["energy"].unsqueeze(-1).unsqueeze(1))
         assert (
             len(lifted_nodes.shape) == len(lifted_edges.shape) == len(lifted_graph.shape)
         ), f"Lifted features have inconsistent dimensionalities. Nodes: {lifted_nodes.shape}, edges: {lifted_edges.shape}, graph: {lifted_graph.shape}"
@@ -173,7 +174,7 @@ class IMPGTNOBlock(nn.Module):
         node_features = self.pre_norm(batch["node_features"])
 
         graph_attended_nodes = node_features + self.graph_attention(node_features, node_features, node_features)[0]
-        graph_attended_nodes: torch.Tensor = self.ffn(graph_attended_nodes)
+        graph_attended_nodes = self.ffn(graph_attended_nodes)
 
         hetero_attended_nodes = graph_attended_nodes + self.heterogenous_attention(batch)["node_features"]
         hetero_attended_nodes = self.ffn(hetero_attended_nodes)

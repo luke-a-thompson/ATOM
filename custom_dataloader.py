@@ -112,7 +112,7 @@ class MD17Dataset(Dataset):
             all_entries.append(
                 {
                     "timestep": timesteps[i],
-                    "energy": energies[i],
+                    "energy": energies[i].view(1, 1),
                     "nuclear_charges": charges,
                     "coords": coords,
                     "forces": forces,
@@ -135,20 +135,34 @@ class MD17Dataset(Dataset):
             # Convert edges from list of (u, v, d) to tensors
             edge_list = entry["edges"]
             if len(edge_list) > 0:
-                u = torch.tensor([e[0] for e in edge_list], dtype=torch.long)
-                v = torch.tensor([e[1] for e in edge_list], dtype=torch.long)
-                d = torch.tensor([e[2] for e in edge_list], dtype=torch.float32)
+                # Extract source nodes (u), target nodes (v), and distances (d) from edge list
+                u = torch.tensor([e[0] for e in edge_list], dtype=torch.long)  # source node indices
+                v = torch.tensor([e[1] for e in edge_list], dtype=torch.long)  # target node indices
+                d = torch.tensor([e[2] for e in edge_list], dtype=torch.float32)  # distances between nodes
 
-                edges_tensor = torch.stack([u, v], dim=-1)  # shape: (num_edges, 2)
+                # Validate edge indices are within bounds
+                num_nodes = len(entry["nuclear_charges"])
+                assert torch.all(u >= 0) and torch.all(u < num_nodes), f"Source node indices out of bounds: {u}"
+                assert torch.all(v >= 0) and torch.all(v < num_nodes), f"Target node indices out of bounds: {v}"
+                assert torch.all(d > 0), f"Found non-positive distances: {d}"  # distances should be positive
+                assert len(u) == len(v) == len(d), f"Unequal lengths of u, v, and d: {len(u)}, {len(v)}, {len(d)}"
+
+                # Pad edges tensor to fixed size (50, 2) with -1
+                edges_tensor = torch.full((50, 2), -1, dtype=torch.long)
+                edges_tensor[: len(u)] = torch.stack([u, v], dim=-1)
 
                 # Create edge features: [charge_u, charge_v, distance]
                 charges = entry["nuclear_charges"]
-                edge_features = torch.stack([charges[u].float(), charges[v].float(), d], dim=-1)
-                # shape: (num_edges, 3)
+
+                # Create and pad edge features tensor to fixed size (50, 3) with zeros
+                edge_features = torch.zeros((50, 3), dtype=torch.float32)
+                features = torch.stack([charges[u].float(), charges[v].float(), d], dim=-1)
+                edge_features[: len(u)] = features
 
                 entry["edges"] = edges_tensor
                 entry["edge_features"] = edge_features
             else:
+                print("WARNING: No edges found for entry", i)
                 entry["edges"] = torch.empty((0, 2), dtype=torch.long)
                 entry["edge_features"] = torch.empty((0, 3), dtype=torch.float32)
 
@@ -181,17 +195,7 @@ class MD17Dataset(Dataset):
         self.data = torch.load(self.pt_path, weights_only=False)
 
     def __getitem__(self, idx):
-        item = self.data[idx]
-        return {
-            "timestep": item["timestep"],
-            "energy": item["energy"],
-            "nuclear_charges": item["nuclear_charges"],
-            "coords": item["coords"],
-            "forces": item["forces"],
-            "node_features": item["node_features"],
-            "edges": item["edges"],  # tensor of shape (num_edges, 2)
-            "edge_features": item["edge_features"],  # tensor of shape (num_edges, 3)
-        }
+        return self.data[idx]
 
     def __len__(self):
         return len(self.data)

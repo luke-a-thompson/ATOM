@@ -21,7 +21,7 @@ train_dataset = Subset(dataset, train_indices)
 val_dataset = Subset(dataset, val_indices)
 test_dataset = Subset(dataset, test_indices)
 
-train_loader = DataLoader(train_dataset, batch_size=1, shuffle=True)
+train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
 val_loader = DataLoader(val_dataset, batch_size=1, shuffle=True)
 test_loader = DataLoader(test_dataset, batch_size=1, shuffle=True)
 
@@ -51,32 +51,54 @@ for batch in dataloader:
     pretty_print_graph_data(batch, print_node_features=True)
     break
 
-criterion = nn.L1Loss()
-
 
 def train_step(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoader):
     model.train()
+    total_loss = 0
     for batch in tqdm(dataloader, desc="Training", leave=False):
         batch = tensordict.from_dict(batch).to(device)
         optimizer.zero_grad()
 
-        loss = criterion(model(batch), batch["coords"])
+        # Get predicted coordinates
+        pred_coords = model(batch)
+
+        # Get target coordinates and reshape to align with predictions
+        target_coords = batch["coords"].view(pred_coords.shape)
+
+        # Calculate MSE loss
+        loss = torch.mean((pred_coords - target_coords) ** 2)
+
         loss.backward()
         optimizer.step()
+        total_loss += loss.item()
 
-    return loss
+    avg_loss = total_loss / len(dataloader)
+    return avg_loss
 
 
 @torch.no_grad()
 def evaluate_step(model: nn.Module, dataloader: DataLoader):
     model.eval()
+    total_loss = 0
     for batch in tqdm(dataloader, desc="Evaluating", leave=False):
         batch = tensordict.from_dict(batch).to(device)
-        loss = criterion(model(batch), batch["coords"])
-        return loss
+
+        # Get predicted coordinates
+        pred_coords = model(batch)
+
+        # Get target coordinates and reshape to align with predictions
+        target_coords = batch["coords"].view(pred_coords.shape)
+
+        # Calculate MSE loss
+        loss = torch.mean((pred_coords - target_coords) ** 2)
+
+        total_loss += loss.item()
+
+    avg_loss = total_loss / len(dataloader)
+    return avg_loss
 
 
-num_epochs = 50
+num_epochs = 20
 best_eval_loss = float("inf")
 eval_losses: list[float] = []
 for epoch in range(num_epochs):
