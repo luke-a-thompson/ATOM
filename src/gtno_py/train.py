@@ -1,15 +1,16 @@
+import datetime
+
+import tensordict
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import tensordict
-from Dataloaders.custom_dataloader import MD17Dataset
-from torch.utils.data import DataLoader, Subset
-from model import IMPGTNO
+from dataloaders.custom_dataloader import MD17Dataset
 from modules.activations import FFNActivation
-from model import NormType, GraphAttentionType
+from torch.utils.data import DataLoader, Subset
 from tqdm import tqdm
-from utils import get_data_split_indices_custom
-import datetime
+
+from .model import IMPGTNO, GraphAttentionType, NormType
+from .utils import get_data_split_indices_custom
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

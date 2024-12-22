@@ -1,12 +1,14 @@
-import torch
-from torch.utils.data import Dataset, DataLoader
-from pathlib import Path
-from typing import Tuple, List, Dict, Any
-import pandas as pd
-import networkx as nx
 from concurrent.futures import ProcessPoolExecutor
-from utils import pretty_print_graph_data, draw_graph
+from pathlib import Path
+from typing import Any, Dict, List, Tuple
+
+import networkx as nx
+import pandas as pd
+import torch
+from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
+
+from ..utils import draw_graph, pretty_print_graph_data
 
 
 def parse_vector_field(value: str) -> List[float]:
@@ -138,13 +140,15 @@ class MD17Dataset(Dataset):
                 # Extract source nodes (u), target nodes (v), and distances (d) from edge list
                 u = torch.tensor([e[0] for e in edge_list], dtype=torch.long)  # source node indices
                 v = torch.tensor([e[1] for e in edge_list], dtype=torch.long)  # target node indices
-                d = torch.tensor([e[2] for e in edge_list], dtype=torch.float32)  # distances between nodes
+                # distances between nodes
+                d = torch.tensor([e[2] for e in edge_list], dtype=torch.float32)
 
                 # Validate edge indices are within bounds
                 num_nodes = len(entry["nuclear_charges"])
                 assert torch.all(u >= 0) and torch.all(u < num_nodes), f"Source node indices out of bounds: {u}"
                 assert torch.all(v >= 0) and torch.all(v < num_nodes), f"Target node indices out of bounds: {v}"
-                assert torch.all(d > 0), f"Found non-positive distances: {d}"  # distances should be positive
+                # distances should be positive
+                assert torch.all(d > 0), f"Found non-positive distances: {d}"
                 assert len(u) == len(v) == len(d), f"Unequal lengths of u, v, and d: {len(u)}, {len(v)}, {len(d)}"
 
                 # Pad edges tensor to fixed size (50, 2) with -1

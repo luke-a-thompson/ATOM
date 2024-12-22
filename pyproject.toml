@@ -5,7 +5,10 @@ description = ""
 authors = ["Luke Thompson <luke-a-thompson@outlook.com>"]
 readme = "README.md"
 keywords = ["graph transformer", "quantum chemistry", "molecular property prediction", "neural operator"]
-package-mode = false
+
+[[tool.poetry.packages]]
+include = "gtno_py"
+from = "src"
 
 [tool.poetry.dependencies]
 python = "^3.12"
@@ -29,6 +32,12 @@ target-version = ["py312"]
 
 [tool.isort]
 profile = "black"
+
+[tool.pyright]
+include = ["src"]
+exclude = ["**/__pycache__", "*/.mypy_cache", "**/.pytest_cache"]
+venvPath = "."
+venv = ".venv"
 
 [build-system]
 requires = ["poetry-core"]
