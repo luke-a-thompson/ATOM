@@ -65,10 +65,9 @@ class GraphHeterogenousCrossAttention(nn.Module):
         ), f"Last dimension must match across all lifted features.0 Nodes: {lifted_nodes.shape[-1]}, edges: {lifted_edges.shape[-1]}, graph: {lifted_graph.shape[-1]}"
         # lifted_graph = self.graph_lifting(batch["energy"]).unsqueeze(1)  # (B, 1, C)
 
-        ### WE ARE GOOD TO HERE?
-
         # Put the heterogeneous embeddings into a list to loop over
         hetero_features = [lifted_nodes, lifted_edges, lifted_graph]
+        assert len(hetero_features) == self.num_hetero_feats, f"Number of heterogeneous features must match the number of keys/values. Expected {self.num_hetero_feats}, got {len(hetero_features)}"
 
         # 2. Compute Q from nodes only (following your given pattern)
         q = self.query(lifted_nodes).view(B, N, self.num_heads, self.lifting_dim // self.num_heads).transpose(1, 2)
@@ -76,6 +75,8 @@ class GraphHeterogenousCrossAttention(nn.Module):
 
         # 3. Perform cross-attention over all heterogeneous inputs
         # Here, hetero_features = [lifted_nodes, lifted_edges, lifted_graph]
+        # Drop for loop, have a tensor with first dim as num_hetero_feats
+        # Add causal masking
         for i in range(self.num_hetero_feats):
             h_feat = hetero_features[i]
             # Determine the sequence length for this feature type
@@ -127,7 +128,12 @@ class IMPGTNOBlock(nn.Module):
             raise ValueError(f"Lifting (embedding) dim {lifting_dim} must be divisible by num_heads ({num_heads})")
 
         match graph_attention_type:
+            ## Add independent attentions for x_0, v_0, Z -> Heterogenous learns to compose learned graph representations
+            ### Context for position data
+            ### Heavy feature learning left to G-HNCA. Graph represnetation learning is done here
+            ### Possibly different graphormer-style priors for x_0, v_0, Z
             case GraphAttentionType.MHA:
+                # Add causal masking
                 self.graph_attention = nn.MultiheadAttention(
                     embed_dim=lifting_dim, num_heads=num_heads, batch_first=True
                 )
@@ -171,6 +177,7 @@ class IMPGTNOBlock(nn.Module):
     def forward(self, batch: dict) -> dict[str, torch.Tensor]:
         # Graph attention as message passing
         # MHA returns (attn_output, attn_weights)
+        # Everything modified on each layer must be scaled / normalised
         node_features = self.pre_norm(batch["node_features"])
 
         graph_attended_nodes = node_features + self.graph_attention(node_features, node_features, node_features)[0]
@@ -226,5 +233,4 @@ class IMPGTNO(nn.Module):
             batch = layer(batch)
 
         out: torch.Tensor = self.projection_layer(batch["node_features"])
-        out = out[:, :, -3:]  # Get last 3 elements of last dimension
-        return out
+        return out[:, :, -3:]

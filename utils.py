@@ -3,6 +3,7 @@ import networkx as nx
 from typing import Dict, Tuple, List
 import pandas as pd
 from torch.utils.data import random_split
+import random
 
 
 def pretty_print_graph_data(
@@ -108,7 +109,9 @@ def draw_graph(nx_graph: nx.Graph, filename: str = "debug_graph.png"):
     plt.close()
 
 
-def get_data_split_indices(split_number: int, val_ratio: float = 0.2) -> Tuple[List[int], List[int], List[int]]:
+def get_data_split_indices_MD17_prescribed(
+    split_number: int, val_ratio: float = 0.2
+) -> Tuple[List[int], List[int], List[int]]:
     """
     Splits indices for train, validation, and test sets based on index files.
 
@@ -137,3 +140,22 @@ def get_data_split_indices(split_number: int, val_ratio: float = 0.2) -> Tuple[L
     val_indices_split = list(val_indices_split)
 
     return train_indices_split, val_indices_split, test_indices
+
+
+def get_data_split_indices_custom(dataset_size: int) -> Tuple[List[int], List[int], List[int]]:
+    """
+    Returns indices of size 500 for train, 2000 for val, 2000 for test,
+    randomly chosen from dataset_size frames. Adjust as needed.
+    """
+
+    all_indices = list(range(dataset_size))
+    random.shuffle(all_indices)
+    train_count = 500
+    val_count = 2000
+    test_count = 2000
+    assert dataset_size >= train_count + val_count + test_count, "Dataset size is too small for the specified splits."
+
+    train_indices = all_indices[:train_count]
+    val_indices = all_indices[train_count : train_count + val_count]
+    test_indices = all_indices[train_count + val_count : train_count + val_count + test_count]
+    return train_indices, val_indices, test_indices

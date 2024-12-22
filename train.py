@@ -2,28 +2,32 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import tensordict
-from custom_dataloader import MD17Dataset
+from Dataloaders.custom_dataloader import MD17Dataset
 from torch.utils.data import DataLoader, Subset
 from model import IMPGTNO
 from modules.activations import FFNActivation
 from model import NormType, GraphAttentionType
 from tqdm import tqdm
-from utils import get_data_split_indices
+from utils import get_data_split_indices_custom
 import datetime
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+seed = 42
+torch.manual_seed(seed)
+torch.cuda.manual_seed(seed)
+
 dataset = MD17Dataset("data/rmd17_cleaned/rmd17_aspirin.csv")
 dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
 
-train_indices, val_indices, test_indices = get_data_split_indices(1)
+train_indices, val_indices, test_indices = get_data_split_indices_custom(len(dataset))
 train_dataset = Subset(dataset, train_indices)
 val_dataset = Subset(dataset, val_indices)
 test_dataset = Subset(dataset, test_indices)
 
 train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-val_loader = DataLoader(val_dataset, batch_size=1, shuffle=True)
-test_loader = DataLoader(test_dataset, batch_size=1, shuffle=True)
+val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
+test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
 
 model = IMPGTNO(
     node_feature_dim=7,

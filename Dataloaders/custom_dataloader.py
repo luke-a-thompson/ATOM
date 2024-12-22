@@ -112,7 +112,7 @@ class MD17Dataset(Dataset):
             all_entries.append(
                 {
                     "timestep": timesteps[i],
-                    "energy": energies[i].view(1, 1),
+                    "energy": energies[i],
                     "nuclear_charges": charges,
                     "coords": coords,
                     "forces": forces,
@@ -180,7 +180,6 @@ class MD17Dataset(Dataset):
             [
                 charges.unsqueeze(-1).float(),
                 forces.view(forces.size(0), -1),
-                coords.view(coords.size(0), -1),
                 # relative_pos.view(relative_pos.size(0), -1),
             ],
             dim=-1,
