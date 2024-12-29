@@ -106,9 +106,9 @@ class GraphHeterogenousCrossAttention(nn.Module):
 
     @override
     def forward(self, batch: dict[str, torch.Tensor], q_data: torch.Tensor) -> dict[str, torch.Tensor]:
-        B, N, D = batch["node_features"].shape
+        B, N, D = batch["x_0"].shape
         # Already lifted at model init (first fwd pass)
-        lifted_nodes: torch.Tensor = batch["node_features"]  # (B, N, C)
+        lifted_nodes: torch.Tensor = batch["x_0"]  # (B, N, C)
         lifted_edges: torch.Tensor = batch["edge_features"]  # (B, E, C)
         # Graph feature shape: [B] -> [B, 1] -> [B, 1, C]
         lifted_graph: torch.Tensor = batch["energy"].unsqueeze(-1).unsqueeze(1)  # (B, 1, C)
@@ -257,7 +257,6 @@ class IMPGTNOBlock(nn.Module):
         # https://pytorch.org/tensordict/stable/reference/generated/tensordict.TensorDict.html#tensordict.TensorDict.add
         graph_attended_nodes = node_features + self.graph_attention(batch)
         graph_attended_nodes = self.ffn(graph_attended_nodes)
-
 
         hetero_attended_nodes = graph_attended_nodes + self.heterogenous_attention(batch, q_data=q_data)
         hetero_attended_nodes = self.ffn(hetero_attended_nodes)
