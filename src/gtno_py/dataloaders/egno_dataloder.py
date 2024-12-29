@@ -1,10 +1,10 @@
-from io import BufferedWriter
 import numpy as np
 import torch
 import pickle as pkl
 import os
 from enum import Enum
 from typing import final
+import numpy.typing as npt
 
 
 @final
@@ -138,8 +138,8 @@ class MD17Dataset:
         self.cfg = self.sample_cfg()
 
     def _get_or_generate_split(
-        self, split_dir: str, x: np.ndarray, train_par: float, val_par: float, test_par: float
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        self, split_dir: str, x: npt.NDArray[np.float32], train_par: float, val_par: float, test_par: float
+    ) -> tuple[npt.NDArray[np.int_], npt.NDArray[np.int_], npt.NDArray[np.int_]]:
         """
         Load the train/val/test split from split_dir if it exists; otherwise generate it.
         Returns:
@@ -148,7 +148,7 @@ class MD17Dataset:
         try:
             with open(split_dir, "rb") as f:
                 print("Got Split!")
-                split: tuple[np.ndarray, np.ndarray, np.ndarray] = pkl.load(f)
+                split: tuple[npt.NDArray[np.int_], npt.NDArray[np.int_], npt.NDArray[np.int_]] = pkl.load(f)
         except Exception as e:
             print(f"Error loading split file: {e}")
             np.random.seed(100)
@@ -175,9 +175,10 @@ class MD17Dataset:
             with open(split_dir, "wb") as f:
                 pkl.dump(split, f)
             print("Generate and save split!")
+
         return split
 
-    def _compute_edges(self, x: np.ndarray, z: np.ndarray, threshold: float = 1.6) -> tuple[torch.Tensor, torch.Tensor]:
+    def _compute_edges(self, x: npt.NDArray[np.float32], z: npt.NDArray[np.int_], threshold: float = 1.6) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Computes adjacency (atom_edges) and squared adjacency (atom_edges2) matrices
         based on inter-atomic distances at the first frame.
@@ -226,7 +227,9 @@ class MD17Dataset:
         edge_attr_tensor = torch.Tensor(np.array(edge_attr))
         return edge_attr_tensor, edges
 
-    def _compute_all_edges(self, x: np.ndarray, z: np.ndarray, threshold: float = 1.6) -> dict[tuple[int, int], list[list[int]]]:
+    def _compute_all_edges(
+        self, x: npt.NDArray[np.float32], z: npt.NDArray[np.int_], threshold: float = 1.6
+    ) -> dict[tuple[int, int], list[list[int]]]:
         """
         Builds a dictionary of edges keyed by (atom type i, atom type j), where each value
         is a list of pairs of atom indices that are close (distance < threshold).
@@ -377,163 +380,121 @@ class MD17DynamicsDataset(MD17Dataset):
 
     """
 
-    def __init__(self, partition, max_samples, delta_frame, data_dir, molecule_type, num_timesteps=8):
+    def __init__(
+        self, partition: DataPartition, max_samples: int, delta_frame: int, data_dir: str, molecule_type: MoleculeType, num_timesteps: int = 8
+    ):
         # First call the parent constructor so we inherit shared logic
         super().__init__(
-            partition=DataPartition(partition),
+            partition=partition,
             max_samples=max_samples,
             delta_frame=delta_frame,
             data_dir=os.path.join(data_dir, "md17_npz/"),
             split_dir=os.path.join(data_dir, "md17_egno_splits/"),
-            molecule_type=MoleculeType(molecule_type),
+            molecule_type=molecule_type,
             train_par=0.1,
             val_par=0.05,
             test_par=0.05,
         )
 
-        # The rest of this constructor remains the same as before
         # setup a split, tentative setting
         train_par, val_par, test_par = 0.1, 0.05, 0.05
-        full_dir = os.path.join(data_dir, "md17_npz/" + "md17_" + molecule_type + ".npz")
-        split_dir = os.path.join(data_dir, "md17_egno_splits/" + "md17_" + molecule_type + "_split.pkl")
-        data = np.load(full_dir)
-        self.partition = partition
-        self.molecule_type = molecule_type
+        full_dir: str = os.path.join(data_dir, "md17_npz/" + f"md17_{molecule_type}.npz")
+        split_dir: str = os.path.join(data_dir, "md17_egno_splits/" + f"md17_{molecule_type}_split.pkl")
 
-        x = data["R"]
-        v = x[1:] - x[:-1]
+        data: np.lib.npyio.NpzFile = np.load(full_dir)
+        self.partition: DataPartition = partition
+        self.molecule_type: MoleculeType = molecule_type
+
+        x: np.ndarray = data["R"]
+        v: np.ndarray = x[1:] - x[:-1]
         x = x[:-1]
 
+        # Attempt to load or generate the split
         try:
             with open(split_dir, "rb") as f:
                 print("Got Split!")
-                split = pkl.load(f)
+                split: tuple[np.ndarray, np.ndarray, np.ndarray] = pkl.load(f)
         except:
             np.random.seed(100)
 
             _x = x[10000:-10000]
-
-            train_idx = np.random.choice(np.arange(_x.shape[0]), size=int(train_par * _x.shape[0]), replace=False)
-            flag = np.zeros(_x.shape[0])
+            train_idx: np.ndarray = np.random.choice(np.arange(_x.shape[0]), size=int(train_par * _x.shape[0]), replace=False)
+            flag: np.ndarray = np.zeros(_x.shape[0])
             for _ in train_idx:
                 flag[_] = 1
             rest = [_ for _ in range(_x.shape[0]) if not flag[_]]
-            val_idx = np.random.choice(rest, size=int(val_par * _x.shape[0]), replace=False)
+            val_idx: np.ndarray = np.random.choice(rest, size=int(val_par * _x.shape[0]), replace=False)
             for _ in val_idx:
                 flag[_] = 1
             rest = [_ for _ in range(_x.shape[0]) if not flag[_]]
-            test_idx = np.random.choice(rest, size=int(test_par * _x.shape[0]), replace=False)
+            test_idx: np.ndarray = np.random.choice(rest, size=int(test_par * _x.shape[0]), replace=False)
 
             train_idx += 10000
             val_idx += 10000
             test_idx += 10000
-
             split = (train_idx, val_idx, test_idx)
 
             with open(split_dir, "wb") as f:
                 pkl.dump(split, f)
             print("Generate and save split!")
 
-        if partition == "train":
-            st = split[0]
-        elif partition == "val":
-            st = split[1]
-        elif partition == "test":
-            st = split[2]
-        else:
-            raise NotImplementedError()
+        match partition:
+            case DataPartition.train:
+                st = split[0]
+            case DataPartition.val:
+                st = split[1]
+            case DataPartition.test:
+                st = split[2]
+            case _:
+                raise NotImplementedError()
 
         st = st[:max_samples]
 
-        z = data["z"]
+        z: np.ndarray = data["z"]
         print("mol idx:", z)
+        # Filter out atoms with atomic number <= 1
         x = x[:, z > 1, ...]
         v = v[:, z > 1, ...]
         z = z[z > 1]
 
-        x_0, v_0 = x[st], v[st]
-        # x_t, v_t = x[st + delta_frame], v[st + delta_frame]
-        x_t = [x[st + delta_frame * i // num_timesteps] for i in range(1, num_timesteps + 1)]
+        # Select starting and velocity frames
+        x_0: np.ndarray = x[st]
+        v_0: np.ndarray = v[st]
+
+        # Create multi-step x_t, v_t sequences
+        x_t: list[np.ndarray] = [x[st + delta_frame * i // num_timesteps] for i in range(1, num_timesteps + 1)]
         x_t = np.stack(x_t, axis=2)
-        v_t = [v[st + delta_frame * i // num_timesteps] for i in range(1, num_timesteps + 1)]
+        v_t: list[np.ndarray] = [v[st + delta_frame * i // num_timesteps] for i in range(1, num_timesteps + 1)]
         v_t = np.stack(v_t, axis=2)
 
         print("Got {:d} samples!".format(x_0.shape[0]))
 
-        mole_idx = z
-        n_node = mole_idx.shape[0]
-        self.n_node = n_node
+        mole_idx: np.ndarray = z
+        n_node: int = mole_idx.shape[0]
+        self.n_node: int = n_node
 
-        _lambda = 1.6
-
-        def d(_i: int, _j: int, _t: int) -> float:
-            return np.sqrt(np.sum((x[_t][_i] - x[_t][_j]) ** 2))
-
-        n = z.shape[0]
-
+        # Convert arrays to torch tensors
+        self.x_0 = torch.Tensor(x_0)
+        self.v_0 = torch.Tensor(v_0)
+        self.x_t = torch.Tensor(x_t)
+        self.v_t = torch.Tensor(v_t)
+        self.mole_idx = torch.Tensor(mole_idx)
         self.Z = torch.Tensor(z)
 
-        atom_edges = torch.zeros(n, n).int()
-        for i in range(n):
-            for j in range(n):
-                if i != j:
-                    _d = d(i, j, 0)
-                    if _d < _lambda:
-                        atom_edges[i][j] = 1
-
-        atom_edges2 = atom_edges @ atom_edges
+        # Use the parent's helper functions for edge construction and bond constraints
+        atom_edges, atom_edges2 = self._compute_edges(x, z, threshold=1.6)
         self.atom_edge = atom_edges
         self.atom_edge2 = atom_edges2
-        edge_attr = []
-        rows, cols = [], []
-        for i in range(n_node):
-            for j in range(n_node):
-                if i != j:
-                    if self.atom_edge[i][j]:
-                        rows.append(i)
-                        cols.append(j)
-                        edge_attr.append([mole_idx[i], mole_idx[j], 1])
-                        assert not self.atom_edge2[i][j]
-                    if self.atom_edge2[i][j]:
-                        rows.append(i)
-                        cols.append(j)
-                        edge_attr.append([mole_idx[i], mole_idx[j], 2])
-                        assert not self.atom_edge[i][j]
 
-        edges = [rows, cols]  # edges for equivariant message passing
-        edge_attr = torch.Tensor(np.array(edge_attr))  # [edge, 3]
-        self.edge_attr = edge_attr  # [edge, 3]
-        self.edges = edges  # [2, edge]
+        edge_attr, edges = self._build_edge_attributes(atom_edges, atom_edges2, mole_idx)
+        self.edge_attr = edge_attr
+        self.edges = edges
 
-        all_edges = {}
-        for i in range(n):
-            for j in range(i + 1, n):
-                _d = d(i, j, 0)
-                if _d < _lambda:
-                    idx_i, idx_j = z[i], z[j]
-                    if idx_i < idx_j:
-                        idx_i, idx_j = idx_j, idx_i
-                    if (idx_i, idx_j) in all_edges:
-                        all_edges[(idx_i, idx_j)].append([i, j])
-                    else:
-                        all_edges[(idx_i, idx_j)] = [[i, j]]
-
-        print(all_edges)
-        conf_edges = []
-        for key in all_edges:
-            assert abs(key[0] - key[1]) <= 2
-            conf_edges.extend(all_edges[key])
-
-        print(conf_edges)
+        all_edges = self._compute_all_edges(x, z, threshold=1.6)
+        conf_edges = self._compute_conf_edges(all_edges)
         self.conf_edges = conf_edges
-        self.x_0, self.v_0, self.x_t, self.v_t = (
-            torch.Tensor(x_0),
-            torch.Tensor(v_0),
-            torch.Tensor(x_t),
-            torch.Tensor(v_t),
-        )
-        self.mole_idx = torch.Tensor(mole_idx)
 
+        # Re-sample configuration from the parent
         self.cfg = self.sample_cfg()
 
 
