@@ -64,12 +64,11 @@ class MD17Dataset:
         data: np.lib.npyio.NpzFile = np.load(full_dir)
 
         if molecule_type in MoleculeType.__members__.values():
-            self.molecule_type: str = molecule_type
+            self.molecule_type: MoleculeType = molecule_type
         else:
             raise ValueError(f"Invalid molecule type: {molecule_type}, select from one of {MoleculeType.__members__.keys()}")
-
-        x = data["R"]
-        v = x[1:] - x[:-1]
+        x: npt.NDArray[np.float64] = data["R"]
+        v: npt.NDArray[np.float64] = x[1:] - x[:-1]
         x = x[:-1]
 
         # Load or generate split
@@ -123,7 +122,7 @@ class MD17Dataset:
         # Build conf_edges
         all_edges = self._compute_all_edges(x=x, z=z)
         conf_edges = self._compute_conf_edges(all_edges=all_edges)
-        self.conf_edges = conf_edges
+        self.conf_edges: list[list[int]] = conf_edges
 
         self.x_0, self.v_0, self.x_t, self.v_t = (
             torch.Tensor(x_0),
@@ -138,7 +137,7 @@ class MD17Dataset:
         self.cfg = self.sample_cfg()
 
     def _get_or_generate_split(
-        self, split_dir: str, x: npt.NDArray[np.float32], train_par: float, val_par: float, test_par: float
+        self, split_dir: str, x: npt.NDArray[np.float64], train_par: float, val_par: float, test_par: float
     ) -> tuple[npt.NDArray[np.int_], npt.NDArray[np.int_], npt.NDArray[np.int_]]:
         """
         Load the train/val/test split from split_dir if it exists; otherwise generate it.
@@ -178,7 +177,7 @@ class MD17Dataset:
 
         return split
 
-    def _compute_edges(self, x: npt.NDArray[np.float32], z: npt.NDArray[np.int_], threshold: float = 1.6) -> tuple[torch.Tensor, torch.Tensor]:
+    def _compute_edges(self, x: npt.NDArray[np.float64], z: npt.NDArray[np.int_], threshold: float = 1.6) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Computes adjacency (atom_edges) and squared adjacency (atom_edges2) matrices
         based on inter-atomic distances at the first frame.
@@ -200,13 +199,14 @@ class MD17Dataset:
         return atom_edges, atom_edges2
 
     def _build_edge_attributes(
-        self, atom_edges: torch.Tensor, atom_edges2: torch.Tensor, mole_idx: np.ndarray
+        self, atom_edges: torch.Tensor, atom_edges2: torch.Tensor, mole_idx: npt.NDArray[np.int_]
     ) -> tuple[torch.Tensor, list[list[int]]]:
         """
         Build edge_attr (torch.Tensor) and edges (list) based on atom_edges and atom_edges2.
         The edge_attr array stores [atom_type1, atom_type2, path_distance].
         The edges list has two sublists [rows, cols] for edges.
         """
+
         n_node = mole_idx.shape[0]
         edge_attr = []
         rows, cols = [], []
@@ -223,12 +223,14 @@ class MD17Dataset:
                         cols.append(j)
                         edge_attr.append([mole_idx[i], mole_idx[j], 2])
                         assert not atom_edges[i][j]
+
         edges = [rows, cols]
         edge_attr_tensor = torch.Tensor(np.array(edge_attr))
+
         return edge_attr_tensor, edges
 
     def _compute_all_edges(
-        self, x: npt.NDArray[np.float32], z: npt.NDArray[np.int_], threshold: float = 1.6
+        self, x: npt.NDArray[np.float64], z: npt.NDArray[np.int_], threshold: float = 1.6
     ) -> dict[tuple[int, int], list[list[int]]]:
         """
         Builds a dictionary of edges keyed by (atom type i, atom type j), where each value
@@ -251,6 +253,7 @@ class MD17Dataset:
                         all_edges[(idx_i, idx_j)].append([i, j])
                     else:
                         all_edges[(idx_i, idx_j)] = [[i, j]]
+
         return all_edges
 
     def _compute_conf_edges(self, all_edges: dict[tuple[int, int], list[list[int]]]) -> list[list[int]]:
@@ -351,20 +354,20 @@ class MD17Dataset:
     def __len__(self):
         return len(self.x_0)
 
-    def get_edges(self, batch_size, n_nodes):
-        edges = [torch.LongTensor(self.edges[0]), torch.LongTensor(self.edges[1])]
+    def get_edges(self, batch_size: int, n_nodes: int) -> list[torch.LongTensor]:
+        edges: list[torch.LongTensor] = [torch.LongTensor(self.edges[0]), torch.LongTensor(self.edges[1])]
         if batch_size == 1:
             return edges
-        elif batch_size > 1:
-            rows, cols = [], []
-            for i in range(batch_size):
-                rows.append(edges[0] + n_nodes * i)
-                cols.append(edges[1] + n_nodes * i)
-            edges = [torch.cat(rows), torch.cat(cols)]
+
+        rows, cols = [], []
+        for i in range(batch_size):
+            rows.append(edges[0] + n_nodes * i)
+            cols.append(edges[1] + n_nodes * i)
+        edges = [torch.cat(rows).long(), torch.cat(cols).long()]
         return edges
 
     @staticmethod
-    def get_cfg(batch_size, n_nodes, cfg):
+    def get_cfg(batch_size: int, n_nodes: int, cfg):
         offset = torch.arange(batch_size) * n_nodes
         for type in cfg:
             index = cfg[type]  # [B, n_type, node_per_type]
@@ -374,6 +377,7 @@ class MD17Dataset:
         return cfg
 
 
+@final
 class MD17DynamicsDataset(MD17Dataset):
     """
     MD17 Dynamics Dataset
@@ -405,16 +409,17 @@ class MD17DynamicsDataset(MD17Dataset):
         self.partition: DataPartition = partition
         self.molecule_type: MoleculeType = molecule_type
 
-        x: np.ndarray = data["R"]
-        v: np.ndarray = x[1:] - x[:-1]
+        x: npt.NDArray[np.float64] = data["R"]
+        v: npt.NDArray[np.float64] = x[1:] - x[:-1]
         x = x[:-1]
 
         # Attempt to load or generate the split
         try:
             with open(split_dir, "rb") as f:
                 print("Got Split!")
-                split: tuple[np.ndarray, np.ndarray, np.ndarray] = pkl.load(f)
-        except:
+                split: tuple[npt.NDArray[np.int_], npt.NDArray[np.int_], npt.NDArray[np.int_]] = pkl.load(f)
+        except Exception as e:
+            print(f"Error loading split file: {e}")
             np.random.seed(100)
 
             _x = x[10000:-10000]
