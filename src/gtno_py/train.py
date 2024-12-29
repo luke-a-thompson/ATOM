@@ -9,13 +9,13 @@ from modules.activations import FFNActivation
 from torch.utils.data import DataLoader, Subset
 from tqdm import tqdm
 
-from .model import IMPGTNO, GraphAttentionType, NormType
+from .model import IMPGTNO, GraphAttentionType, GraphHeterogenousAttentionType, NormType
 from .utils import get_data_split_indices_custom
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 seed = 42
-torch.manual_seed(seed)
+_ = torch.manual_seed(seed)
 torch.cuda.manual_seed(seed)
 
 dataset = MD17Dataset("data/rmd17_cleaned/rmd17_aspirin.csv")
@@ -39,7 +39,8 @@ model = IMPGTNO(
     activation=FFNActivation.RELU,
     num_layers=3,
     num_heads=4,
-    graph_attention_type=GraphAttentionType.MHA,
+    graph_attention_type=GraphAttentionType.UNIFIED_MHA,
+    heterogenous_attention_type=GraphHeterogenousAttentionType.GHCNA,
 ).to(device)
 
 optimizer_type = optim.AdamW
@@ -82,7 +83,7 @@ def train_step(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoa
 
 
 @torch.no_grad()
-def evaluate_step(model: nn.Module, dataloader: DataLoader):
+def evaluate_step(model: nn.Module, dataloader: DataLoader) -> float:
     model.eval()
     total_loss = 0
     for batch in tqdm(dataloader, desc="Evaluating", leave=False):

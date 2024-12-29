@@ -156,7 +156,7 @@ class MD17Dataset:
 
         self.cfg = self.sample_cfg()
 
-    def sample_cfg(self):
+    def sample_cfg(self) -> dict[str, list[tuple[int, int]] | list[list[int]]]:
         """
         Kinematics Decomposition
         """
@@ -189,7 +189,7 @@ class MD17Dataset:
 
         return cfg
 
-    def __getitem__(self, i):
+    def __getitem__(self, i) -> dict[str, torch.Tensor]:
 
         cfg = self.cfg
 
@@ -236,6 +236,8 @@ class MD17Dataset:
             # 'Stick': [n_sticks, 2]: stick constraint defined by atom index pairs.
             # 'Isolated': [n_isolated, 1]: index of isolated atoms.
             "cfg": cfg_tensors,
+            # 'concatenated_features': [n_nodes, 4]: concatenated features (x, v, z).
+            "concatenated_features": torch.cat([self.x_0[i], self.v_0[i], self.Z.unsqueeze(-1)], dim=-1),
         }
 
     def __len__(self):

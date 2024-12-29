@@ -4,6 +4,7 @@ TODO:
 1. Review `model.py`
 1. Training loop / datasets
 1. Add unit tests
+1. Architectural improvements as per comments
 
 Relevant papers:
 1. EGNO: https://arxiv.org/pdf/2401.11037

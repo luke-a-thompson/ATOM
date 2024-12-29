@@ -1,13 +1,12 @@
 import torch
 import networkx as nx
-from typing import Dict, Tuple, List
 import pandas as pd
 from torch.utils.data import random_split
 import random
 
 
 def pretty_print_graph_data(
-    batch_element: Dict[str, torch.Tensor], print_node_features: bool = True, precision: int = 4
+    batch_element: dict[str, torch.Tensor], print_node_features: bool = True, precision: int = 4
 ) -> None:
     """
     Pretty print a single batch element from the graph data.
@@ -15,7 +14,7 @@ def pretty_print_graph_data(
     Args:
         batch_element (dict): A dictionary containing graph data with tensors.
     """
-    assert isinstance(batch_element, Dict), "batch_element must be a dictionary"
+    assert isinstance(batch_element, dict), "batch_element must be a dictionary"
 
     torch.set_printoptions(precision=precision)  # Set precision for tensor printing
 
@@ -111,7 +110,7 @@ def draw_graph(nx_graph: nx.Graph, filename: str = "debug_graph.png"):
 
 def get_data_split_indices_MD17_prescribed(
     split_number: int, val_ratio: float = 0.2
-) -> Tuple[List[int], List[int], List[int]]:
+) -> tuple[list[int], list[int], list[int]]:
     """
     Splits indices for train, validation, and test sets based on index files.
 
@@ -142,7 +141,7 @@ def get_data_split_indices_MD17_prescribed(
     return train_indices_split, val_indices_split, test_indices
 
 
-def get_data_split_indices_custom(dataset_size: int) -> Tuple[List[int], List[int], List[int]]:
+def get_data_split_indices_custom(dataset_size: int) -> tuple[list[int], list[int], list[int]]:
     """
     Returns indices of size 500 for train, 2000 for val, 2000 for test,
     randomly chosen from dataset_size frames. Adjust as needed.

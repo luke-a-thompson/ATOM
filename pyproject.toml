@@ -27,7 +27,7 @@ types-networkx = "^3.4.2.20241115"
 pandas-stubs = "^2.2.3.241126"
 
 [tool.black]
-line-length = 120
+line-length = 140
 target-version = ["py312"]
 
 [tool.isort]
