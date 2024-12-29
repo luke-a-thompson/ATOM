@@ -1,0 +1,24 @@
+[wandb]
+project_name = "GTNO"
+run_name = "Test"
+
+[training]
+batch_size = 32
+learning_rate = 0.001
+epochs = 20
+weight_decay = 0.0001
+
+[optimizer]
+type = "adamw"
+learning_rate = 0.001
+weight_decay = 0.0001
+adam_betas = [0.9, 0.999]
+
+[model]
+lifting_dim = 128
+norm = "rms"
+activation = "relu"
+num_layers = 3
+num_heads = 4
+graph_attention_type = "unified_mha"
+heterogenous_attention_type = "ghcna"
