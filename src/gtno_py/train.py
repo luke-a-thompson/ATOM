@@ -29,8 +29,8 @@ torch.cuda.manual_seed(seed)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 dataset_train = MD17DynamicsDataset(
     partition=DataPartition.train,
-    max_samples=3000,
-    delta_frame=50,
+    max_samples=5000,
+    delta_frame=5000,
     data_dir="data/md17_npz/",
     split_dir="data/md17_egno_splits/",
     molecule_type=MoleculeType.aspirin,
@@ -40,7 +40,7 @@ loader_train = DataLoader(dataset_train, batch_size=config["training"]["batch_si
 dataset_val = MD17DynamicsDataset(
     partition=DataPartition.val,
     max_samples=2000,
-    delta_frame=50,
+    delta_frame=5000,
     data_dir="data/md17_npz/",
     split_dir="data/md17_egno_splits/",
     molecule_type=MoleculeType.aspirin,
@@ -50,7 +50,7 @@ loader_val = DataLoader(dataset_val, batch_size=config["training"]["batch_size"]
 dataset_test = MD17DynamicsDataset(
     partition=DataPartition.test,
     max_samples=2000,
-    delta_frame=50,
+    delta_frame=5000,
     data_dir="data/md17_npz/",
     split_dir="data/md17_egno_splits/",
     molecule_type=MoleculeType.aspirin,
@@ -115,7 +115,7 @@ def train_step(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoa
     return avg_loss
 
 
-@torch.no_grad()
+@torch.inference_mode()
 def evaluate_step(model: nn.Module, dataloader: DataLoader[dict[str, torch.Tensor]]) -> float:
     _ = model.eval()
     total_loss = 0.0
@@ -137,9 +137,9 @@ def evaluate_step(model: nn.Module, dataloader: DataLoader[dict[str, torch.Tenso
     return avg_loss
 
 
-best_eval_loss = float("inf")
+best_eval_loss: float = float("inf")
 eval_losses: list[float] = []
-num_epochs = config["training"]["epochs"]
+num_epochs: int = config["training"]["epochs"]
 for epoch in range(num_epochs):
     train_loss = train_step(model, optimizer, loader_train)
     val_loss = evaluate_step(model, loader_val)
@@ -148,9 +148,8 @@ for epoch in range(num_epochs):
     if val_loss < best_eval_loss:
         best_eval_loss = val_loss
         date = datetime.datetime.now().strftime("%Y%m%d")
-        torch.save(model.state_dict(), f"trained_models/best_model_{best_eval_loss:.4f}_{date}.pth")
+        torch.save(model.state_dict(), f"trained_models/best_model_{date}.pth")
 
-test_loss = evaluate_step(model, loader_test)
-print(f"Test Loss: {test_loss:.4f}")
-
+test_loss = evaluate_step(torch.load(f"trained_models/best_model_{date}.pth"), loader_test)
 print(f"Best validation loss: {best_eval_loss:.4f}")
+print(f"Test Loss: {test_loss:.4f}")
