@@ -2,7 +2,13 @@ from typing import final, override
 import torch
 import torch.nn as nn
 from enum import Enum
-from modules.activations import FFNActivation, ReLU2, SwiGLU
+from gtno_py.modules.activations import FFNActivation, ReLU2, SwiGLU
+from gtno_py.utils import get_context
+import logging
+from tensordict import TensorDict
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
+logger = logging.getLogger(__name__)
 
 
 class NormType(str, Enum):
@@ -37,7 +43,7 @@ class UnifiedInputMHA(nn.Module):
         concatenated_features = batch["concatenated_features"]
 
         attn_output: torch.Tensor = self.graph_attention(concatenated_features, concatenated_features, concatenated_features)[0]
-        batch["ConcatenatedFeatures"] = attn_output
+        batch["concatenated_features"] = attn_output
 
         return batch
 
@@ -51,6 +57,8 @@ class SplitInputMHA(nn.Module):
     def __init__(self, lifting_dim: int, num_heads: int, batch_first: bool = True) -> None:
         super().__init__()
 
+        self.lifting_dim = lifting_dim
+
         self.position_attention = nn.MultiheadAttention(embed_dim=lifting_dim, num_heads=num_heads, batch_first=batch_first)
         self.velocity_attention = nn.MultiheadAttention(embed_dim=lifting_dim, num_heads=num_heads, batch_first=batch_first)
         self.feature_attention = nn.MultiheadAttention(embed_dim=lifting_dim, num_heads=num_heads, batch_first=batch_first)
@@ -59,15 +67,15 @@ class SplitInputMHA(nn.Module):
     def forward(self, batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
         positions = batch["x_0"]
         velocities = batch["v_0"]
-        features = batch["Z"]
+        assert positions.shape == velocities.shape, f"Positions and velocities must have the same shape. Got {positions.shape} and {velocities.shape}"
+        assert positions.shape[-1] == self.lifting_dim, f"Positions must have last dim of {self.lifting_dim} when MHA called. Got {positions.shape}"
+        assert velocities.shape[-1] == self.lifting_dim, f"Velocities must have last dim of {self.lifting_dim} when MHA called. Got {velocities.shape}"
 
         position_attn_output: torch.Tensor = self.position_attention(positions, positions, positions)[0]
         velocity_attn_output: torch.Tensor = self.velocity_attention(velocities, velocities, velocities)[0]
-        feature_attn_output: torch.Tensor = self.feature_attention(features, features, features)[0]
 
         batch["x_0"] = position_attn_output
         batch["v_0"] = velocity_attn_output
-        batch["Z"] = feature_attn_output
 
         return batch
 
@@ -76,23 +84,20 @@ class SplitInputMHA(nn.Module):
 class GraphHeterogenousCrossAttention(nn.Module):
     def __init__(
         self,
-        node_feature_dim: int,
-        edge_feature_dim: int,
-        graph_feature_dim: int,
         num_hetero_feats: int,
         lifting_dim: int,
         num_heads: int,
     ) -> None:
+        """
+        Heterogenous cross attention.
+
+        Features must already be lifted to the same dimension.
+        """
         super().__init__()
 
         self.num_heads = num_heads
         self.num_hetero_feats = num_hetero_feats
         self.lifting_dim = lifting_dim
-
-        # Lift raw features into a unified embedding space once
-        self.node_lifting = nn.Linear(node_feature_dim, lifting_dim)
-        self.edge_lifting = nn.Linear(edge_feature_dim, lifting_dim)
-        self.graph_lifting = nn.Linear(graph_feature_dim, lifting_dim)
 
         # Query projection (applied to node embeddings)
         self.query = nn.Linear(lifting_dim, lifting_dim)
@@ -106,21 +111,38 @@ class GraphHeterogenousCrossAttention(nn.Module):
 
     @override
     def forward(self, batch: dict[str, torch.Tensor], q_data: torch.Tensor) -> dict[str, torch.Tensor]:
+        """
+        This is the heterogenous cross attention.
+
+        Parameters:
+            batch: The batch dictionary containing the node features, edge features, graph features, etc.
+            q_data: The query data for generating the query for cross attention.
+
+        Returns:
+            The updated batch dictionary with the heterogenous cross attention applied to x_0.
+        """
+
         B, N, D = batch["x_0"].shape
         # Already lifted at model init (first fwd pass)
         lifted_nodes: torch.Tensor = batch["x_0"]  # (B, N, C)
-        lifted_edges: torch.Tensor = batch["edge_features"]  # (B, E, C)
+        lifted_edges: torch.Tensor = batch["edge_attr"]  # (B, E, C)
         # Graph feature shape: [B] -> [B, 1] -> [B, 1, C]
-        lifted_graph: torch.Tensor = batch["energy"].unsqueeze(-1).unsqueeze(1)  # (B, 1, C)
 
-        assert lifted_nodes.shape == (B, N, self.lifting_dim), f"Lifted nodes shape must be ({B}, {N}, {self.lifting_dim}). Got {lifted_nodes.shape}"
-        assert lifted_edges.shape == (B, N, self.lifting_dim), f"Lifted edges shape must be ({B}, {N}, {self.lifting_dim}). Got {lifted_edges.shape}"
-        assert lifted_graph.shape == (B, 1, self.lifting_dim), f"Lifted graph shape must be ({B}, {1}, {self.lifting_dim}). Got {lifted_graph.shape}"
-        # Data for generating the query for cross attention
-        assert q_data.shape == (B, N, self.lifting_dim), f"Query generating data shape must be ({B}, {N}, {self.lifting_dim}). Got {q_data.shape}"
+        # Lifted nodes
+        assert (
+            lifted_nodes.shape[0] == B and lifted_nodes.shape[-1] == self.lifting_dim
+        ), f"{get_context(self)}: Lifted nodes batch size and feature dimension must match. Got {lifted_nodes.shape}"
+
+        # Lifted edges
+        assert (
+            lifted_edges.shape[0] == B and lifted_edges.shape[-1] == self.lifting_dim
+        ), f"{get_context(self)}: Lifted edges batch size and feature dimension must match. Got {lifted_edges.shape}"
+
+        # Query data
+        assert q_data.shape[0] == B and q_data.shape[-1] == self.lifting_dim, f"{get_context(self)}: Query data batch size and feature dimension must match. Got {q_data.shape}"
 
         # Put the heterogeneous embeddings into a list to loop over
-        hetero_features: list[torch.Tensor] = [lifted_nodes, lifted_edges, lifted_graph]
+        hetero_features: list[torch.Tensor] = [lifted_nodes, lifted_edges]
         assert (
             len(hetero_features) == self.num_hetero_feats
         ), f"Number of heterogeneous features must match the number of keys/values. Expected {self.num_hetero_feats}, got {len(hetero_features)}"
@@ -156,11 +178,11 @@ class GraphHeterogenousCrossAttention(nn.Module):
             D_inv = 1.0 / torch.clamp_min((q * k_cumsum).sum(dim=-1, keepdim=True), 1e-8)
             out: torch.Tensor = q + (q @ (k.transpose(-2, -1) @ v)) * D_inv
 
-        # 4. Project output back
+        # 4. Project output back - DOUBLE CHECK THIS
         out = out.transpose(1, 2).contiguous().view(B, N, self.lifting_dim)
         out = self.out_proj(out)
 
-        batch["node_features"] = out
+        batch["x_0"] = out
 
         return batch
 
@@ -169,9 +191,6 @@ class GraphHeterogenousCrossAttention(nn.Module):
 class IMPGTNOBlock(nn.Module):
     def __init__(
         self,
-        node_feature_dim: int,
-        edge_feature_dim: int,
-        graph_feature_dim: int,
         lifting_dim: int,
         norm: NormType,
         activation: FFNActivation,
@@ -232,36 +251,46 @@ class IMPGTNOBlock(nn.Module):
         match heterogenous_attention_type:
             case GraphHeterogenousAttentionType.GHCNA:
                 self.heterogenous_attention = GraphHeterogenousCrossAttention(
-                    node_feature_dim=node_feature_dim,
-                    edge_feature_dim=edge_feature_dim,
-                    graph_feature_dim=graph_feature_dim,
-                    num_hetero_feats=3,
+                    num_hetero_feats=2,
                     lifting_dim=lifting_dim,
                     num_heads=num_heads,
                 )
             case _:
-                raise ValueError(
-                    f"Invalid heterogenous attention type: {heterogenous_attention_type}, select from one of {GraphHeterogenousAttentionType.__members__.keys()}"
-                )
+                raise ValueError(f"Invalid heterogenous attention type: {heterogenous_attention_type}, select from one of {GraphHeterogenousAttentionType.__members__.keys()}")  # type: ignore
 
     @override
     def forward(self, batch: dict[str, torch.Tensor], q_data: torch.Tensor) -> dict[str, torch.Tensor]:
         # Graph attention as message passing
         # MHA returns (attn_output, attn_weights)
         # Everything modified on each layer must be scaled / normalised
-        node_features = self.pre_norm(batch["node_features"])  # We probably shouldn't normalise position/velocity right?
+        match self.graph_attention:
+            case UnifiedInputMHA():
+                batch["concatenated_features"] = self.pre_norm(batch["concatenated_features"])
+            case SplitInputMHA():
+                batch["x_0"] = self.pre_norm(batch["x_0"])  # We probably shouldn't normalise position/velocity right?
+                batch["v_0"] = self.pre_norm(batch["v_0"])
+            case _:
+                raise ValueError(f"Invalid graph attention type: {self.graph_attention}, select from one of {GraphAttentionType.__members__.keys()}")
 
-        # Currently this residual is broken as we are returning a graph from self.graph_attention, but node_features is a tensor
+        # Currently this residual is broken as we are returning a TensorDict from self.graph_attention, but node_features is a tensor
         # We can consider elementwise residual via the dict
         # We can do this if we change the batch dict to a tensor dict:
         # https://pytorch.org/tensordict/stable/reference/generated/tensordict.TensorDict.html#tensordict.TensorDict.add
-        graph_attended_nodes = node_features + self.graph_attention(batch)
-        graph_attended_nodes = self.ffn(graph_attended_nodes)
+        match self.graph_attention:
+            case UnifiedInputMHA():
+                graph_attended_nodes = batch["concatenated_features"] + self.graph_attention(batch)["concatenated_features"]  # Residual connection
+                batch["concatenated_features"] = self.ffn(graph_attended_nodes)
+            case SplitInputMHA():
+                batch["x_0"] = batch["x_0"] + self.graph_attention(batch)["x_0"]  # Residual connection (with normalised - DOUBLE CHECK THIS)
+                batch["v_0"] = batch["v_0"] + self.graph_attention(batch)["v_0"]  # Residual connection
 
-        hetero_attended_nodes = graph_attended_nodes + self.heterogenous_attention(batch, q_data=q_data)
-        hetero_attended_nodes = self.ffn(hetero_attended_nodes)
+                batch["x_0"] = self.ffn(batch["x_0"])
+                batch["v_0"] = self.ffn(batch["v_0"])
+            case _:
+                raise ValueError(f"Invalid graph attention type: {self.graph_attention}, select from one of {GraphAttentionType.__members__.keys()}")
 
-        batch["Coordinates"] = hetero_attended_nodes[:, :-3]
+        hetero_attended_nodes = batch["x_0"] + self.heterogenous_attention(batch, q_data=q_data)["x_0"]  # Residual connection
+        batch["x_0"] = self.ffn(hetero_attended_nodes)
 
         return batch
 
@@ -270,9 +299,6 @@ class IMPGTNOBlock(nn.Module):
 class IMPGTNO(nn.Module):
     def __init__(
         self,
-        node_feature_dim: int,
-        edge_feature_dim: int,
-        graph_feature_dim: int,
         lifting_dim: int,
         norm: NormType,
         activation: FFNActivation,
@@ -280,28 +306,56 @@ class IMPGTNO(nn.Module):
         num_heads: int,
         graph_attention_type: GraphAttentionType,
         heterogenous_attention_type: GraphHeterogenousAttentionType,
+        num_timesteps: int,
     ) -> None:
+        """
+        Multi-step IMPGTNO model that always does T>1 predictions.
+        Args:
+            lifting_dim: size of the lifted embedding dimension
+            norm: type of normalisation (e.g., NormType.LAYER)
+            activation: which feed-forward activation to use
+            num_layers: number of IMPGTNOBlock layers
+            num_heads: number of MHA heads
+            graph_attention_type: 'Unified MHA', 'Split MHA', or 'GRIT'
+            heterogenous_attention_type: e.g. 'G-HNCA'
+            num_timesteps: the number of future steps (T) to predict
+        """
         super().__init__()
 
-        self.lifting_layer = nn.Linear(in_features=node_feature_dim, out_features=lifting_dim)
+        assert num_timesteps > 1, f"num_timesteps must be greater than 1. Got {num_timesteps}"
+        self.num_timesteps = num_timesteps
 
         # One-time lifting to unified embedding space at model init. Keys must be in the batch dict
+        # We infer the shape of the features from the graph attention type - Unified MHA works on concatenated features, Split MHA works on x_0, v_0, Z
         match graph_attention_type:
             case GraphAttentionType.UNIFIED_MHA:
-                self.elements_to_lift = ["concatenated_features"]
+                self.elements_to_lift = ["concatenated_features", "edge_attr"]
+                in_dims = {
+                    "concatenated_features": 7,
+                    "edge_attr": 4,
+                }
+                logger.info("Message passing on concatenated features - Lifting edge_attr, concatenated_features to unified embedding space for graph attention")
             case GraphAttentionType.SPLIT_MHA:
-                self.elements_to_lift = ["x_0", "v_0", "Z"]
+                self.elements_to_lift = ["concatenated_features", "x_0", "v_0", "edge_attr"]
+                # We should find a way to infer this from the data
+                in_dims = {
+                    "concatenated_features": 7,
+                    "x_0": 4,
+                    "v_0": 4,
+                    "edge_attr": 4,
+                }
+                logger.info("Message passing on x_0, v_0 - Lifting x_0, v_0, edge_attr, concatenated_features to unified embedding space for graph attention")
             case GraphAttentionType.GRIT:
                 raise NotImplementedError("GRITAttention is not implemented")
             case _:
                 raise ValueError(f"Invalid graph attention type: {graph_attention_type}, select from one of {GraphAttentionType.__members__.keys()}")
 
+        # Create one Linear layer per feature
+        self.lifting_layers = nn.ModuleDict({key: nn.Linear(in_features=in_dims[key], out_features=lifting_dim) for key in self.elements_to_lift})
+
         self.layers = nn.Sequential(
             *[
                 IMPGTNOBlock(
-                    lifting_dim,
-                    edge_feature_dim,
-                    graph_feature_dim,
                     lifting_dim,
                     norm,
                     activation,
@@ -313,16 +367,122 @@ class IMPGTNO(nn.Module):
             ]
         )
 
-        self.projection_layer = nn.Linear(in_features=lifting_dim, out_features=node_feature_dim)
+        # Final projection to (x, y, z)
+        self.projection_layer = nn.Linear(in_features=lifting_dim, out_features=3)
 
     @override
-    def forward(self, batch: dict[str, torch.Tensor]) -> torch.Tensor:
-        # Lift the elements we want to lift
+    def forward(self, batch: TensorDict) -> torch.Tensor:
+        # Batch size, number of nodes, feature dimension
+        B, N, _ = batch["x_0"].shape
+
+        # # Duplicate the future timesteps
+        # if "x_0" in batch:
+        #     batch["x_0"] = self._build_duplicate_future_timesteps(batch["x_0"], self.num_timesteps)
+        # if "v_0" in batch:
+        #     batch["v_0"] = self._build_duplicate_future_timesteps(batch["v_0"], self.num_timesteps)
+        # if "concatenated_features" in batch:
+        #     batch["concatenated_features"] = self._build_duplicate_future_timesteps(batch["concatenated_features"], self.num_timesteps)
+        # if "edge_attr" in batch:
+        #     batch["edge_attr"] = self._build_duplicate_future_timesteps(batch["edge_attr"], self.num_timesteps)
+
+        batch = self._replicate_tensordict(batch, self.num_timesteps)
+
+        # Project this batch feature from its original dimension to `lifting_dim`
+        # Use the same "key" to pick the lifting layer from `self.lifting_layers` and the corresponding feature from the `batch` dict.
         for key in self.elements_to_lift:
-            batch[key] = self.lifting_layer(batch[key])
+            batch[key] = self.lifting_layers[key](batch[key])
 
         for layer in self.layers:
-            batch = layer(batch, q_data=batch["x_0"])
+            batch = layer(batch, q_data=batch["concatenated_features"])
 
-        out: torch.Tensor = self.projection_layer(batch["node_features"])
-        return out[:, :, -3:]
+        out: torch.Tensor = self.projection_layer(batch["x_0"])
+        assert out.shape[-1] == 3, f"Output shape must have last dimension of 3 (x, y, z). Got {out.shape}"
+
+        # 6) Reshape to [B, N, T, 3]
+        out = out.view(self.num_timesteps, B, N, 3).permute(1, 2, 0, 3).contiguous()
+        return out
+
+    def _build_duplicate_future_timesteps(self, tensor: torch.Tensor, T: int) -> torch.Tensor:
+        """
+        Replicates (tiles) the batch dimension of a [B, X, feats] tensor T times.
+
+        Specifically, it takes an input tensor of shape [B, X, feats]—where
+        - B is the batch size,
+        - X is typically the number of nodes or edges (depending on dims),
+        - feats is the feature dimension—
+
+        and returns a new tensor of shape [T * B, X, feats] by repeating
+        each batch entry T times along the batch dimension.
+
+        Args:
+            tensor (torch.Tensor): The input tensor to replicate.
+                Must have shape [B, X, feats].
+            T (int): The number of times to replicate the batch dimension.
+            dims (str, optional): A descriptive label indicating what X represents.
+                Typically "node" (if X is the number of nodes) or "edge"
+                (if X is the number of edges). This is only used for
+                logging or debugging purposes; it does not alter the logic.
+
+        Returns:
+            torch.Tensor: A tensor of shape [T * B, X, feats], formed by
+            replicating the original tensor T times along the batch dimension.
+
+        Example:
+            >>> # Suppose 'tensor' has shape [32, 13, 4].
+            >>> # B=32, X=13, feats=4, and we want T=8 timesteps.
+            >>> out = _tile_fn(tensor, T=8, dims="node")
+            >>> # 'out' now has shape [256, 13, 4].
+        """
+        B = tensor.shape[0]
+
+        # 1) Insert a new dimension at index 0 -> [1, B, X, feats]
+        out = tensor.unsqueeze(0)
+
+        # 2) Replicate that dimension T times -> [T, B, X, feats]
+        # Recall: -1 in expand tells torch to infer the size of the dimension
+        out = out.expand(T, -1, -1, -1)
+
+        # 3) Flatten the first two dimensions -> [T*B, X, feats]
+        out = out.reshape(T * B, tensor.shape[1], tensor.shape[2])
+
+        assert out.shape[0] == T * B, f"Output shape must have first dimension of {T * B}. Got {out.shape}"
+
+        return out
+
+    def _replicate_tensordict(self, batch: TensorDict, T: int) -> TensorDict:
+        """
+        Replicates the entire tensordict along the batch dimension T times.
+        Resulting TensorDict has batch_size = [T * B].
+
+        Specifically, if the original tensordict has batch_size = [B], then
+        we generate a new tensordict with batch_size = [T * B], where each
+        of the B entries is repeated T times.
+
+        Args:
+            batch (TensorDict): The input tensordict with batch_size = [B].
+            T (int): The number of times to replicate the batch dimension.
+
+        Returns:
+            TensorDict: A new tensordict whose batch_size = [T * B], with each
+            field in the original tensordict replicated T times.
+
+        Example:
+            >>> # Suppose 'batch' has batch_size [32].
+            >>> # We want 8 future timesteps -> T=8.
+            >>> # The returned tensordict will have batch_size [256].
+            >>> expanded = replicate_tensordict(batch, 8)
+            >>> print(expanded.batch_size)  # torch.Size([256])
+        """
+        B = batch.batch_size[0]
+        new_shape = (T, B)  # We'll reshape to [T * B] eventually.
+
+        # 1) Insert a new dimension at index 0 -> shape = [1, B].
+        out = batch.unsqueeze(0)
+
+        # 2) Expand along that new dimension T times -> shape = [T, B].
+        out = out.expand(*new_shape)
+
+        # 3) Make memory contiguous, then flatten the first two dims -> [T * B].
+        out = out.contiguous().view(-1)
+
+        return out

@@ -3,11 +3,10 @@ import networkx as nx
 import pandas as pd
 from torch.utils.data import random_split
 import random
+import inspect
 
 
-def pretty_print_graph_data(
-    batch_element: dict[str, torch.Tensor], print_node_features: bool = True, precision: int = 4
-) -> None:
+def pretty_print_graph_data(batch_element: dict[str, torch.Tensor], print_node_features: bool = True, precision: int = 4) -> None:
     """
     Pretty print a single batch element from the graph data.
 
@@ -20,13 +19,7 @@ def pretty_print_graph_data(
 
     print("\n===== Graph Batch Keys =====")
     # Handle types that might not have a `.shape` attribute
-    print(
-        "\nBatch Keys:\n"
-        + "\n".join(
-            f" - {key} (shape: {value.shape if isinstance(value, torch.Tensor) else type(value)})"
-            for key, value in batch_element.items()
-        )
-    )
+    print("\nBatch Keys:\n" + "\n".join(f" - {key} (shape: {value.shape if isinstance(value, torch.Tensor) else type(value)})" for key, value in batch_element.items()))
 
     print("\n===== Graph Batch Data =====")
 
@@ -108,9 +101,7 @@ def draw_graph(nx_graph: nx.Graph, filename: str = "debug_graph.png"):
     plt.close()
 
 
-def get_data_split_indices_MD17_prescribed(
-    split_number: int, val_ratio: float = 0.2
-) -> tuple[list[int], list[int], list[int]]:
+def get_data_split_indices_MD17_prescribed(split_number: int, val_ratio: float = 0.2) -> tuple[list[int], list[int], list[int]]:
     """
     Splits indices for train, validation, and test sets based on index files.
 
@@ -158,3 +149,22 @@ def get_data_split_indices_custom(dataset_size: int) -> tuple[list[int], list[in
     val_indices = all_indices[train_count : train_count + val_count]
     test_indices = all_indices[train_count + val_count : train_count + val_count + test_count]
     return train_indices, val_indices, test_indices
+
+
+def get_context(instance: object) -> str:
+    """
+    Returns the class name and method name of the caller context.
+
+    Parameters:
+        instance: The instance of the class (typically `self`).
+
+    Returns:
+        str: The class name and method name in the format `ClassName.MethodName`.
+    """
+    frame = inspect.currentframe().f_back  # Access the caller's frame
+    if frame is None:
+        raise RuntimeError("Unable to determine the calling context.")
+
+    class_name = instance.__class__.__name__
+    method_name = frame.f_code.co_name
+    return f"{class_name}.{method_name}"

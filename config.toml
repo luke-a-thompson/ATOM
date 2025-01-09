@@ -3,7 +3,7 @@ project_name = "GTNO"
 run_name = "Test"
 
 [training]
-batch_size = 32
+batch_size = 32  # Easier shape for testing
 learning_rate = 0.001
 epochs = 20
 weight_decay = 0.0001
@@ -20,5 +20,6 @@ norm = "rms"
 activation = "relu"
 num_layers = 3
 num_heads = 4
-graph_attention_type = "unified_mha"
+graph_attention_type = "split_mha"
 heterogenous_attention_type = "ghcna"
+num_timesteps = 8

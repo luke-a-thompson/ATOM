@@ -3,12 +3,10 @@ import tensordict
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from dataloaders.egno_dataloder import MD17Dataset, MoleculeType, DataPartition
-from gtno_py.utils import pretty_print_graph_data
-from modules.activations import FFNActivation
+from gtno_py.dataloaders.egno_dataloder import MD17DynamicsDataset, MoleculeType, DataPartition
+from gtno_py.modules.activations import FFNActivation
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-import wandb
 import tomllib
 from gtno_py.model import IMPGTNO, GraphAttentionType, GraphHeterogenousAttentionType, NormType
 
@@ -29,7 +27,7 @@ seed = 42
 _ = torch.manual_seed(seed)
 torch.cuda.manual_seed(seed)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-dataset_train = MD17Dataset(
+dataset_train = MD17DynamicsDataset(
     partition=DataPartition.train,
     max_samples=3000,
     delta_frame=50,
@@ -39,7 +37,7 @@ dataset_train = MD17Dataset(
 )
 loader_train = DataLoader(dataset_train, batch_size=config["training"]["batch_size"], shuffle=True)
 
-dataset_val = MD17Dataset(
+dataset_val = MD17DynamicsDataset(
     partition=DataPartition.val,
     max_samples=2000,
     delta_frame=50,
@@ -49,7 +47,7 @@ dataset_val = MD17Dataset(
 )
 loader_val = DataLoader(dataset_val, batch_size=config["training"]["batch_size"], shuffle=False)
 
-dataset_test = MD17Dataset(
+dataset_test = MD17DynamicsDataset(
     partition=DataPartition.test,
     max_samples=2000,
     delta_frame=50,
@@ -61,16 +59,14 @@ loader_test = DataLoader(dataset_test, batch_size=config["training"]["batch_size
 
 
 model = IMPGTNO(
-    node_feature_dim=7,  # Add checks for these
-    edge_feature_dim=3,
-    graph_feature_dim=1,
     lifting_dim=config["model"]["lifting_dim"],
     norm=NormType.RMS,
     activation=FFNActivation.RELU,
     num_layers=config["model"]["num_layers"],
     num_heads=config["model"]["num_heads"],
-    graph_attention_type=GraphAttentionType.UNIFIED_MHA,
+    graph_attention_type=GraphAttentionType.SPLIT_MHA,
     heterogenous_attention_type=GraphHeterogenousAttentionType.GHCNA,
+    num_timesteps=config["model"]["num_timesteps"],
 ).to(device)
 
 optimizer: optim.Optimizer
@@ -85,23 +81,31 @@ match config["optimizer"]["type"]:
     case _:
         raise ValueError(f"Invalid optimizer: {config['optimizer']['type']}")
 
+loss_fn = nn.MSELoss()
 
-def train_step(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoader):
-    model.train()
-    total_loss = 0
+
+def train_step(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoader[dict[str, torch.Tensor]]) -> float:
+    _ = model.train()
+    total_loss = 0.0
     for batch in tqdm(dataloader, desc="Training", leave=False):
-        assert False, pretty_print_graph_data(batch)
         batch = tensordict.from_dict(batch).to(device)
+        x_t = batch.pop("x_t")  # Pop them out to avoid tiling in the model
+
         optimizer.zero_grad()
 
         # Get predicted coordinates
-        pred_coords = model(batch)
+        pred_coords: torch.Tensor = model(batch)
 
         # Get target coordinates and reshape to align with predictions
-        target_coords = batch["coords"].view(pred_coords.shape)
+        target_coords: torch.Tensor = x_t
+        assert pred_coords.shape == target_coords.shape, f"Predicted and target coordinates must have the same shape. Got {pred_coords.shape} and {target_coords.shape}"
+
+        assert pred_coords.shape[-1] == target_coords.shape[-1], f"Predicted and target coordinates must have the same shape. Got {pred_coords.shape} and {target_coords.shape}"
+        assert pred_coords.shape[-1] == 3, f"Predicted and target coordinates must have the last dimension of 3 (x, y, z). Got {pred_coords.shape}"
+        assert target_coords.shape[-1] == 3, f"Predicted and target coordinates must have the last dimension of 3 (x, y, z). Got {target_coords.shape}"
 
         # Calculate MSE loss
-        loss = torch.mean((pred_coords - target_coords) ** 2)
+        loss: torch.Tensor = loss_fn(pred_coords, target_coords)
 
         loss.backward()
         optimizer.step()
@@ -112,20 +116,20 @@ def train_step(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoa
 
 
 @torch.no_grad()
-def evaluate_step(model: nn.Module, dataloader: DataLoader) -> float:
-    model.eval()
-    total_loss = 0
+def evaluate_step(model: nn.Module, dataloader: DataLoader[dict[str, torch.Tensor]]) -> float:
+    _ = model.eval()
+    total_loss = 0.0
     for batch in tqdm(dataloader, desc="Evaluating", leave=False):
         batch = tensordict.from_dict(batch).to(device)
 
         # Get predicted coordinates
-        pred_coords = model(batch)
+        pred_coords: torch.Tensor = model(batch)
 
         # Get target coordinates and reshape to align with predictions
-        target_coords = batch["coords"].view(pred_coords.shape)
+        target_coords: torch.Tensor = batch["x_t"]
 
         # Calculate MSE loss
-        loss = torch.mean((pred_coords - target_coords) ** 2)
+        loss: torch.Tensor = loss_fn(pred_coords, target_coords)
 
         total_loss += loss.item()
 
