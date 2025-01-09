@@ -140,6 +140,7 @@ def evaluate_step(model: nn.Module, dataloader: DataLoader[dict[str, torch.Tenso
 best_eval_loss: float = float("inf")
 eval_losses: list[float] = []
 num_epochs: int = config["training"]["epochs"]
+date: str = datetime.datetime.now().strftime("%Y%m%d")
 for epoch in range(num_epochs):
     train_loss = train_step(model, optimizer, loader_train)
     val_loss = evaluate_step(model, loader_val)
@@ -147,9 +148,9 @@ for epoch in range(num_epochs):
     print(f"Epoch {epoch+1}/{num_epochs}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}")
     if val_loss < best_eval_loss:
         best_eval_loss = val_loss
-        date = datetime.datetime.now().strftime("%Y%m%d")
         torch.save(model.state_dict(), f"trained_models/best_model_{date}.pth")
 
+assert date is not None
 test_loss = evaluate_step(torch.load(f"trained_models/best_model_{date}.pth"), loader_test)
 print(f"Best validation loss: {best_eval_loss:.4f}")
 print(f"Test Loss: {test_loss:.4f}")
