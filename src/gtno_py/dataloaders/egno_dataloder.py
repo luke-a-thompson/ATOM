@@ -198,9 +198,7 @@ class MD17Dataset:
         atom_edges2 = atom_edges @ atom_edges
         return atom_edges, atom_edges2
 
-    def _build_edge_attributes(
-        self, atom_edges: torch.Tensor, atom_edges2: torch.Tensor, mole_idx: npt.NDArray[np.int_]
-    ) -> tuple[torch.Tensor, list[list[int]]]:
+    def _build_edge_attributes(self, atom_edges: torch.Tensor, atom_edges2: torch.Tensor, mole_idx: npt.NDArray[np.int_]) -> tuple[torch.Tensor, list[list[int]]]:
         """
         Build edge_attr (torch.Tensor) and edges (list) based on atom_edges and atom_edges2.
         The edge_attr array stores [atom_type1, atom_type2, path_distance].
@@ -229,9 +227,7 @@ class MD17Dataset:
 
         return edge_attr_tensor, edges
 
-    def _compute_all_edges(
-        self, x: npt.NDArray[np.float64], z: npt.NDArray[np.int_], threshold: float = 1.6
-    ) -> dict[tuple[int, int], list[list[int]]]:
+    def _compute_all_edges(self, x: npt.NDArray[np.float64], z: npt.NDArray[np.int_], threshold: float = 1.6) -> dict[tuple[int, int], list[list[int]]]:
         """
         Builds a dictionary of edges keyed by (atom type i, atom type j), where each value
         is a list of pairs of atom indices that are close (distance < threshold).
@@ -329,9 +325,9 @@ class MD17Dataset:
 
         return {
             # 'x_0': [n_nodes, 3]: 3D coords (x,y,z) in starting frame.
-            "x_0": self.x_0[i],
+            "x_0": torch.cat([self.x_0[i], torch.norm(self.x_0[i], dim=1, keepdim=True)], dim=1),
             # 'v_0': [n_nodes, 3]: 3D velocity (vx,vy,vz) in starting frame.
-            "v_0": self.v_0[i],
+            "v_0": torch.cat([self.v_0[i], torch.norm(self.v_0[i], dim=1, keepdim=True)], dim=1),
             # 'edge_attr': [n_edges, 4]: edge attributes.
             # [atom type 1, atom type 2, path distance (1 or 2), stick indicator].
             "edge_attr": edge_attr,
@@ -385,27 +381,37 @@ class MD17DynamicsDataset(MD17Dataset):
     """
 
     def __init__(
-        self, partition: DataPartition, max_samples: int, delta_frame: int, data_dir: str, molecule_type: MoleculeType, num_timesteps: int = 8
+        self,
+        partition: DataPartition,
+        max_samples: int,
+        delta_frame: int,
+        data_dir: str,
+        split_dir: str,
+        molecule_type: MoleculeType,
+        train_par: float = 0.1,
+        val_par: float = 0.05,
+        test_par: float = 0.05,
+        num_timesteps: int = 8,
     ):
         # First call the parent constructor so we inherit shared logic
         super().__init__(
             partition=partition,
             max_samples=max_samples,
             delta_frame=delta_frame,
-            data_dir=os.path.join(data_dir, "md17_npz/"),
-            split_dir=os.path.join(data_dir, "md17_egno_splits/"),
+            data_dir=data_dir,
+            split_dir=split_dir,
             molecule_type=molecule_type,
-            train_par=0.1,
-            val_par=0.05,
-            test_par=0.05,
+            train_par=train_par,
+            val_par=val_par,
+            test_par=test_par,
         )
 
         # setup a split, tentative setting
-        train_par, val_par, test_par = 0.1, 0.05, 0.05
-        full_dir: str = os.path.join(data_dir, "md17_npz/" + f"md17_{molecule_type}.npz")
-        split_dir: str = os.path.join(data_dir, "md17_egno_splits/" + f"md17_{molecule_type}_split.pkl")
-
+        train_par, val_par, test_par = train_par, val_par, test_par
+        full_dir = os.path.join(data_dir + "md17_" + molecule_type + ".npz")
+        split_dir = os.path.join(split_dir + molecule_type + "_split.pkl")
         data: np.lib.npyio.NpzFile = np.load(full_dir)
+
         self.partition: DataPartition = partition
         self.molecule_type: MoleculeType = molecule_type
 
@@ -451,11 +457,11 @@ class MD17DynamicsDataset(MD17Dataset):
             case DataPartition.test:
                 st = split[2]
             case _:
-                raise NotImplementedError()
+                raise ValueError(f"Invalid partition: {partition}")
 
         st = st[:max_samples]
 
-        z: np.ndarray = data["z"]
+        z: npt.NDArray[np.int_] = data["z"]
         print("mol idx:", z)
         # Filter out atoms with atomic number <= 1
         x = x[:, z > 1, ...]
@@ -463,18 +469,18 @@ class MD17DynamicsDataset(MD17Dataset):
         z = z[z > 1]
 
         # Select starting and velocity frames
-        x_0: np.ndarray = x[st]
-        v_0: np.ndarray = v[st]
+        x_0: npt.NDArray[np.float64] = x[st]
+        v_0: npt.NDArray[np.float64] = v[st]
 
         # Create multi-step x_t, v_t sequences
-        x_t: list[np.ndarray] = [x[st + delta_frame * i // num_timesteps] for i in range(1, num_timesteps + 1)]
+        x_t: list[npt.NDArray[np.float64]] = [x[st + delta_frame * i // num_timesteps] for i in range(1, num_timesteps + 1)]
         x_t = np.stack(x_t, axis=2)
-        v_t: list[np.ndarray] = [v[st + delta_frame * i // num_timesteps] for i in range(1, num_timesteps + 1)]
+        v_t: list[npt.NDArray[np.float64]] = [v[st + delta_frame * i // num_timesteps] for i in range(1, num_timesteps + 1)]
         v_t = np.stack(v_t, axis=2)
 
-        print("Got {:d} samples!".format(x_0.shape[0]))
+        print(f"Got {x_0.shape[0]} samples!")
 
-        mole_idx: np.ndarray = z
+        mole_idx: npt.NDArray[np.int_] = z
         n_node: int = mole_idx.shape[0]
         self.n_node: int = n_node
 
