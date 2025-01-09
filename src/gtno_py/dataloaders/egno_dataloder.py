@@ -124,14 +124,12 @@ class MD17Dataset:
         conf_edges = self._compute_conf_edges(all_edges=all_edges)
         self.conf_edges: list[list[int]] = conf_edges
 
-        self.x_0, self.v_0, self.x_t, self.v_t = (
-            torch.Tensor(x_0),
-            torch.Tensor(v_0),
-            torch.Tensor(x_t),
-            torch.Tensor(v_t),
-        )
+        # Convert to tensors
+        self.x_0 = torch.cat([torch.Tensor(x_0), torch.norm(torch.Tensor(x_0), dim=-1, keepdim=True)], dim=-1)
+        self.v_0 = torch.cat([torch.Tensor(v_0), torch.norm(torch.Tensor(v_0), dim=-1, keepdim=True)], dim=-1)
+        self.x_t = torch.Tensor(x_t)
+        self.v_t = torch.Tensor(v_t)
         self.mole_idx = torch.Tensor(mole_idx)
-
         self.Z = torch.Tensor(z)
 
         self.cfg = self.sample_cfg()
@@ -324,10 +322,10 @@ class MD17Dataset:
         cfg_tensors = {key: torch.from_numpy(np.array(cfg[key])) for key in cfg}
 
         return {
-            # 'x_0': [n_nodes, 3]: 3D coords (x,y,z) in starting frame.
-            "x_0": torch.cat([self.x_0[i], torch.norm(self.x_0[i], dim=1, keepdim=True)], dim=1),
-            # 'v_0': [n_nodes, 3]: 3D velocity (vx,vy,vz) in starting frame.
-            "v_0": torch.cat([self.v_0[i], torch.norm(self.v_0[i], dim=1, keepdim=True)], dim=1),
+            # 'x_0': [n_nodes, 4]: 3D coords (x,y,z, norm(x)) in starting frame.
+            "x_0": self.x_0[i],
+            # 'v_0': [n_nodes, 4]: 3D velocity (vx,vy,vz, norm(v)) in starting frame.
+            "v_0": self.v_0[i],
             # 'edge_attr': [n_edges, 4]: edge attributes.
             # [atom type 1, atom type 2, path distance (1 or 2), stick indicator].
             "edge_attr": edge_attr,
@@ -343,7 +341,7 @@ class MD17Dataset:
             # 'Stick': [n_sticks, 2]: stick constraint by atom indices.
             # 'Isolated': [n_isolated, 1]: index of isolated atoms.
             "cfg": cfg_tensors,
-            # 'concatenated_features': [n_nodes, 7]: concatenated (x,y,z,vx,vy,vz,z)
+            # # 'concatenated_features': [n_nodes, 9]: concatenated (x,y,z,norm(x),vx,vy,vz,norm(v),Z)
             "concatenated_features": torch.cat([self.x_0[i], self.v_0[i], self.Z.unsqueeze(-1)], dim=-1),
         }
 
@@ -485,8 +483,8 @@ class MD17DynamicsDataset(MD17Dataset):
         self.n_node: int = n_node
 
         # Convert arrays to torch tensors
-        self.x_0 = torch.Tensor(x_0)
-        self.v_0 = torch.Tensor(v_0)
+        self.x_0 = torch.cat([torch.Tensor(x_0), torch.norm(torch.Tensor(x_0), dim=-1, keepdim=True)], dim=-1)
+        self.v_0 = torch.cat([torch.Tensor(v_0), torch.norm(torch.Tensor(v_0), dim=-1, keepdim=True)], dim=-1)
         self.x_t = torch.Tensor(x_t)
         self.v_t = torch.Tensor(v_t)
         self.mole_idx = torch.Tensor(mole_idx)
@@ -510,18 +508,23 @@ class MD17DynamicsDataset(MD17Dataset):
 
 
 if __name__ == "__main__":
-    dataset = MD17DynamicsDataset("train", 3000, 50, "data", "aspirin")
     from torch.utils.data import DataLoader
 
-    dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
-    for i, data in enumerate(dataloader):
-        print("x_0 shape:", data["x_0"].shape)  # [batch_size, n_nodes, 3]
-        print("v_0 shape:", data["v_0"].shape)  # [batch_size, n_nodes, 3]
-        print("edge_attr shape:", data["edge_attr"].shape)  # [n_edges, 4]
-        print("mole_idx shape:", data["mole_idx"].shape)  # [n_nodes, 1]
-        print("x_t shape:", data["x_t"].shape)  # [batch_size, n_nodes, ?, 3]
-        print("v_t shape:", data["v_t"].shape)  # [batch_size, n_nodes, ?, 3]
-        print("Z shape:", data["Z"].shape)  # [n_nodes, 1]
+    dataset = MD17DynamicsDataset(
+        partition=DataPartition.train,
+        max_samples=5000,
+        delta_frame=5000,
+        data_dir="data/md17_npz/",
+        split_dir="data/md17_egno_splits/",
+        molecule_type=MoleculeType.aspirin,
+    )
+
+    dataloader: DataLoader[dict[str, torch.Tensor]] = DataLoader(dataset, batch_size=1, shuffle=True)
+    for data in dataloader:
+        for key in data:
+            if key not in ["cfg", "edge_attr"]:
+                print(f"{key}:", data[key].shape)
+
         print("cfg shapes:")
         for key in data["cfg"]:
             print(f"  {key}:", data["cfg"][key].shape)

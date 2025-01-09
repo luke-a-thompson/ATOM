@@ -1,3 +1,5 @@
+Chemical Graph Transformer Neural Operator (CGTNO) is a neural operator for molecular dynamics trained on the MD17 dataset.
+
 Please install with `poetry install --with dev` if you want type checking (i.e., for mypy).
 
 TODO:

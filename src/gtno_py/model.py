@@ -327,7 +327,7 @@ class IMPGTNO(nn.Module):
             case GraphAttentionType.UNIFIED_MHA:
                 self.elements_to_lift = ["concatenated_features", "edge_attr"]
                 in_dims = {
-                    "concatenated_features": 7,
+                    "concatenated_features": 9,
                     "edge_attr": 4,
                 }
                 print("Message passing on concatenated features - Lifting edge_attr, concatenated_features to unified embedding space for graph attention")
@@ -335,7 +335,7 @@ class IMPGTNO(nn.Module):
                 self.elements_to_lift = ["concatenated_features", "x_0", "v_0", "edge_attr"]
                 # We should find a way to infer this from the data
                 in_dims = {
-                    "concatenated_features": 7,
+                    "concatenated_features": 9,
                     "x_0": 4,
                     "v_0": 4,
                     "edge_attr": 4,
