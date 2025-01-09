@@ -4,11 +4,7 @@ import torch.nn as nn
 from enum import Enum
 from gtno_py.modules.activations import FFNActivation, ReLU2, SwiGLU
 from gtno_py.utils import get_context
-import logging
 from tensordict import TensorDict
-
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
-logger = logging.getLogger(__name__)
 
 
 class NormType(str, Enum):
@@ -334,7 +330,7 @@ class IMPGTNO(nn.Module):
                     "concatenated_features": 7,
                     "edge_attr": 4,
                 }
-                logger.info("Message passing on concatenated features - Lifting edge_attr, concatenated_features to unified embedding space for graph attention")
+                print("Message passing on concatenated features - Lifting edge_attr, concatenated_features to unified embedding space for graph attention")
             case GraphAttentionType.SPLIT_MHA:
                 self.elements_to_lift = ["concatenated_features", "x_0", "v_0", "edge_attr"]
                 # We should find a way to infer this from the data
@@ -344,7 +340,7 @@ class IMPGTNO(nn.Module):
                     "v_0": 4,
                     "edge_attr": 4,
                 }
-                logger.info("Message passing on x_0, v_0 - Lifting x_0, v_0, edge_attr, concatenated_features to unified embedding space for graph attention")
+                print("Message passing on x_0, v_0 - Lifting x_0, v_0, edge_attr, concatenated_features to unified embedding space for graph attention")
             case GraphAttentionType.GRIT:
                 raise NotImplementedError("GRITAttention is not implemented")
             case _:
@@ -375,16 +371,6 @@ class IMPGTNO(nn.Module):
         # Batch size, number of nodes, feature dimension
         B, N, _ = batch["x_0"].shape
 
-        # # Duplicate the future timesteps
-        # if "x_0" in batch:
-        #     batch["x_0"] = self._build_duplicate_future_timesteps(batch["x_0"], self.num_timesteps)
-        # if "v_0" in batch:
-        #     batch["v_0"] = self._build_duplicate_future_timesteps(batch["v_0"], self.num_timesteps)
-        # if "concatenated_features" in batch:
-        #     batch["concatenated_features"] = self._build_duplicate_future_timesteps(batch["concatenated_features"], self.num_timesteps)
-        # if "edge_attr" in batch:
-        #     batch["edge_attr"] = self._build_duplicate_future_timesteps(batch["edge_attr"], self.num_timesteps)
-
         batch = self._replicate_tensordict(batch, self.num_timesteps)
 
         # Project this batch feature from its original dimension to `lifting_dim`
@@ -400,53 +386,6 @@ class IMPGTNO(nn.Module):
 
         # 6) Reshape to [B, N, T, 3]
         out = out.view(self.num_timesteps, B, N, 3).permute(1, 2, 0, 3).contiguous()
-        return out
-
-    def _build_duplicate_future_timesteps(self, tensor: torch.Tensor, T: int) -> torch.Tensor:
-        """
-        Replicates (tiles) the batch dimension of a [B, X, feats] tensor T times.
-
-        Specifically, it takes an input tensor of shape [B, X, feats]—where
-        - B is the batch size,
-        - X is typically the number of nodes or edges (depending on dims),
-        - feats is the feature dimension—
-
-        and returns a new tensor of shape [T * B, X, feats] by repeating
-        each batch entry T times along the batch dimension.
-
-        Args:
-            tensor (torch.Tensor): The input tensor to replicate.
-                Must have shape [B, X, feats].
-            T (int): The number of times to replicate the batch dimension.
-            dims (str, optional): A descriptive label indicating what X represents.
-                Typically "node" (if X is the number of nodes) or "edge"
-                (if X is the number of edges). This is only used for
-                logging or debugging purposes; it does not alter the logic.
-
-        Returns:
-            torch.Tensor: A tensor of shape [T * B, X, feats], formed by
-            replicating the original tensor T times along the batch dimension.
-
-        Example:
-            >>> # Suppose 'tensor' has shape [32, 13, 4].
-            >>> # B=32, X=13, feats=4, and we want T=8 timesteps.
-            >>> out = _tile_fn(tensor, T=8, dims="node")
-            >>> # 'out' now has shape [256, 13, 4].
-        """
-        B = tensor.shape[0]
-
-        # 1) Insert a new dimension at index 0 -> [1, B, X, feats]
-        out = tensor.unsqueeze(0)
-
-        # 2) Replicate that dimension T times -> [T, B, X, feats]
-        # Recall: -1 in expand tells torch to infer the size of the dimension
-        out = out.expand(T, -1, -1, -1)
-
-        # 3) Flatten the first two dimensions -> [T*B, X, feats]
-        out = out.reshape(T * B, tensor.shape[1], tensor.shape[2])
-
-        assert out.shape[0] == T * B, f"Output shape must have first dimension of {T * B}. Got {out.shape}"
-
         return out
 
     def _replicate_tensordict(self, batch: TensorDict, T: int) -> TensorDict:

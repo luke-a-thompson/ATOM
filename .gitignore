@@ -5,3 +5,8 @@
 /trained_models
 *.png
 /dist
+
+# Byte-compiled / optimized / DLL files
+*.py[cod]
+__pycache__/
+*.pyc

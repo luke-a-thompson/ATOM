@@ -3,10 +3,9 @@ project_name = "GTNO"
 run_name = "Test"
 
 [training]
-batch_size = 32  # Easier shape for testing
+batch_size = 64
 learning_rate = 0.001
-epochs = 20
-weight_decay = 0.0001
+epochs = 100
 
 [optimizer]
 type = "adamw"
