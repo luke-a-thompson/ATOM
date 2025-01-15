@@ -5,6 +5,7 @@ import os
 from enum import Enum
 from typing import final
 import numpy.typing as npt
+from tensordict import TensorDict
 
 
 @final
@@ -348,8 +349,8 @@ class MD17Dataset:
     def __len__(self):
         return len(self.x_0)
 
-    def get_edges(self, batch_size: int, n_nodes: int) -> list[torch.LongTensor]:
-        edges: list[torch.LongTensor] = [torch.LongTensor(self.edges[0]), torch.LongTensor(self.edges[1])]
+    def get_edges(self, batch_size: int, n_nodes: int) -> tuple[torch.LongTensor, torch.LongTensor]:
+        edges: tuple[torch.LongTensor, torch.LongTensor] = (torch.LongTensor(self.edges[0]), torch.LongTensor(self.edges[1]))
         if batch_size == 1:
             return edges
 
@@ -357,17 +358,56 @@ class MD17Dataset:
         for i in range(batch_size):
             rows.append(edges[0] + n_nodes * i)
             cols.append(edges[1] + n_nodes * i)
-        edges = [torch.cat(rows).long(), torch.cat(cols).long()]
+        edges = (torch.cat(rows).long(), torch.cat(cols).long())
         return edges
 
     @staticmethod
-    def get_cfg(batch_size: int, n_nodes: int, cfg):
-        offset = torch.arange(batch_size) * n_nodes
-        for type in cfg:
-            index = cfg[type]  # [B, n_type, node_per_type]
-            cfg[type] = (index + offset.unsqueeze(-1).unsqueeze(-1).expand_as(index)).reshape(-1, index.shape[-1])
-            if type == "Isolated":
-                cfg[type] = cfg[type].squeeze(-1)
+    def get_cfg(batch_size: int, n_nodes: int, cfg: TensorDict) -> TensorDict:
+        """
+        Expands a molecule's configuration dictionary (cfg) to a batch.
+
+        This function takes a base configuration dictionary `cfg` (defined per molecule)
+        and replicates it for each molecule in a batch, adjusting atom indices to
+        account for the batch structure. It's used to represent structural
+        constraints or groupings (e.g., rigid bodies) within a molecule.
+
+        Args:
+            batch_size (int): The number of molecules in the batch.
+            n_nodes (int): The number of atoms (nodes) per molecule.
+            cfg (TensorDict): A dictionary containing the base configuration
+                for a single molecule. Keys are typically strings like "Stick" or
+                "Isolated", and values are lists of atom index tuples (for "Stick") or
+                lists of atom indices (for "Isolated").
+
+        Returns:
+            TensorDict: A new TensorDict with the expanded configuration. The keys
+            remain the same (e.g., "Stick", "Isolated"), but the values are now
+            modified to reflect the batch structure. Atom indices are offset
+            by `n_nodes` for each molecule in the batch.
+
+        Example:
+            If `cfg` is `{'Stick': [(0, 1), (2, 3)], 'Isolated': [[4]]}` for a single molecule with 5 nodes,
+            and `batch_size` is 2, the function will return:
+            `{'Stick': tensor([[0, 1], [2, 3], [5, 6], [7, 8]]), 'Isolated': tensor([4, 9])}`.
+        """
+
+        # Make sure offset is on the same device as cfg
+        offset = torch.arange(batch_size, device=cfg.device) * n_nodes
+
+        # 'cfg.keys()' returns all fields in this TensorDict, e.g. ["Isolated", "Stick", ...]
+        for bond_type in cfg.keys():
+            # index is now a proper torch.Tensor of shape [B, n_type, node_per_type]
+            index = cfg.get(bond_type)
+
+            # Perform the exact same operations as EGNO
+            index = index + offset.unsqueeze(-1).unsqueeze(-1).expand_as(index)
+
+            if bond_type == "Isolated":
+                index = index.squeeze(-1)
+
+            # Store it back in the tensordict
+            cfg.set(bond_type, index)
+
         return cfg
 
 
