@@ -8,6 +8,7 @@ class FFNActivation(str, Enum):
     RELU = "relu"
     RELU2 = "relu2"
     GELU = "gelu"
+    SILU = "silu"
     SWIGLU = "swiglu"
 
 
