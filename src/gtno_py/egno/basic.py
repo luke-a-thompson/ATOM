@@ -180,9 +180,9 @@ class EGNN(nn.Module):
     def __init__(
         self,
         n_layers: int,
-        in_node_nf: int,
-        in_edge_nf: int,
-        hidden_nf: int,
+        in_node_num_feats: int,
+        in_edge_num_feats: int,
+        hidden_num_feats: int,
         activation: nn.Module = nn.SiLU(),
         device: Literal["cpu", "cuda"] = "cpu",
         with_v: bool = False,
@@ -194,9 +194,9 @@ class EGNN(nn.Module):
         self.layers: nn.ModuleList = nn.ModuleList()
         self.with_v: bool = with_v
         # input feature mapping
-        self.embedding: nn.Linear = nn.Linear(in_node_nf, hidden_nf)
+        self.embedding: nn.Linear = nn.Linear(in_node_num_feats, hidden_num_feats)
         for _ in range(self.n_layers):
-            layer: EGNN_Layer = EGNN_Layer(in_edge_nf, hidden_nf, activation=activation, with_v=with_v, flat=flat, norm=norm)
+            layer: EGNN_Layer = EGNN_Layer(in_edge_num_feats, hidden_num_feats, activation=activation, with_v=with_v, flat=flat, norm=norm)
             self.layers.append(layer)
         self.to(device)
 

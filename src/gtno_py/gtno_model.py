@@ -277,18 +277,18 @@ class IMPGTNOBlock(nn.Module):
         # https://pytorch.org/tensordict/stable/reference/generated/tensordict.TensorDict.html#tensordict.TensorDict.add
         match self.graph_attention:
             case UnifiedInputMHA():
-                graph_attended_nodes = batch["concatenated_features"] + self.graph_attention(batch)["concatenated_features"]  # Residual connection
-                batch["concatenated_features"] = self.ffn(graph_attended_nodes)
+                graph_attended_concat: torch.Tensor = batch["concatenated_features"] + self.graph_attention(batch)["concatenated_features"]  # Residual connection
+                batch["concatenated_features"] = self.ffn(graph_attended_concat)
             case SplitInputMHA():
-                batch["x_0"] = batch["x_0"] + self.graph_attention(batch)["x_0"]  # Residual connection (with normalised - DOUBLE CHECK THIS)
-                batch["v_0"] = batch["v_0"] + self.graph_attention(batch)["v_0"]  # Residual connection
+                graph_attended_pos: torch.Tensor = batch["x_0"] + self.graph_attention(batch)["x_0"]  # Residual connection (with normalised - DOUBLE CHECK THIS)
+                graph_attended_vel: torch.Tensor = batch["v_0"] + self.graph_attention(batch)["v_0"]  # Residual connection
 
-                batch["x_0"] = self.ffn(batch["x_0"])
-                batch["v_0"] = self.ffn(batch["v_0"])
+                batch["x_0"] = self.ffn(graph_attended_pos)
+                batch["v_0"] = self.ffn(graph_attended_vel)
             case _:
                 raise ValueError(f"Invalid graph attention type: {self.graph_attention}, select from one of {GraphAttentionType.__members__.keys()}")
 
-        hetero_attended_nodes = batch["x_0"] + self.heterogenous_attention(batch, q_data=q_data)["x_0"]  # Residual connection
+        hetero_attended_nodes: torch.Tensor = batch["x_0"] + self.heterogenous_attention(batch, q_data=q_data)["x_0"]  # Residual connection
         batch["x_0"] = self.ffn(hetero_attended_nodes)
 
         return batch
@@ -393,7 +393,7 @@ class IMPGTNO(nn.Module):
 
         # 6) Reshape to [B, N, T, 3]
         out = out.view(self.num_timesteps, B, N, 3).permute(1, 2, 0, 3).contiguous()
-        return out
+        return out  # Outputting the positions (x, y, z) for N nodes over T timesteps. Batched.
 
     @staticmethod
     def _initialise_weights(model: nn.Module) -> None:
@@ -402,7 +402,6 @@ class IMPGTNO(nn.Module):
                 _ = nn.init.kaiming_normal_(module.weight, nonlinearity="relu")
                 if module.bias is not None:
                     _ = nn.init.zeros_(module.bias)
-            
 
     def _replicate_tensordict(self, batch: TensorDict, T: int) -> TensorDict:
         """

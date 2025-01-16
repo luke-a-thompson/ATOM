@@ -77,9 +77,9 @@ match config["model"]["model_type"]:
         ).to(device)
     case "egno":  # Default EGNO arguments
         model = EGNO(
-            in_node_nf=2,
-            in_edge_nf=2 + 3,
-            hidden_nf=64,
+            in_node_num_feats=5,
+            in_edge_num_feats=2 + 3,
+            hidden_num_feats=64,
             device="cuda",
             n_layers=5,
             with_v=True,
@@ -114,7 +114,7 @@ match config["scheduler"]["type"]:
 loss_fn = nn.MSELoss()
 
 
-def train_step(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoader[dict[str, torch.Tensor]]) -> float:
+def train_step(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoader[dict[str, torch.Tensor]], dataset: MD17DynamicsDataset) -> float:
     _ = model.train()
     total_loss = 0.0
     for batch in tqdm(dataloader, desc="Training", leave=False):
@@ -128,36 +128,12 @@ def train_step(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoa
             case "gtno":
                 pred_coords: torch.Tensor = model(batch)
             case "egno":
-                # Same per-batch computations as EGNO
-                batch_size = int(batch.batch_size[0])
-                n_nodes = int(batch["x_0"].shape[1])
-
-                # The velocity norm is already the last element of the velocity vector. We concat it with the normalised atomic numbers.
-                z_normalised = batch["Z"] / batch["Z"].max().unsqueeze(-1)
-                nodes: torch.Tensor = torch.cat([batch["v_0"], z_normalised], dim=-1)  # Shape [B, N, 5], 5 = 3 (x, y, z) + 1 (velocity norm) + 1 (normalised atomic number)
-
-                edges: tuple[torch.LongTensor, torch.LongTensor] = dataset_train.get_edges(batch_size, batch["x_0"].shape[1])
-                cfg = dataset_train.get_cfg(batch_size, batch["x_0"].shape[1], batch["cfg"])
-
-                rows, cols = edges[0], edges[1]
-                # loc_dist: we index on the N dimension (dim=1), so we do batch-wise indexing:
-                #   batch["x_0"] has shape [B, N, 3].
-                #   batch["x_0"][:, rows] -> shape [B, E, 3]
-                #   batch["x_0"][:, cols] -> shape [B, E, 3]
-                loc_dist = torch.sum((batch["x_0"][:, rows] - batch["x_0"][:, cols]) ** 2, dim=-1).unsqueeze(-1)  # Shape [batch, n_edges, 1]
-                assert (
-                    loc_dist.shape[1] == batch["edge_attr"].shape[1]
-                ), f"Loc dist must have the same number of edges {loc_dist.shape[1]} as edge attributes {batch['edge_attr'].shape[1]}"
-                edge_attr: torch.Tensor = torch.cat([batch["edge_attr"], loc_dist], dim=2).detach()
-
-                # Replicate the logic from the original code to compute loc_mean:
-                # 1) Take the mean over the node dimension (dim=1), shape => [B, 1, 4]
-                # 2) Repeat for each node => [B, N, 4]
-                # 3) add .view(-1, 4) to reshape => [B*N, 4] as in original EGNO
-                loc_mean: torch.Tensor = batch["x_0"].mean(dim=1, keepdim=True).repeat(1, n_nodes, 1)  # shape [B, 1, 4]  # shape [B, N, 4]
-
-                # To clearly align with the original EGNO, we specify the batch elements to deliver the forward here.
-                pred_coords: torch.Tensor = model(batch["x_0"], nodes, edges, edge_attr, batch["v_0"], loc_mean=loc_mean)
+                # In the original EGNO code, the batch is reshaped and the per-batch computations are done here.
+                # We replicate this as a static method and call it here. It is functionally identical.
+                x_0, nodes, edges, edge_attr, v_0, loc_mean = EGNO.reshape_batch(batch, dataset)
+                pred_coords: torch.Tensor = model(x_0, nodes, edges, edge_attr, v_0, loc_mean=loc_mean)[0]  # Only retrive pred_coord
+                pred_coords = pred_coords.view(batch.batch_size[0], 13, config["model"]["num_timesteps"], 4)
+                pred_coords = pred_coords[:, :, :, :3]  # We dont do MSE on the norm
             case _:
                 raise ValueError(f"Invalid model type: {config['model']['model_type']}")
 
@@ -182,14 +158,25 @@ def train_step(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoa
 
 
 @torch.inference_mode()
-def evaluate_step(model: nn.Module, dataloader: DataLoader[dict[str, torch.Tensor]]) -> float:
+def evaluate_step(model: nn.Module, dataloader: DataLoader[dict[str, torch.Tensor]], dataset: MD17DynamicsDataset) -> float:
     model.eval()
     total_loss = 0.0
     for batch in tqdm(dataloader, desc="Evaluating", leave=False):
         batch = tensordict.from_dict(batch).to(device)
 
         # Get predicted coordinates
-        pred_coords: torch.Tensor = model(batch)
+        match config["model"]["model_type"]:
+            case "gtno":
+                pred_coords: torch.Tensor = model(batch)
+            case "egno":
+                # In the original EGNO code, the batch is reshaped and the per-batch computations are done here.
+                # We replicate this as a static method and call it here. It is functionally identical.
+                x_0, nodes, edges, edge_attr, v_0, loc_mean = EGNO.reshape_batch(batch, dataset_val)
+                pred_coords: torch.Tensor = model(x_0, nodes, edges, edge_attr, v_0, loc_mean=loc_mean)[0]  # Only retrive pred_coord
+                pred_coords = pred_coords.view(batch.batch_size[0], 13, config["model"]["num_timesteps"], 4)
+                pred_coords = pred_coords[:, :, :, :3]  # We dont do MSE on the norm
+            case _:
+                raise ValueError(f"Invalid model type: {config['model']['model_type']}")
 
         # Get target coordinates and reshape to align with predictions
         target_coords: torch.Tensor = batch["x_t"]
@@ -208,8 +195,8 @@ eval_losses: list[float] = []
 num_epochs: int = config["training"]["epochs"]
 date: str = datetime.datetime.now().strftime("%Y%m%d")
 for epoch in range(num_epochs):
-    train_loss = train_step(model, optimizer, loader_train)
-    val_loss = evaluate_step(model, loader_val)
+    train_loss = train_step(model, optimizer, loader_train, dataset_train)
+    val_loss = evaluate_step(model, loader_val, dataset_val)
     eval_losses.append(val_loss)
     print(f"Epoch {epoch+1}/{num_epochs}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}")
 
@@ -223,7 +210,7 @@ model.load_state_dict(torch.load(f"trained_models/best_eval_model_{date}.pth", w
 model.eval()  # Set the model to evaluation mode
 
 # Evaluate on the test set
-test_loss = evaluate_step(model, loader_test)
+test_loss = evaluate_step(model, loader_test, dataset_test)
 torch.save(model.state_dict(), f"trained_models/best_test_model_with_loss_{(test_loss * 1e2):.4f}e-2.pth")
 print(f"Best validation loss: {best_eval_loss:.4f}")
 print(f"Test Loss: {test_loss:.4f}, {(test_loss * 1e2):.4f}x10^-2")
