@@ -31,17 +31,24 @@ class UnifiedInputMHA(nn.Module):
     This may learn some position-velocity dependence across time (i.e., Newton's second law).
     """
 
-    def __init__(self, lifting_dim: int, num_heads: int, batch_first: bool = True) -> None:
+    def __init__(self, lifting_dim: int, num_heads: int, num_timesteps: int, batch_first: bool = True) -> None:
         super().__init__()
 
+        self.num_timesteps = num_timesteps
         self.graph_attention = nn.MultiheadAttention(embed_dim=lifting_dim, num_heads=num_heads, batch_first=batch_first)
 
     @override
     def forward(self, batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
         concatenated_features = batch["concatenated_features"]
 
-        attn_output: torch.Tensor = self.graph_attention(concatenated_features, concatenated_features, concatenated_features)[0]
-        batch["concatenated_features"] = attn_output
+        B_times_T, N, d = concatenated_features.shape
+        B = concatenated_features.shape[0] // self.num_timesteps  # Get the batch size from B*T
+
+        x_over_time = IMPGTNO.flatten_spatiotemporal(concatenated_features, B, N, self.num_timesteps)
+
+        attn_output: torch.Tensor = self.graph_attention(x_over_time, x_over_time, x_over_time)[0]
+
+        batch["concatenated_features"] = IMPGTNO.unflatten_spatiotemporal(attn_output, B, N, self.num_timesteps)
 
         return batch
 
@@ -86,6 +93,7 @@ class GraphHeterogenousCrossAttention(nn.Module):
         num_hetero_feats: int,
         lifting_dim: int,
         num_heads: int,
+        num_timesteps: int,
     ) -> None:
         """
         Heterogenous graph cross attention. We construct separate K/V projections for each heterogeneous feature, then perform cross attention on queries generated from the q_data aka "trunk".
@@ -97,7 +105,7 @@ class GraphHeterogenousCrossAttention(nn.Module):
         self.num_heads = num_heads
         self.num_hetero_feats = num_hetero_feats
         self.lifting_dim = lifting_dim
-
+        self.num_timesteps = num_timesteps
         # Query projection (applied to node embeddings)
         self.query = nn.Linear(lifting_dim, lifting_dim)
 
@@ -105,7 +113,6 @@ class GraphHeterogenousCrossAttention(nn.Module):
         # Each input set gets its own distinct K/V projections
         self.keys = nn.ModuleList([nn.Linear(lifting_dim, lifting_dim) for _ in range(self.num_hetero_feats)])
         self.values = nn.ModuleList([nn.Linear(lifting_dim, lifting_dim) for _ in range(self.num_hetero_feats)])
-
         self.out_proj = nn.Linear(lifting_dim, lifting_dim)
 
     @override
@@ -120,36 +127,37 @@ class GraphHeterogenousCrossAttention(nn.Module):
         Returns:
             The updated batch dictionary with the heterogenous cross attention applied to x_0.
         """
-
-        B, N, D = batch["x_0"].shape
-        # Already lifted at model init (first fwd pass)
-        lifted_nodes: torch.Tensor = batch["x_0"]  # (B, N, C)
-        lifted_edges: torch.Tensor = batch["edge_attr"]  # (B, E, C)
-        # Graph feature shape: [B] -> [B, 1] -> [B, 1, C]
+        # Recall batch["x_0"] has shape [B*T, N, d]
+        B_times_T, N, d = batch["x_0"].shape
+        B = B_times_T // self.num_timesteps  # Get the batch size from B*T
 
         # Lifted nodes
         assert (
-            lifted_nodes.shape[0] == B and lifted_nodes.shape[-1] == self.lifting_dim
-        ), f"{get_context(self)}: Lifted nodes batch size and feature dimension must match. Got {lifted_nodes.shape}"
+            batch["x_0"].shape[-1] == self.lifting_dim and batch["edge_attr"].shape[-1] == self.lifting_dim
+        ), f"{get_context(self)}: Lifted nodes and edge_attr embedding dim must match. Got {batch['x_0'].shape} and {batch['edge_attr'].shape}"
 
-        # Lifted edges
         assert (
-            lifted_edges.shape[0] == B and lifted_edges.shape[-1] == self.lifting_dim
-        ), f"{get_context(self)}: Lifted edges batch size and feature dimension must match. Got {lifted_edges.shape}"
+            batch["x_0"].shape[0] == B * self.num_timesteps and batch["edge_attr"].shape[0] == B * self.num_timesteps
+        ), f"{get_context(self)}: Batch size must match the number of timesteps. Got {batch['x_0'].shape[0]} and {B * self.num_timesteps}"
 
         # Query data
-        assert q_data.shape[0] == B and q_data.shape[-1] == self.lifting_dim, f"{get_context(self)}: Query data batch size and feature dimension must match. Got {q_data.shape}"
+        assert (
+            q_data.shape[0] == B * self.num_timesteps and q_data.shape[-1] == self.lifting_dim
+        ), f"{get_context(self)}: Query data batch size and feature dimension must match. Got {q_data.shape}"
 
         # Put the heterogeneous embeddings into a list to loop over
-        hetero_features: list[torch.Tensor] = [lifted_nodes, lifted_edges]
+        hetero_features: list[torch.Tensor] = [batch["x_0"], batch["edge_attr"]]
         assert (
             len(hetero_features) == self.num_hetero_feats
         ), f"Number of heterogeneous features must match the number of keys/values. Expected {self.num_hetero_feats}, got {len(hetero_features)}"
 
         # 2. Compute Q from nodes only (following your given pattern)
         # We compute the queries from the trunk
-        q: torch.Tensor = self.query(q_data).view(B, N, self.num_heads, self.lifting_dim // self.num_heads).transpose(1, 2)
-        q = q.softmax(dim=-1)
+        q_data = IMPGTNO.flatten_spatiotemporal(q_data, B, N, self.num_timesteps)  # [B*T, N, d] -> [B, T*N, d]
+        q_proj: torch.Tensor = self.query(q_data)  # [B, N*T, d]
+        q: torch.Tensor = q_proj.view(B, self.num_heads, (N * self.num_timesteps), self.lifting_dim // self.num_heads)
+        q: torch.Tensor = q.softmax(dim=-1)  # [B, num_heads, T*N, d_head]
+        out = q
 
         # 3. Perform cross-attention over all heterogeneous inputs
         # Here, hetero_features = [lifted_nodes, lifted_edges, lifted_graph]
@@ -164,11 +172,20 @@ class GraphHeterogenousCrossAttention(nn.Module):
         for i in range(self.num_hetero_feats):
             h_feat = hetero_features[i]
             # Determine the sequence length for this feature type
-            _, T, _ = h_feat.shape
+            B_times_T, N_or_E, d = h_feat.shape
+            T = B_times_T // B
 
-            # We construct a view for each head
-            k: torch.Tensor = self.keys[i](h_feat).view(B, T, self.num_heads, self.lifting_dim // self.num_heads).transpose(1, 2)
-            v: torch.Tensor = self.values[i](h_feat).view(B, T, self.num_heads, self.lifting_dim // self.num_heads).transpose(1, 2)
+            # 1) Flatten to [B, (N_or_E * T), d]
+            h_feat = IMPGTNO.flatten_spatiotemporal(h_feat, B, N_or_E, T)
+
+            # 2) Project K/V to [B, (N_or_E * T), d]
+            k_proj = self.keys[i](h_feat)  # => [B, (N_or_E*T), d]
+            v_proj = self.values[i](h_feat)  # => [B, (N_or_E*T), d]
+
+            # 3) Reshape to multihead dims [B, num_heads, (N_or_E * T), d_head]
+            #    so each head sees the full spatiotemporal dimension
+            k = k_proj.view(B, self.num_heads, (N_or_E * T), self.lifting_dim // self.num_heads)  # k: [B, num_heads, (N_or_E*T), d_head]
+            v = v_proj.view(B, self.num_heads, (N_or_E * T), self.lifting_dim // self.num_heads)  # v: [B, num_heads, (N_or_E*T), d_head]
 
             k = k.softmax(dim=-1)
 
@@ -178,8 +195,9 @@ class GraphHeterogenousCrossAttention(nn.Module):
             out: torch.Tensor = q + (q @ (k.transpose(-2, -1) @ v)) * D_inv
 
         # 4. Project output back - DOUBLE CHECK THIS
-        out = out.transpose(1, 2).contiguous().view(B, N, self.lifting_dim)
+        out = out.transpose(1, 2).contiguous().view(B, N * self.num_timesteps, self.lifting_dim)
         out = self.out_proj(out)
+        out = IMPGTNO.unflatten_spatiotemporal(out, B, N, self.num_timesteps)
 
         batch["x_0"] = out
 
@@ -196,8 +214,11 @@ class IMPGTNOBlock(nn.Module):
         num_heads: int,
         graph_attention_type: GraphAttentionType,
         heterogenous_attention_type: GraphHeterogenousAttentionType,
+        num_timesteps: int,
     ) -> None:
         super().__init__()
+
+        self.num_timesteps = num_timesteps
 
         self.pre_norm: nn.Module
         match norm:
@@ -219,7 +240,7 @@ class IMPGTNOBlock(nn.Module):
             ### Possibly different graphormer-style priors for x_0, v_0, Z
             case GraphAttentionType.UNIFIED_MHA:
                 # Add causal masking
-                self.graph_attention = UnifiedInputMHA(lifting_dim, num_heads, batch_first=True)
+                self.graph_attention = UnifiedInputMHA(lifting_dim, num_heads, self.num_timesteps, batch_first=True)
             case GraphAttentionType.SPLIT_MHA:
                 self.graph_attention = SplitInputMHA(lifting_dim, num_heads, batch_first=True)
             case GraphAttentionType.GRIT:
@@ -253,6 +274,7 @@ class IMPGTNOBlock(nn.Module):
                     num_hetero_feats=2,
                     lifting_dim=lifting_dim,
                     num_heads=num_heads,
+                    num_timesteps=self.num_timesteps,
                 )
             case _:
                 raise ValueError(f"Invalid heterogenous attention type: {heterogenous_attention_type}, select from one of {GraphHeterogenousAttentionType.__members__.keys()}")  # type: ignore
@@ -363,6 +385,7 @@ class IMPGTNO(nn.Module):
                     num_heads,
                     graph_attention_type,
                     heterogenous_attention_type,
+                    num_timesteps,
                 )
                 for _ in range(num_layers)
             ]
@@ -375,11 +398,10 @@ class IMPGTNO(nn.Module):
 
     @override
     def forward(self, batch: TensorDict) -> torch.Tensor:
-        # Batch size, number of nodes, feature dimension
+        # Batch: [Batch, Nodes, 4]
         B, N, _ = batch["x_0"].shape
 
-        batch = self._replicate_tensordict(batch, self.num_timesteps)
-
+        batch = self._replicate_tensordict_BxT(batch, self.num_timesteps)  # [Batch * timesteps, Nodes, 4]
         # Project this batch feature from its original dimension to `lifting_dim`
         # Use the same "key" to pick the lifting layer from `self.lifting_layers` and the corresponding feature from the `batch` dict.
         for key in self.elements_to_lift:
@@ -403,7 +425,8 @@ class IMPGTNO(nn.Module):
                 if module.bias is not None:
                     _ = nn.init.zeros_(module.bias)
 
-    def _replicate_tensordict(self, batch: TensorDict, T: int) -> TensorDict:
+    @staticmethod
+    def _replicate_tensordict_BxT(batch: TensorDict, T: int) -> TensorDict:
         """
         Replicates the entire tensordict along the batch dimension T times.
         Resulting TensorDict has batch_size = [T * B].
@@ -440,3 +463,121 @@ class IMPGTNO(nn.Module):
         out = out.contiguous().view(-1)
 
         return out
+
+    @staticmethod
+    def _replicate_tensordict_B_T(batch: TensorDict, T: int) -> TensorDict:
+        """
+        Replicates the entire tensordict along a new 'time' dimension so the
+        final shape is [B, T], instead of [T * B].
+
+        If batch.batch_size == [B], then out.batch_size == [B, T].
+        """
+        B = batch.batch_size[0]
+        # 1) Insert a time dimension at index 1 => shape [B, 1]
+        out = batch.unsqueeze(1)
+        # 2) Expand that dimension => shape [B, T]
+        out = out.expand(B, T)
+        return out
+
+    @staticmethod
+    def flatten_spatiotemporal(x: torch.Tensor, B: int, N: int, T: int) -> torch.Tensor:
+        """
+        Takes [B*T, N, d] -> reshapes to [B, N*T, d].
+
+        Where:
+            B = batch size
+            N = number of nodes
+            T = number of timesteps
+            d = feature dimension
+        """
+        # 1) Reshape [B*T, N, d] -> [B, T, N, d]
+        x = x.view(B, T, N, -1)
+        # 2) Permute to [B, N*T, d]
+        x = x.permute(0, 2, 1, 3).contiguous().view(B, N * T, -1)
+        return x
+
+    @staticmethod
+    def unflatten_spatiotemporal(x: torch.Tensor, B: int, N: int, T: int) -> torch.Tensor:
+        """
+        Takes [B, N*T, d] -> reshapes back to [B*T, N, d].
+
+        Where:
+            B = batch size
+            N = number of nodes
+            T = number of timesteps
+            d = feature dimension
+        """
+        # 1) Reshape to [B, N, T, d]
+        x = x.view(B, N, T, -1)
+        # 2) Permute to [B, T, N, d] -> flatten to [B*T, N, d]
+        x = x.permute(0, 2, 1, 3).contiguous().view(B * T, N, -1)
+        return x
+
+
+import math
+
+
+def rope_rotation(x: torch.Tensor, times: torch.Tensor, base: float = 10000.0) -> torch.Tensor:
+    """
+    Applies Rotary Positional Encoding (RoPE) to x, using 'times' as absolute
+    time indices. This ensures uniqueness across the entire dataset.
+
+    x: [B, T, num_heads, head_dim]
+    times: [T] (absolute dataset time indices, e.g. [234, 235, ..., 241])
+    base: base for frequency scaling
+    """
+    B, T, H, d = x.shape
+    half_d = d // 2
+    # Frequencies (standard RoPE approach: freq_i = base^(-2i/d))
+    freq_seq = torch.arange(half_d, device=x.device, dtype=x.dtype)
+    freqs = torch.exp(-math.log(base) * (2 * freq_seq / d))  # [half_d]
+
+    # Angles: [T, half_d]
+    angles = times.unsqueeze(-1).float() * freqs.unsqueeze(0)
+
+    sin = torch.sin(angles)  # [T, half_d]
+    cos = torch.cos(angles)  # [T, half_d]
+
+    # Broadcast sin, cos to [B, T, H, half_d]
+    sin = sin.unsqueeze(0).unsqueeze(2).expand(B, T, H, half_d)
+    cos = cos.unsqueeze(0).unsqueeze(2).expand(B, T, H, half_d)
+
+    x1, x2 = x[..., :half_d], x[..., half_d:]  # Split into halves
+    x_rot = torch.cat([x1 * cos - x2 * sin, x1 * sin + x2 * cos], dim=-1)
+    return x_rot
+
+
+class RoPEMultiheadAttention(nn.MultiheadAttention):
+    """
+    A simple multi-head attention with RoPE for Q,K projections, using *global*
+    absolute time indices.
+    """
+
+    def __init__(self, embed_dim, num_heads, batch_first=True):
+        super().__init__(embed_dim, num_heads, batch_first=batch_first)
+
+    def forward(self, query, key, value, times: torch.Tensor, **kwargs):
+        """
+        Expects:
+          query, key, value: [B, T, embed_dim]
+          times: [T] (absolute times)
+        """
+        B, T, _ = query.shape
+        # 1) Project Q,K,V
+        q, k, v = self.in_proj_qkv(query)
+
+        # 2) Reshape Q,K to [B, T, num_heads, head_dim]
+        q = q.view(B, T, self.num_heads, self.head_dim)
+        k = k.view(B, T, self.num_heads, self.head_dim)
+
+        # 3) Apply global RoPE rotation
+        q = rope_rotation(q, times)  # pass absolute times
+        k = rope_rotation(k, times)
+
+        # 4) Flatten back to [B, T, embed_dim]
+        q = q.view(B, T, self.embed_dim)
+        k = k.view(B, T, self.embed_dim)
+
+        # 5) Forward to standard dot-product attention
+        attn_output, attn_weights = super().forward(q, k, value, **kwargs)
+        return attn_output, attn_weights

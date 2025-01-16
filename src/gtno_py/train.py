@@ -108,25 +108,27 @@ scheduler: optim.lr_scheduler.LRScheduler
 match config["scheduler"]["type"]:
     case "step":
         scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=config["scheduler"]["step_size"], gamma=config["scheduler"]["gamma"])
+    case "cosine":
+        scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=config["scheduler"]["step_size"], eta_min=config["scheduler"]["gamma"])
     case _:
         raise ValueError(f"Invalid scheduler: {config['scheduler']['type']}")
 
-loss_fn = nn.MSELoss()
+loss_fn = nn.MSELoss(reduction="none")
 
 
 def train_step(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoader[dict[str, torch.Tensor]], dataset: MD17DynamicsDataset) -> float:
     _ = model.train()
     total_loss = 0.0
+    res = {"epoch": epoch, "loss": 0, "counter": 0}
     for batch in tqdm(dataloader, desc="Training", leave=False):
         batch = tensordict.from_dict(batch).to(device)
         x_t: torch.Tensor = batch.pop("x_t")  # Pop them out to avoid tiling in the model
-
         optimizer.zero_grad()
 
         # Get predicted coordinates
         match config["model"]["model_type"]:
             case "gtno":
-                pred_coords: torch.Tensor = model(batch)
+                pred_coords: torch.Tensor = model(batch).reshape(-1, 3)
             case "egno":
                 # In the original EGNO code, the batch is reshaped and the per-batch computations are done here.
                 # We replicate this as a static method and call it here. It is functionally identical.
@@ -134,11 +136,12 @@ def train_step(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoa
                 pred_coords: torch.Tensor = model(x_0, nodes, edges, edge_attr, v_0, loc_mean=loc_mean)[0]  # Only retrive pred_coord
                 pred_coords = pred_coords.view(batch.batch_size[0], 13, config["model"]["num_timesteps"], 4)
                 pred_coords = pred_coords[:, :, :, :3]  # We dont do MSE on the norm
+                pred_coords = pred_coords.reshape(-1, 3)
             case _:
                 raise ValueError(f"Invalid model type: {config['model']['model_type']}")
 
         # Get target coordinates and reshape to align with predictions
-        target_coords: torch.Tensor = x_t
+        target_coords: torch.Tensor = x_t.reshape(-1, 3)
         assert pred_coords.shape == target_coords.shape, f"Predicted and target coordinates must have the same shape. Got {pred_coords.shape} and {target_coords.shape}"
 
         assert pred_coords.shape[-1] == target_coords.shape[-1], f"Predicted and target coordinates must have the same shape. Got {pred_coords.shape} and {target_coords.shape}"
@@ -146,28 +149,38 @@ def train_step(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoa
         assert target_coords.shape[-1] == 3, f"Predicted and target coordinates must have the last dimension of 3 (x, y, z). Got {target_coords.shape}"
 
         # Calculate MSE loss
-        loss: torch.Tensor = loss_fn(pred_coords, target_coords)
+        losses = loss_fn(pred_coords, target_coords).view(config["model"]["num_timesteps"], batch.batch_size[0] * 13, 3)
+        losses: torch.Tensor = torch.mean(losses, dim=(1, 2))
+        loss = torch.mean(losses)
+        res["loss"] += losses[-1].item() * batch.batch_size[0]
+        res["counter"] += batch.batch_size[0]
+
+        # loss: torch.Tensor = loss_fn(pred_coords, target_coords)
 
         loss.backward()
         # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=config["training"]["max_grad_norm"])
         optimizer.step()
-        total_loss += loss.item()
+        # total_loss += loss.item()
 
-    avg_loss = total_loss / len(dataloader)
-    return avg_loss
+    # avg_loss = total_loss / len(dataloader)
+    # return avg_loss
+    return res["loss"] / res["counter"]
 
 
 @torch.inference_mode()
 def evaluate_step(model: nn.Module, dataloader: DataLoader[dict[str, torch.Tensor]], dataset: MD17DynamicsDataset) -> float:
     model.eval()
     total_loss = 0.0
+    res = {"epoch": epoch, "loss": 0, "counter": 0}
+
     for batch in tqdm(dataloader, desc="Evaluating", leave=False):
         batch = tensordict.from_dict(batch).to(device)
+        x_t: torch.Tensor = batch.pop("x_t")  # Pop them out to avoid tiling in the model
 
         # Get predicted coordinates
         match config["model"]["model_type"]:
             case "gtno":
-                pred_coords: torch.Tensor = model(batch)
+                pred_coords: torch.Tensor = model(batch).reshape(-1, 3)
             case "egno":
                 # In the original EGNO code, the batch is reshaped and the per-batch computations are done here.
                 # We replicate this as a static method and call it here. It is functionally identical.
@@ -175,19 +188,25 @@ def evaluate_step(model: nn.Module, dataloader: DataLoader[dict[str, torch.Tenso
                 pred_coords: torch.Tensor = model(x_0, nodes, edges, edge_attr, v_0, loc_mean=loc_mean)[0]  # Only retrive pred_coord
                 pred_coords = pred_coords.view(batch.batch_size[0], 13, config["model"]["num_timesteps"], 4)
                 pred_coords = pred_coords[:, :, :, :3]  # We dont do MSE on the norm
+                pred_coords = pred_coords.reshape(-1, 3)
             case _:
                 raise ValueError(f"Invalid model type: {config['model']['model_type']}")
 
         # Get target coordinates and reshape to align with predictions
-        target_coords: torch.Tensor = batch["x_t"]
+        target_coords: torch.Tensor = x_t.reshape(-1, 3)
 
         # Calculate MSE loss
-        loss: torch.Tensor = loss_fn(pred_coords, target_coords)
+        losses = loss_fn(pred_coords, target_coords).view(config["model"]["num_timesteps"], batch.batch_size[0] * 13, 3)
+        losses: torch.Tensor = torch.mean(losses, dim=(1, 2))
+        loss = torch.mean(losses)
+        res["loss"] += losses[-1].item() * batch.batch_size[0]
+        res["counter"] += batch.batch_size[0]
 
         total_loss += loss.item()
 
-    avg_loss = total_loss / len(dataloader)
-    return avg_loss
+    # avg_loss = total_loss / len(dataloader)
+    # return avg_loss
+    return res["loss"] / res["counter"]
 
 
 best_eval_loss: float = float("inf")
