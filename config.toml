@@ -5,7 +5,7 @@ run_name = "Test"
 [training]
 seed = 42
 batch_size = 100
-epochs = 100
+epochs = 500
 max_grad_norm = 1.0
 
 [optimizer]

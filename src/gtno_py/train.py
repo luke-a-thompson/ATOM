@@ -4,11 +4,11 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from gtno_py.dataloaders.egno_dataloder import MD17DynamicsDataset, MoleculeType, DataPartition
-from gtno_py.modules.activations import FFNActivation
+from gtno_py.gtno.activations import FFNActivation
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 import tomllib
-from gtno_py.gtno_model import IMPGTNO, GraphAttentionType, GraphHeterogenousAttentionType, NormType
+from gtno_py.gtno.gtno_model import IMPGTNO, GraphAttentionType, GraphHeterogenousAttentionType, NormType
 from gtno_py.egno.egno_model import EGNO
 
 with open("config.toml", "rb") as file:
@@ -134,13 +134,14 @@ def train_step(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoa
                 pred_coords = model(batch)
                 pred_coords: torch.Tensor = pred_coords.reshape(-1, 3)
             case "egno":
+                raise NotImplementedError("EGNO not implemented")
                 # In the original EGNO code, the batch is reshaped and the per-batch computations are done here.
                 # We replicate this as a static method and call it here. It is functionally identical.
-                x_0, nodes, edges, edge_attr, v_0, loc_mean = EGNO.reshape_batch(batch, dataset)
-                pred_coords: torch.Tensor = model(x_0, nodes, edges, edge_attr, v_0, loc_mean=loc_mean)[0]  # Only retrive pred_coord
-                pred_coords = pred_coords.view(batch.batch_size[0], 13, config["model"]["num_timesteps"], 4)
-                pred_coords = pred_coords[:, :, :, :3]  # We dont do MSE on the norm
-                pred_coords = pred_coords.reshape(-1, 3)
+                # x_0, nodes, edges, edge_attr, v_0, loc_mean = EGNO.reshape_batch(batch, dataset)
+                # pred_coords: torch.Tensor = model(x_0, nodes, edges, edge_attr, v_0, loc_mean=loc_mean)[0]  # Only retrive pred_coord
+                # pred_coords = pred_coords.view(batch.batch_size[0], 13, config["model"]["num_timesteps"], 4)
+                # pred_coords = pred_coords[:, :, :, :3]  # We dont do MSE on the norm
+                # pred_coords = pred_coords.reshape(-1, 3)
             case _:
                 raise ValueError(f"Invalid model type: {config['model']['model_type']}")
 
