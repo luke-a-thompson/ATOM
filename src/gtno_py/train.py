@@ -32,7 +32,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 dataset_train = MD17DynamicsDataset(
     partition=DataPartition.train,
-    max_samples=5000,
+    max_samples=500,
     delta_frame=5000,
     num_timesteps=config["model"]["num_timesteps"],
     data_dir="data/md17_npz/",
@@ -67,8 +67,8 @@ match config["model"]["model_type"]:
     case "gtno":
         model = IMPGTNO(
             lifting_dim=config["model"]["lifting_dim"],
-            norm=NormType.RMS,
-            activation=FFNActivation.RELU,
+            norm=NormType.LAYER,
+            activation=FFNActivation.SILU,
             num_layers=config["model"]["num_layers"],
             num_heads=config["model"]["num_heads"],
             graph_attention_type=GraphAttentionType.UNIFIED_MHA,
@@ -109,7 +109,9 @@ match config["scheduler"]["type"]:
     case "step":
         scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=config["scheduler"]["step_size"], gamma=config["scheduler"]["gamma"])
     case "cosine":
-        scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=config["scheduler"]["step_size"], eta_min=config["scheduler"]["gamma"])
+        scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=config["training"]["epochs"])
+    case "cosine_warmup":
+        scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=10, T_mult=2)
     case _:
         raise ValueError(f"Invalid scheduler: {config['scheduler']['type']}")
 
@@ -126,9 +128,11 @@ def train_step(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoa
         optimizer.zero_grad()
 
         # Get predicted coordinates
+        pred_coords: torch.Tensor
         match config["model"]["model_type"]:
             case "gtno":
-                pred_coords: torch.Tensor = model(batch).reshape(-1, 3)
+                pred_coords = model(batch)
+                pred_coords: torch.Tensor = pred_coords.reshape(-1, 3)
             case "egno":
                 # In the original EGNO code, the batch is reshaped and the per-batch computations are done here.
                 # We replicate this as a static method and call it here. It is functionally identical.

@@ -118,7 +118,7 @@ class GraphHeterogenousCrossAttention(nn.Module):
     @override
     def forward(self, batch: dict[str, torch.Tensor], q_data: torch.Tensor) -> dict[str, torch.Tensor]:
         """
-        This is the heterogenous cross attention.
+        This is the heterogenous cross attention. We generate queries from the trunk data (nodes * timesteps) and perform cross attention by generating KV from the heterogeneous features.
 
         Parameters:
             batch: The batch dictionary containing the node features, edge features, graph features, etc.
@@ -131,7 +131,6 @@ class GraphHeterogenousCrossAttention(nn.Module):
         B_times_T, N, d = batch["x_0"].shape
         B = B_times_T // self.num_timesteps  # Get the batch size from B*T
 
-        # Lifted nodes
         assert (
             batch["x_0"].shape[-1] == self.lifting_dim and batch["edge_attr"].shape[-1] == self.lifting_dim
         ), f"{get_context(self)}: Lifted nodes and edge_attr embedding dim must match. Got {batch['x_0'].shape} and {batch['edge_attr'].shape}"
@@ -179,8 +178,8 @@ class GraphHeterogenousCrossAttention(nn.Module):
             h_feat = IMPGTNO.flatten_spatiotemporal(h_feat, B, N_or_E, T)
 
             # 2) Project K/V to [B, (N_or_E * T), d]
-            k_proj = self.keys[i](h_feat)  # => [B, (N_or_E*T), d]
-            v_proj = self.values[i](h_feat)  # => [B, (N_or_E*T), d]
+            k_proj: torch.Tensor = self.keys[i](h_feat)  # => [B, (N_or_E*T), d]
+            v_proj: torch.Tensor = self.values[i](h_feat)  # => [B, (N_or_E*T), d]
 
             # 3) Reshape to multihead dims [B, num_heads, (N_or_E * T), d_head]
             #    so each head sees the full spatiotemporal dimension
@@ -256,6 +255,8 @@ class IMPGTNOBlock(nn.Module):
                 activation_fn = ReLU2()
             case FFNActivation.GELU:
                 activation_fn = nn.GELU()
+            case FFNActivation.SILU:
+                activation_fn = nn.SiLU()
             case FFNActivation.SWIGLU:
                 activation_fn = SwiGLU()
             case _:
@@ -454,7 +455,7 @@ class IMPGTNO(nn.Module):
         new_shape = (T, B)  # We'll reshape to [T * B] eventually.
 
         # 1) Insert a new dimension at index 0 -> shape = [1, B].
-        out = batch.unsqueeze(0)
+        out: torch.Tensor = batch.unsqueeze(0)
 
         # 2) Expand along that new dimension T times -> shape = [T, B].
         out = out.expand(*new_shape)
@@ -462,21 +463,6 @@ class IMPGTNO(nn.Module):
         # 3) Make memory contiguous, then flatten the first two dims -> [T * B].
         out = out.contiguous().view(-1)
 
-        return out
-
-    @staticmethod
-    def _replicate_tensordict_B_T(batch: TensorDict, T: int) -> TensorDict:
-        """
-        Replicates the entire tensordict along a new 'time' dimension so the
-        final shape is [B, T], instead of [T * B].
-
-        If batch.batch_size == [B], then out.batch_size == [B, T].
-        """
-        B = batch.batch_size[0]
-        # 1) Insert a time dimension at index 1 => shape [B, 1]
-        out = batch.unsqueeze(1)
-        # 2) Expand that dimension => shape [B, T]
-        out = out.expand(B, T)
         return out
 
     @staticmethod

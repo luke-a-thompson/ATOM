@@ -1,9 +1,10 @@
 import numpy as np
 import torch
 import pickle as pkl
+from torch.utils.data import Dataset
 import os
 from enum import Enum
-from typing import final
+from typing import final, override
 import numpy.typing as npt
 from tensordict import TensorDict
 
@@ -27,7 +28,7 @@ class MoleculeType(str, Enum):
     uracil = "uracil"
 
 
-class MD17Dataset:
+class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
     """
     MD17 Dataset
 
@@ -295,6 +296,7 @@ class MD17Dataset:
 
         return cfg
 
+    @override
     def __getitem__(self, i) -> dict[str, torch.Tensor]:
 
         cfg = self.cfg
