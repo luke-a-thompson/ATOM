@@ -10,7 +10,7 @@ max_grad_norm = 1.0
 
 [optimizer]
 type = "adamw"
-learning_rate = 1e-3
+learning_rate = 1e-4
 weight_decay = 1e-5
 adam_betas = [0.9, 0.999]
 
