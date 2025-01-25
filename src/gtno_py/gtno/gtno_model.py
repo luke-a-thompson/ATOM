@@ -20,8 +20,7 @@ class GraphAttentionType(str, Enum):
 
 
 class GraphHeterogenousAttentionType(str, Enum):
-    GHCNA = "G-HNCA"
-    QHCA = "Q-HCA"
+    GHCA = "G-HCA"
 
 
 @final
@@ -91,7 +90,7 @@ class IMPGTNOBlock(nn.Module):
 
         self.heterogenous_attention: nn.Module
         match heterogenous_attention_type:
-            case GraphHeterogenousAttentionType.GHCNA:
+            case GraphHeterogenousAttentionType.GHCA:
                 self.heterogenous_attention = QuadraticHeterogenousCrossAttention(
                     num_hetero_feats=4,
                     lifting_dim=lifting_dim,
@@ -170,7 +169,7 @@ class IMPGTNO(nn.Module):
                     "concatenated_features": 9,
                     "x_0": 4,
                     "v_0": 4,
-                    "edge_attr": 4,
+                    "edge_attr": 5,
                 }
                 print("Message passing on concatenated features: x_0 (position) || v_0 (velocity) || edge_attr (bonds)")
             case GraphAttentionType.SPLIT_MHA:
@@ -180,7 +179,7 @@ class IMPGTNO(nn.Module):
                     "concatenated_features": 9,
                     "x_0": 4,
                     "v_0": 4,
-                    "edge_attr": 4,
+                    "edge_attr": 5,
                 }
                 print("Message passing on each graph feature: x_0 (position), v_0 (velocity)")
             case GraphAttentionType.GRIT:
@@ -278,72 +277,3 @@ class IMPGTNO(nn.Module):
         out = out.contiguous().view(-1)
 
         return out
-
-
-# import math
-
-
-# def rope_rotation(x: torch.Tensor, times: torch.Tensor, base: float = 10000.0) -> torch.Tensor:
-#     """
-#     Applies Rotary Positional Encoding (RoPE) to x, using 'times' as absolute
-#     time indices. This ensures uniqueness across the entire dataset.
-
-#     x: [B, T, num_heads, head_dim]
-#     times: [T] (absolute dataset time indices, e.g. [234, 235, ..., 241])
-#     base: base for frequency scaling
-#     """
-#     B, T, H, d = x.shape
-#     half_d = d // 2
-#     # Frequencies (standard RoPE approach: freq_i = base^(-2i/d))
-#     freq_seq = torch.arange(half_d, device=x.device, dtype=x.dtype)
-#     freqs = torch.exp(-math.log(base) * (2 * freq_seq / d))  # [half_d]
-
-#     # Angles: [T, half_d]
-#     angles = times.unsqueeze(-1).float() * freqs.unsqueeze(0)
-
-#     sin = torch.sin(angles)  # [T, half_d]
-#     cos = torch.cos(angles)  # [T, half_d]
-
-#     # Broadcast sin, cos to [B, T, H, half_d]
-#     sin = sin.unsqueeze(0).unsqueeze(2).expand(B, T, H, half_d)
-#     cos = cos.unsqueeze(0).unsqueeze(2).expand(B, T, H, half_d)
-
-#     x1, x2 = x[..., :half_d], x[..., half_d:]  # Split into halves
-#     x_rot = torch.cat([x1 * cos - x2 * sin, x1 * sin + x2 * cos], dim=-1)
-#     return x_rot
-
-
-# class RoPEMultiheadAttention(nn.MultiheadAttention):
-#     """
-#     A simple multi-head attention with RoPE for Q,K projections, using *global*
-#     absolute time indices.
-#     """
-
-#     def __init__(self, embed_dim, num_heads, batch_first=True):
-#         super().__init__(embed_dim, num_heads, batch_first=batch_first)
-
-#     def forward(self, query, key, value, times: torch.Tensor, **kwargs):
-#         """
-#         Expects:
-#           query, key, value: [B, T, embed_dim]
-#           times: [T] (absolute times)
-#         """
-#         B, T, _ = query.shape
-#         # 1) Project Q,K,V
-#         q, k, v = self.in_proj_qkv(query)
-
-#         # 2) Reshape Q,K to [B, T, num_heads, head_dim]
-#         q = q.view(B, T, self.num_heads, self.head_dim)
-#         k = k.view(B, T, self.num_heads, self.head_dim)
-
-#         # 3) Apply global RoPE rotation
-#         q = rope_rotation(q, times)  # pass absolute times
-#         k = rope_rotation(k, times)
-
-#         # 4) Flatten back to [B, T, embed_dim]
-#         q = q.view(B, T, self.embed_dim)
-#         k = k.view(B, T, self.embed_dim)
-
-#         # 5) Forward to standard dot-product attention
-#         attn_output, attn_weights = super().forward(q, k, value, **kwargs)
-#         return attn_output, attn_weights

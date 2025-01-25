@@ -72,7 +72,7 @@ match config["model"]["model_type"]:
             num_layers=config["model"]["num_layers"],
             num_heads=config["model"]["num_heads"],
             graph_attention_type=GraphAttentionType.SPLIT_MHA,
-            heterogenous_attention_type=GraphHeterogenousAttentionType.GHCNA,
+            heterogenous_attention_type=GraphHeterogenousAttentionType.GHCA,
             num_timesteps=config["model"]["num_timesteps"],
         ).to(device)
     case "egno":  # Default EGNO arguments
@@ -119,7 +119,6 @@ match config["scheduler"]["type"]:
 
 loss_fn = nn.MSELoss(reduction="none")
 
-
 def train_step(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoader[dict[str, torch.Tensor]], dataset: MD17DynamicsDataset) -> float:
     _ = model.train()
     total_loss = 0.0
@@ -165,7 +164,7 @@ def train_step(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoa
         # loss: torch.Tensor = loss_fn(pred_coords, target_coords)
 
         loss.backward()
-        # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=config["training"]["max_grad_norm"])
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=config["training"]["max_grad_norm"])
         optimizer.step()
         # total_loss += loss.item()
 

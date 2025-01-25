@@ -45,6 +45,8 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         train_par: float = 0.1,
         val_par: float = 0.05,
         test_par: float = 0.05,
+        seed: int = 100,
+        force_regenerate: bool = False,
     ):
         """
         Args:
@@ -103,22 +105,19 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         v = v[:, z > 1, ...]
         z = z[z > 1]
 
-        x_0, v_0 = x[split_times], v[split_times]
+        x_0, v_0 = x[split_times], v[split_times]  # Initial timesteps
         # We want to load the next frame, so we add delta_frame to the split_times
-        x_t, v_t = x[split_times + delta_frame], v[split_times + delta_frame]
+        x_t, v_t = x[split_times + delta_frame], v[split_times + delta_frame]  # Target timesteps
 
         print("Got {:d} samples!".format(x_0.shape[0]))
 
         mole_idx = z
         n_node = mole_idx.shape[0]
-        self.n_node = n_node
+        self.n_node: int = n_node
 
         # Build edges
-        atom_edges, atom_edges2 = self._compute_edges(x=x, z=z)
-        self.atom_edge = atom_edges
-        self.atom_edge2 = atom_edges2
-
-        edge_attr, edges = self._build_edge_attributes(atom_edges=atom_edges, atom_edges2=atom_edges2, mole_idx=mole_idx)
+        one_hop_adjacency, two_hop_adjacency = self._compute_adjacency_matrix(x, n_node)
+        edge_attr, edges = self._build_edge_attributes(one_hop_adjacency, two_hop_adjacency, mole_idx, x_0, v_0)
         self.edge_attr = edge_attr
         self.edges = edges
 
@@ -138,7 +137,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         self.cfg = self.sample_cfg()
 
     def _get_or_generate_split(
-        self, split_dir: str, x: npt.NDArray[np.float64], train_par: float, val_par: float, test_par: float
+        self, split_dir: str, x: npt.NDArray[np.float64], train_par: float, val_par: float, test_par: float, force_regenerate: bool = False, seed: int = 100
     ) -> tuple[npt.NDArray[np.int_], npt.NDArray[np.int_], npt.NDArray[np.int_]]:
         """
         Load the train/val/test split from split_dir if it exists; otherwise generate it.
@@ -146,12 +145,16 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
             A tuple (train_idx, val_idx, test_idx) of arrays containing split indices.
         """
         try:
+            if force_regenerate:
+                raise FileNotFoundError("Force regeneration of dataset")
+
             with open(split_dir, "rb") as f:
                 print("Got Split!")
                 split: tuple[npt.NDArray[np.int_], npt.NDArray[np.int_], npt.NDArray[np.int_]] = pkl.load(f)
-        except Exception as e:
-            print(f"Error loading split file: {e}")
-            np.random.seed(100)
+
+        except FileNotFoundError as e:
+            print(f"Error loading split file: {e}, regenerating split")
+            np.random.seed(seed)
 
             _x = x[10000:-10000]
 
@@ -178,50 +181,68 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
 
         return split
 
-    def _compute_edges(self, x: npt.NDArray[np.float64], z: npt.NDArray[np.int_], threshold: float = 1.6) -> tuple[torch.Tensor, torch.Tensor]:
+    def _compute_adjacency_matrix(self, x: npt.NDArray[np.float64], num_atoms: int, threshold: float = 1.6) -> tuple[torch.Tensor, torch.Tensor]:
         """
-        Computes adjacency (atom_edges) and squared adjacency (atom_edges2) matrices
-        based on inter-atomic distances at the first frame.
+        Computes node x node adjacency matrix (one_hop_edges) and squared adjacency (two_hop_edges) matrices based on inter-atomic distances at the first frame.
+
+        One-hop edges is all edges that are within the threshold distance.
+        Two-hop edges is all edges that are within 2 hops of each other.
         """
 
         def d(_i: int, _j: int, _t: int) -> float:
             return np.sqrt(np.sum((x[_t][_i] - x[_t][_j]) ** 2))
 
-        n = z.shape[0]
-        atom_edges = torch.zeros(n, n).int()
-        for i in range(n):
-            for j in range(n):
+        one_hop_edges = torch.zeros(num_atoms, num_atoms).int()
+        for i in range(num_atoms):
+            for j in range(num_atoms):
                 if i != j:
                     _d = d(i, j, 0)
                     if _d < threshold:
-                        atom_edges[i][j] = 1
+                        one_hop_edges[i][j] = 1
 
-        atom_edges2 = atom_edges @ atom_edges
-        return atom_edges, atom_edges2
+        two_hop_edges = (one_hop_edges @ one_hop_edges).clamp(max=1)  # Matrix-square for 2-hop edges
+        assert (
+            one_hop_edges.shape == two_hop_edges.shape == (num_atoms, num_atoms)
+        ), f"one_hop_edges.shape: {one_hop_edges.shape}, two_hop_edges.shape: {two_hop_edges.shape}, num_atoms: {num_atoms}"
+        return one_hop_edges, two_hop_edges
 
-    def _build_edge_attributes(self, atom_edges: torch.Tensor, atom_edges2: torch.Tensor, mole_idx: npt.NDArray[np.int_]) -> tuple[torch.Tensor, list[list[int]]]:
+    def _build_edge_attributes(
+        self, one_hop_adjacency: torch.Tensor, two_hop_adjacency: torch.Tensor, mole_idx: npt.NDArray[np.int_], x_0: npt.NDArray[np.float64], v_0: npt.NDArray[np.float64]
+    ) -> tuple[torch.Tensor, list[list[int]]]:
         """
-        Build edge_attr (torch.Tensor) and edges (list) based on atom_edges and atom_edges2.
-        The edge_attr array stores [atom_type1, atom_type2, path_distance].
+        Build edge_attr (torch.Tensor) and edges (list) based on atom_edges and atom_edges2. The edge_attr array stores [atom_type1, atom_type2, path_distance].
+
         The edges list has two sublists [rows, cols] for edges.
         """
-
         n_node = mole_idx.shape[0]
         edge_attr = []
-        rows, cols = [], []
+        rows: list[int] = []
+        cols: list[int] = []
+
+        assert len(x_0.shape) == len(v_0.shape) == 3, f"Expected the full shape of x_0 and v_0 to be [n_frames, n_nodes, 3], but got x_0.shape: {x_0.shape}, v_0.shape: {v_0.shape}"
+        x_0_frame_one: npt.NDArray[np.float64] = x_0[0]
+        v_0_frame_one: npt.NDArray[np.float64] = v_0[0]
+
+        # Loop through all node pairs (i, j), without self-loops
         for i in range(n_node):
             for j in range(n_node):
                 if i != j:
-                    if atom_edges[i][j]:
+                    inter_atomic_dist = np.linalg.norm(x_0_frame_one[i] - x_0_frame_one[j])
+                    # The below feature worsens performance considerably
+                    # cosine_vel_similarity = torch.nn.functional.cosine_similarity(v_0_frame_one[i], v_0_frame_one[j], dim=0).item()
+
+                    # One-hop edges
+                    if one_hop_adjacency[i][j]:
                         rows.append(i)
                         cols.append(j)
-                        edge_attr.append([mole_idx[i], mole_idx[j], 1])
-                        assert not atom_edges2[i][j]
-                    if atom_edges2[i][j]:
+                        edge_attr.append([mole_idx[i], mole_idx[j], 1, inter_atomic_dist])
+                        assert not two_hop_adjacency[i][j]
+                    # Two-hop edges
+                    if two_hop_adjacency[i][j]:
                         rows.append(i)
                         cols.append(j)
-                        edge_attr.append([mole_idx[i], mole_idx[j], 2])
-                        assert not atom_edges[i][j]
+                        edge_attr.append([mole_idx[i], mole_idx[j], 2, inter_atomic_dist])
+                        assert not one_hop_adjacency[i][j]
 
         edges = [rows, cols]
         edge_attr_tensor = torch.Tensor(np.array(edge_attr))
@@ -330,8 +351,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
             "x_0": self.x_0[i],
             # 'v_0': [n_nodes, 4]: 3D velocity (vx,vy,vz, norm(v)) in starting frame.
             "v_0": self.v_0[i],
-            # 'edge_attr': [n_edges, 4]: edge attributes.
-            # [atom type 1, atom type 2, path distance (1 or 2), stick indicator].
+            # 'edge_attr': [n_edges, 4]: atom type 1, atom type 2, path distance (1 or 2), stick indicator.
             "edge_attr": edge_attr,
             # 'mole_idx': [n_nodes, 1]: molecule ID for each atom.
             "mole_idx": self.mole_idx.unsqueeze(-1),
@@ -433,6 +453,8 @@ class MD17DynamicsDataset(MD17Dataset):
         val_par: float = 0.05,
         test_par: float = 0.05,
         num_timesteps: int = 8,
+        seed: int = 100,
+        force_regenerate: bool = False,
     ):
         # First call the parent constructor so we inherit shared logic
         super().__init__(
@@ -445,6 +467,8 @@ class MD17DynamicsDataset(MD17Dataset):
             train_par=train_par,
             val_par=val_par,
             test_par=test_par,
+            seed=seed,
+            force_regenerate=force_regenerate,
         )
 
         # setup a split, tentative setting
@@ -462,12 +486,14 @@ class MD17DynamicsDataset(MD17Dataset):
 
         # Attempt to load or generate the split
         try:
+            if force_regenerate:
+                raise FileNotFoundError("Force regeneration of dataset")
             with open(split_dir, "rb") as f:
                 print("Got Split!")
                 split: tuple[npt.NDArray[np.int_], npt.NDArray[np.int_], npt.NDArray[np.int_]] = pkl.load(f)
         except Exception as e:
             print(f"Error loading split file: {e}")
-            np.random.seed(100)
+            np.random.seed(seed)
 
             _x = x[10000:-10000]
             train_idx: np.ndarray = np.random.choice(np.arange(_x.shape[0]), size=int(train_par * _x.shape[0]), replace=False)
@@ -534,11 +560,9 @@ class MD17DynamicsDataset(MD17Dataset):
         self.Z = torch.Tensor(z)
 
         # Use the parent's helper functions for edge construction and bond constraints
-        atom_edges, atom_edges2 = self._compute_edges(x, z, threshold=1.6)
-        self.atom_edge = atom_edges
-        self.atom_edge2 = atom_edges2
+        one_hop_adjacency, two_hop_adjacency = self._compute_adjacency_matrix(x, n_node, threshold=1.6)
 
-        edge_attr, edges = self._build_edge_attributes(atom_edges, atom_edges2, mole_idx)
+        edge_attr, edges = self._build_edge_attributes(one_hop_adjacency, two_hop_adjacency, mole_idx, x_0, v_0)
         self.edge_attr = edge_attr
         self.edges = edges
 
@@ -560,6 +584,7 @@ if __name__ == "__main__":
         data_dir="data/md17_npz/",
         split_dir="data/md17_egno_splits/",
         molecule_type=MoleculeType.aspirin,
+        force_regenerate=True,
     )
 
     dataloader: DataLoader[dict[str, torch.Tensor]] = DataLoader(dataset, batch_size=1, shuffle=True)

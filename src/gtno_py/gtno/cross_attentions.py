@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from gtno_py.gtno.shape_utils import flatten_spatiotemporal, unflatten_spatiotemporal
 
 
-def apply_time_only_rope(tensor: torch.Tensor, num_timesteps: int, base: float = 10000.0) -> torch.Tensor:
+def apply_time_only_rope(tensor: torch.Tensor, num_timesteps: int, velocity, base: float = 1000.0) -> torch.Tensor:
     """
     Applies RoPE *only* based on time index, so that all `num_nodes`
     at the same timestep T_1 share the same rotation.
@@ -51,8 +51,8 @@ def apply_time_only_rope(tensor: torch.Tensor, num_timesteps: int, base: float =
 
     # 5) Apply RoPE to the last dimension
     #    Split even/odd channels
-    t1 = tensor[..., 0::2]
-    t2 = tensor[..., 1::2]
+    t1 = tensor[..., 0::2]  # Even channels
+    t2 = tensor[..., 1::2]  # Odd channels
     rotated_0 = t1 * cos_gathered - t2 * sin_gathered
     rotated_1 = t1 * sin_gathered + t2 * cos_gathered
 
