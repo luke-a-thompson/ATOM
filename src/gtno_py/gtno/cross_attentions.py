@@ -3,10 +3,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from gtno_py.gtno.shape_utils import flatten_spatiotemporal, unflatten_spatiotemporal
-from gtno_py.utils import get_context
 
 
-def apply_time_only_rope(tensor: torch.Tensor, num_nodes: int, num_timesteps: int, base: float = 10000.0) -> torch.Tensor:
+def apply_time_only_rope(tensor: torch.Tensor, num_timesteps: int, base: float = 10000.0) -> torch.Tensor:
     """
     Applies RoPE *only* based on time index, so that all `num_nodes`
     at the same timestep T_1 share the same rotation.
@@ -22,12 +21,16 @@ def apply_time_only_rope(tensor: torch.Tensor, num_nodes: int, num_timesteps: in
     Returns the rotated tensor with the same shape.
     """
     B, H, seq_len, d_head = tensor.shape
-    assert seq_len == num_nodes * num_timesteps, f"Expected seq_len={num_nodes}*{num_timesteps}={num_nodes*num_timesteps}, got {seq_len} instead."
+    torch._assert(d_head % 2 == 0, "d_head must be even")
+    torch._assert(seq_len % num_timesteps == 0, "seq_len must be divisible by num_timesteps. This fails silently without the assert :O.")
+    num_nodes = seq_len // num_timesteps
 
     # 1) Build positions array: shape [num_nodes * num_timesteps]
     #    e.g., for T=8, N=11: [0,0..(11 times), 1,1..(11 times), ..., 7,7..(11 times)]
     times = torch.arange(num_timesteps, device=tensor.device).unsqueeze(1)  # [T,1]
-    positions = times.expand(num_timesteps, num_nodes).reshape(-1)  # [N*T]
+    positions = torch.repeat_interleave(times, num_nodes)  # [N*T]
+    torch._assert(positions.shape == (num_nodes * num_timesteps,), f"Expected {num_nodes * num_timesteps}, got {positions.shape}")
+    torch._assert(torch.all(positions[:num_nodes] == 0), f"Expected first {num_nodes} entries to be 0, got {positions[:num_nodes]}")
 
     # 2) Generate cos/sin for T distinct time steps
     half_dim = d_head // 2
@@ -65,140 +68,7 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         num_heads: int,
         num_timesteps: int,
         rope_on: bool = True,
-        aggregator: str = "concat",  # or "sum"
-    ) -> None:
-        """
-        A more standard cross-attention version:
-
-          - Q is generated from trunk (q_data).
-          - Each heterogeneous feature has distinct K, V.
-          - We do standard scaled dot-product attention over seq. dimension.
-          - Optionally apply RoPE to Q and K before the dot-product.
-
-        Args:
-          num_hetero_feats: number of heterogeneous features
-          lifting_dim: dimension for Q/K/V
-          num_heads: multi-head attention count
-          num_timesteps: T dimension for flatten_spatiotemporal
-          rope_on: if True, apply RoPE to Q, K
-          aggregator: how to combine outputs from multiple features ("sum" or "concat")
-        """
-        super().__init__()
-
-        self.num_hetero_feats = num_hetero_feats
-        self.lifting_dim = lifting_dim
-        self.num_heads = num_heads
-        self.num_timesteps = num_timesteps
-        self.rope_on = rope_on
-        self.aggregator = aggregator
-
-        assert (lifting_dim % num_heads) == 0, "lifting_dim must be divisible by num_heads"
-        self.d_head = lifting_dim // num_heads
-
-        # Query projection
-        self.query_proj = nn.Linear(lifting_dim, lifting_dim)
-        # K,V for each heterogeneous feature
-        self.keys = nn.ModuleList([nn.Linear(lifting_dim, lifting_dim) for _ in range(num_hetero_feats)])
-        self.values = nn.ModuleList([nn.Linear(lifting_dim, lifting_dim) for _ in range(num_hetero_feats)])
-        # Final output projection
-        if aggregator == "sum":
-            self.out_proj = nn.Linear(lifting_dim, lifting_dim)
-        elif aggregator == "concat":
-            self.out_proj = nn.Linear(num_hetero_feats * lifting_dim, lifting_dim)
-        else:
-            raise ValueError("Invalid aggregator choice: must be 'sum' or 'concat'")
-
-    @override
-    def forward(self, batch: dict[str, torch.Tensor], q_data: torch.Tensor) -> dict[str, torch.Tensor]:
-        """
-        Args:
-          batch: dictionary containing e.g. {"x_0": [B*T, N, d], "edge_attr": [B*T, E, d], ...}
-          q_data: trunk data for queries, shape [B*T, trunk_len, d]
-
-        Returns:
-          The updated batch with cross-attended representation in batch["x_0"].
-        """
-        B_times_T, N, d = batch["x_0"].shape
-        B = B_times_T // self.num_timesteps
-
-        # Basic checks
-        assert d == self.lifting_dim, "batch['x_0'] feature dimension mismatch"
-        assert q_data.shape[0] == B_times_T, "q_data must match B*T in batch"
-        assert q_data.shape[-1] == self.lifting_dim, "q_data last dim must match lifting_dim"
-
-        # Example: 2 heterogeneous features: [batch["x_0"], batch["edge_attr"]]
-        hetero_features = [batch["x_0"], batch["edge_attr"]]
-        assert len(hetero_features) == self.num_hetero_feats, f"Expected {self.num_hetero_feats} features"
-
-        # 1) Flatten Q: [B*T, trunk_len, d] -> [B, trunk_len*T, d]
-        q_flat = flatten_spatiotemporal(q_data, self.num_timesteps)
-        seq_len_q = q_flat.shape[1]  # trunk_len * T
-
-        # 2) Project Q -> [B, num_heads, seq_len_q, d_head]
-        Q = self.query_proj(q_flat)  # [B, seq_len_q, d]
-        Q = Q.view(B, seq_len_q, self.num_heads, self.d_head).permute(0, 2, 1, 3)
-
-        # -- Optional RoPE on Q --
-        if self.rope_on:
-            Q = apply_time_only_rope(Q, N, self.num_timesteps)  # N/T unique rotations
-
-        # We'll compute cross-attention over each feature and then aggregate
-        outputs = []
-
-        # 3) For each heterogeneous feature, flatten -> project -> standard cross-attention
-        for i in range(self.num_hetero_feats):
-            feat = hetero_features[i]  # e.g. x_0, edge_attr
-            B_times_T2, N_or_E, d_feat = feat.shape
-            assert d_feat == self.lifting_dim, f"Feature {i} dim mismatch"
-            # Flatten: [B*T, N_or_E, d] -> [B, (N_or_E*T), d]
-            feat_flat = flatten_spatiotemporal(feat, self.num_timesteps)
-            seq_len_k = feat_flat.shape[1]
-
-            # Project K, V -> [B, num_heads, seq_len_k, d_head]
-            K_i: torch.Tensor = self.keys[i](feat_flat).view(B, seq_len_k, self.num_heads, self.d_head).permute(0, 2, 1, 3)
-            V_i: torch.Tensor = self.values[i](feat_flat).view(B, seq_len_k, self.num_heads, self.d_head).permute(0, 2, 1, 3)
-
-            # -- Optional RoPE on K --
-            if self.rope_on:
-                K_i = apply_time_only_rope(K_i, N_or_E, self.num_timesteps)
-
-            # 4) Standard scaled dot-product attention over seq dimension
-            #    attn_scores: [B, n_heads, seq_len_q, seq_len_k]
-            attn_scores = torch.matmul(Q, K_i.transpose(-2, -1)) / torch.sqrt(torch.tensor(self.d_head, dtype=torch.float32))
-            attn_weights = F.softmax(attn_scores, dim=-1)  # sum over seq_len_k
-
-            # out_i: [B, n_heads, seq_len_q, d_head]
-            out_i = torch.matmul(attn_weights, V_i)
-
-            # 5) Reshape to [B, seq_len_q, d]
-            out_i = out_i.permute(0, 2, 1, 3).contiguous().view(B, seq_len_q, self.lifting_dim)
-            outputs.append(out_i)
-
-        # 6) Aggregate multiple features
-        if self.aggregator == "sum":
-            combined = torch.stack(outputs, dim=0).sum(dim=0)  # shape [B, seq_len_q, d]
-            out = self.out_proj(combined)
-        else:  # "concat"
-            combined = torch.cat(outputs, dim=-1)  # shape [B, seq_len_q, d * num_feats]
-            out = self.out_proj(combined)
-
-        # 7) Unflatten back to [B*T, trunk_len, d]
-        out = unflatten_spatiotemporal(out, self.num_timesteps)
-
-        # 8) Store final result
-        batch["x_0"] = out
-        return batch
-
-
-@final
-class SubQuadraticHeterogenousCrossAttention(nn.Module):
-    def __init__(
-        self,
-        num_hetero_feats: int,
-        lifting_dim: int,
-        num_heads: int,
-        num_timesteps: int,
-        rope_on: bool = False,
+        attention_dropout: float = 0.2,
     ) -> None:
         """
         Heterogenous graph cross attention. We construct separate K/V projections
@@ -232,88 +102,84 @@ class SubQuadraticHeterogenousCrossAttention(nn.Module):
         self.keys = nn.ModuleList([nn.Linear(lifting_dim, lifting_dim) for _ in range(self.num_hetero_feats)])
         self.values = nn.ModuleList([nn.Linear(lifting_dim, lifting_dim) for _ in range(self.num_hetero_feats)])
         self.out_proj = nn.Linear(lifting_dim, lifting_dim)
+        self.attention_dropout = nn.Dropout(attention_dropout)
 
+        self.feature_weights = nn.Parameter(torch.randn(self.num_hetero_feats) * 0.1)
+        self.rescale = nn.Linear(lifting_dim, lifting_dim, bias=False)
+
+    @override
     def forward(self, batch: dict[str, torch.Tensor], q_data: torch.Tensor) -> dict[str, torch.Tensor]:
         """
-        Heterogenous cross attention with your custom sub-quadratic step.
-
-        We generate queries from q_data, flatten everything, do the loop over features,
-        and optionally apply RoPE to Q and K.
-
-        Args:
-          batch: dictionary containing ["x_0"] etc. e.g. [B*T, N, lifting_dim]
-          q_data: the trunk data for queries, also [B*T, something, lifting_dim]
-
-        Returns:
-          batch with updated batch["x_0"] = the final cross-attended representation.
+        1. Flatten queries => [B, seq_q, d], then project to [B, heads, seq_q, d_head].
+        2. For each heterogeneous feature, do:
+           - Flatten => [B, seq_k, d],
+           - Project K => [B, heads, seq_k, d_head] and V => same shape,
+           - (optionally apply RoPE),
+           - Compute Q·K^T, softmax over seq_k, multiply by V,
+           - Gate and accumulate to `out_sum`.
+        3. Reshape the final heads => [B, seq_q, d], project, unflatten => [B*T, N, d].
+        4. Store result in batch["x_0"] and return.
         """
-        # batch["x_0"]: [B*T, N, d]
-        B_times_T, N, d = batch["x_0"].shape
-        B = B_times_T // self.num_timesteps
+        # batch["x_0"] might be [B*T, N, d]
 
-        assert (
-            batch["x_0"].shape[-1] == self.lifting_dim and batch["edge_attr"].shape[-1] == self.lifting_dim
-        ), f"Lifted dims must match. Got {batch['x_0'].shape[-1]} vs {batch['edge_attr'].shape[-1]}"
+        # Flatten Q data: [B*T, N, d] -> [B, N*T (seq_q), d]
+        q_data = flatten_spatiotemporal(q_data, self.num_timesteps)  # [B, N*T (seq_q), d]
+        B, seq_q, d_q = q_data.shape
 
-        assert (
-            batch["x_0"].shape[0] == B * self.num_timesteps and batch["edge_attr"].shape[0] == B * self.num_timesteps
-        ), f"Batch size mismatch: {batch['x_0'].shape[0]} vs {B * self.num_timesteps}"
+        # Project Q => [B, heads, seq_q, d_head]
+        d_head = self.lifting_dim // self.num_heads
+        q_proj: torch.Tensor = self.query(q_data).view(B, seq_q, self.num_heads, d_head).permute(0, 2, 1, 3)  # [B, heads, seq_q, d_head]
 
-        # Query data
-        assert q_data.shape[0] == B * self.num_timesteps and q_data.shape[-1] == self.lifting_dim, f"Query data batch size/dim mismatch. q_data: {q_data.shape}"
-
-        # Hetero features we will attend over
-        hetero_features: list[torch.Tensor] = [batch["x_0"], batch["edge_attr"]]
-        assert len(hetero_features) == self.num_hetero_feats, f"Expected {self.num_hetero_feats} hetero feats, got {len(hetero_features)}"
-
-        # 1) Flatten Q from [B*T, N, d] -> [B, N*T, d]
-        q_data = flatten_spatiotemporal(q_data, self.num_timesteps)
-        # 2) Project Q and reshape to multi-head
-        q_proj = self.query(q_data)  # [B, N*T, d]
-        q = q_proj.view(B, self.num_heads, (N * self.num_timesteps), self.lifting_dim // self.num_heads)  # [B, num_heads, T*N, d_head]
-
-        # Softmax over the last dim (embedding), as in your custom code
-        q = q.softmax(dim=-1)
-
-        # Optionally apply RoPE to Q
         if self.rope_on:
-            q = apply_time_only_rope(q, N, self.num_timesteps)
+            q_proj = apply_time_only_rope(q_proj, self.num_timesteps)
 
-        out = q
+        # We'll accumulate over multiple heterogeneous features
+        out_sum = torch.zeros_like(q_proj)  # same shape as q_proj
 
-        # 3) Loop over heterogeneous features, flatten -> project -> custom attention update
-        for i in range(self.num_hetero_feats):
-            h_feat = hetero_features[i]
-            B_times_T2, N_or_E, d_feat = h_feat.shape
+        # Collect the features
+        hetero_features = [
+            batch["x_0"],
+            batch["v_0"],
+            batch["edge_attr"],
+            batch["concatenated_features"],
+        ]
+        assert len(hetero_features) == self.num_hetero_feats
 
-            # Flatten to [B, (N_or_E * T), d]
-            h_feat = flatten_spatiotemporal(h_feat, self.num_timesteps)
+        for i, h_feat in enumerate(hetero_features):
+            # Flatten => [B, N_or_E * T, d]
+            feat_flat = flatten_spatiotemporal(h_feat, self.num_timesteps)
+            _, seq_k, d_k = feat_flat.shape
+            assert d_k == self.lifting_dim, f"Expected {self.lifting_dim}, got {d_k}"
 
-            # K/V projection
-            k_proj = self.keys[i](h_feat)
-            v_proj = self.values[i](h_feat)
+            # Project K and V => [B, heads, seq_k, d_head]
+            k_proj: torch.Tensor = self.keys[i](feat_flat).view(B, seq_k, self.num_heads, d_head).permute(0, 2, 1, 3)
+            v_proj: torch.Tensor = self.values[i](feat_flat).view(B, seq_k, self.num_heads, d_head).permute(0, 2, 1, 3)
 
-            k = k_proj.view(B, self.num_heads, (N_or_E * self.num_timesteps), self.lifting_dim // self.num_heads)
-            v = v_proj.view(B, self.num_heads, (N_or_E * self.num_timesteps), self.lifting_dim // self.num_heads)
-
-            # Optionally apply RoPE to K before softmax, matching Q
             if self.rope_on:
-                k = apply_time_only_rope(k, N_or_E, self.num_timesteps)
+                k_proj = apply_time_only_rope(k_proj, self.num_timesteps)
 
-            k = k.softmax(dim=-1)  # also across embedding dim in your code
+            # 1) scores = Q·K^T / sqrt(d_head)
+            scores = torch.matmul(q_proj, k_proj.transpose(-2, -1)) / torch.sqrt(torch.tensor(d_head, dtype=torch.float32))
+            # 2) softmax over seq_k dimension (dim=-1)
+            attn_weights = F.softmax(scores, dim=-1)
+            attn_weights = self.attention_dropout(attn_weights)
+            # 3) multiply by V
+            out_i = torch.matmul(attn_weights, v_proj)
 
-            # Normalisation step
-            k_cumsum = k.sum(dim=-2, keepdim=True)
-            D_inv = 1.0 / torch.clamp_min((q * k_cumsum).sum(dim=-1, keepdim=True), 1e-8)
+            # Gate
+            gates = F.softmax(self.feature_weights, dim=0)  # ∑ gates = 1
+            out_sum = out_sum + gates[i] * out_i
 
-            # out = q + (q @ (k.transpose(-2, -1) @ v)) * D_inv
-            kv = k.transpose(-2, -1) @ v  # [B, num_heads, d_head, d_head]
-            out = q + (q @ kv) * D_inv
+        # out_sum => [B, heads, seq_q, d_head]
+        # Merge heads => [B, seq_q, heads*d_head]
+        out_sum = out_sum.permute(0, 2, 1, 3).reshape(B, seq_q, self.lifting_dim)
 
-        # 4) Final projection
-        out = out.transpose(1, 2).contiguous().view(B, N * self.num_timesteps, self.lifting_dim)
-        out = self.out_proj(out)
-        out = unflatten_spatiotemporal(out, self.num_timesteps)
+        # Final linear projection
+        out_sum: torch.Tensor = self.out_proj(out_sum)
 
-        batch["x_0"] = out
+        # Unflatten => [B*T, N, d]
+        out_sum = unflatten_spatiotemporal(out_sum, self.num_timesteps)
+
+        # Store result
+        batch["x_0"] = out_sum
         return batch

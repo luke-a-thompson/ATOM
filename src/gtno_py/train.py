@@ -67,11 +67,11 @@ match config["model"]["model_type"]:
     case "gtno":
         model = IMPGTNO(
             lifting_dim=config["model"]["lifting_dim"],
-            norm=NormType.LAYER,
+            norm=NormType.RMS,
             activation=FFNActivation.SILU,
             num_layers=config["model"]["num_layers"],
             num_heads=config["model"]["num_heads"],
-            graph_attention_type=GraphAttentionType.UNIFIED_MHA,
+            graph_attention_type=GraphAttentionType.SPLIT_MHA,
             heterogenous_attention_type=GraphHeterogenousAttentionType.GHCNA,
             num_timesteps=config["model"]["num_timesteps"],
         ).to(device)
@@ -100,6 +100,8 @@ match config["optimizer"]["type"]:
             lr=config["optimizer"]["learning_rate"],
             weight_decay=config["optimizer"]["weight_decay"],
             betas=config["optimizer"]["adam_betas"],
+            eps=config["optimizer"]["adam_eps"],
+            amsgrad=True,
         )
     case _:
         raise ValueError(f"Invalid optimizer: {config['optimizer']['type']}")
@@ -224,7 +226,7 @@ for epoch in range(num_epochs):
     eval_losses.append(val_loss)
     print(f"Epoch {epoch+1}/{num_epochs}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}")
 
-    if val_loss < best_eval_loss:
+    if val_loss < best_eval_loss and epoch > 0.9 * num_epochs:
         best_eval_loss = val_loss
         torch.save(model.state_dict(), f"trained_models/best_eval_model_{date}.pth")
         print(f"Saved best model to trained_models/best_eval_model_{date}.pth with val loss {val_loss:.4f}")

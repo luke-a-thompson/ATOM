@@ -4,7 +4,7 @@ import torch.nn as nn
 from enum import Enum
 from gtno_py.gtno.activations import FFNActivation, ReLU2, SwiGLU
 from tensordict import TensorDict
-from gtno_py.gtno.cross_attentions import SubQuadraticHeterogenousCrossAttention, QuadraticHeterogenousCrossAttention
+from gtno_py.gtno.cross_attentions import QuadraticHeterogenousCrossAttention
 from gtno_py.gtno.graph_attentions import UnifiedInputMHA, SplitInputMHA
 
 
@@ -60,9 +60,9 @@ class IMPGTNOBlock(nn.Module):
             ### Possibly different graphormer-style priors for x_0, v_0, Z
             case GraphAttentionType.UNIFIED_MHA:
                 # Add causal masking
-                self.graph_attention = UnifiedInputMHA(lifting_dim, num_heads, self.num_timesteps, batch_first=True)
+                self.graph_attention = UnifiedInputMHA(lifting_dim, num_heads, self.num_timesteps)
             case GraphAttentionType.SPLIT_MHA:
-                self.graph_attention = SplitInputMHA(lifting_dim, num_heads, batch_first=True)
+                self.graph_attention = SplitInputMHA(lifting_dim, num_heads, self.num_timesteps)
             case GraphAttentionType.GRIT:
                 raise NotImplementedError("GRITAttention is not implemented")
             case _:
@@ -92,19 +92,11 @@ class IMPGTNOBlock(nn.Module):
         self.heterogenous_attention: nn.Module
         match heterogenous_attention_type:
             case GraphHeterogenousAttentionType.GHCNA:
-                self.heterogenous_attention = SubQuadraticHeterogenousCrossAttention(
-                    num_hetero_feats=2,
-                    lifting_dim=lifting_dim,
-                    num_heads=num_heads,
-                    num_timesteps=self.num_timesteps,
-                )
-            case GraphHeterogenousAttentionType.QHCA:
                 self.heterogenous_attention = QuadraticHeterogenousCrossAttention(
-                    num_hetero_feats=2,
+                    num_hetero_feats=4,
                     lifting_dim=lifting_dim,
                     num_heads=num_heads,
                     num_timesteps=self.num_timesteps,
-                    rope_on=True,
                 )
             case _:
                 raise ValueError(f"Invalid heterogenous attention type: {heterogenous_attention_type}, select from one of {GraphHeterogenousAttentionType.__members__.keys()}")  # type: ignore
@@ -129,7 +121,7 @@ class IMPGTNOBlock(nn.Module):
                 raise ValueError(f"Invalid graph attention type: {self.graph_attention}, select from one of {GraphAttentionType.__members__.keys()}")
 
         match self.heterogenous_attention:
-            case SubQuadraticHeterogenousCrossAttention():
+            case QuadraticHeterogenousCrossAttention():
                 hetero_attended_nodes: torch.Tensor = batch["x_0"] + self.heterogenous_attention(batch, q_data=q_data)["x_0"]  # Residual connection
                 batch["x_0"] = self.ffn(hetero_attended_nodes)
             case QuadraticHeterogenousCrossAttention():

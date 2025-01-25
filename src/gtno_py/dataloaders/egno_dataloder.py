@@ -85,16 +85,16 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         self.partition: DataPartition = partition
         match partition:
             case DataPartition.train:
-                st = split[0]
+                split_times = split[0]
             case DataPartition.val:
-                st = split[1]
+                split_times = split[1]
             case DataPartition.test:
-                st = split[2]
+                split_times = split[2]
             case _:
                 raise ValueError(f"Invalid partition: {partition}, select from one of {DataPartition.__members__.keys()}")
 
-        #  st is the index of the first frame to load
-        st = st[:max_samples]
+        #  st is the index of the first frame to load, this gives the max number of samples from the split
+        split_times = split_times[:max_samples]
 
         z = data["z"]
         print("mol idx:", z)
@@ -103,8 +103,9 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         v = v[:, z > 1, ...]
         z = z[z > 1]
 
-        x_0, v_0 = x[st], v[st]
-        x_t, v_t = x[st + delta_frame], v[st + delta_frame]
+        x_0, v_0 = x[split_times], v[split_times]
+        # We want to load the next frame, so we add delta_frame to the split_times
+        x_t, v_t = x[split_times + delta_frame], v[split_times + delta_frame]
 
         print("Got {:d} samples!".format(x_0.shape[0]))
 

@@ -3,7 +3,6 @@ import torch
 import torch.nn as nn
 from gtno_py.gtno.shape_utils import flatten_spatiotemporal, unflatten_spatiotemporal
 
-
 @final
 class UnifiedInputMHA(nn.Module):
     """
@@ -15,11 +14,11 @@ class UnifiedInputMHA(nn.Module):
     This may learn some position-velocity dependence across time (i.e., Newton's second law).
     """
 
-    def __init__(self, lifting_dim: int, num_heads: int, num_timesteps: int, batch_first: bool = True) -> None:
+    def __init__(self, lifting_dim: int, num_heads: int, num_timesteps: int) -> None:
         super().__init__()
 
         self.num_timesteps = num_timesteps
-        self.graph_attention = nn.MultiheadAttention(embed_dim=lifting_dim, num_heads=num_heads, batch_first=batch_first)
+        self.graph_attention = nn.MultiheadAttention(embed_dim=lifting_dim, num_heads=num_heads, batch_first=True)
 
     @override
     def forward(self, batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
@@ -42,13 +41,13 @@ class SplitInputMHA(nn.Module):
     The idea here is to construct learned graph representations for each of the primary node features.
     """
 
-    def __init__(self, lifting_dim: int, num_heads: int, num_timesteps: int, batch_first: bool = True) -> None:
+    def __init__(self, lifting_dim: int, num_heads: int, num_timesteps: int) -> None:
         super().__init__()
 
         self.num_timesteps = num_timesteps
 
-        self.position_attention = nn.MultiheadAttention(embed_dim=lifting_dim, num_heads=num_heads, batch_first=batch_first)
-        self.velocity_attention = nn.MultiheadAttention(embed_dim=lifting_dim, num_heads=num_heads, batch_first=batch_first)
+        self.position_attention = nn.MultiheadAttention(embed_dim=lifting_dim, num_heads=num_heads, batch_first=True)
+        self.velocity_attention = nn.MultiheadAttention(embed_dim=lifting_dim, num_heads=num_heads, batch_first=True)
 
     @override
     def forward(self, batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:

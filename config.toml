@@ -4,18 +4,19 @@ run_name = "Test"
 
 [training]
 seed = 42
-batch_size = 100
-epochs = 500
+batch_size = 128
+epochs = 100
 max_grad_norm = 1.0
 
 [optimizer]
 type = "adamw"
-learning_rate = 1e-4
+learning_rate = 5e-4
 weight_decay = 1e-5
 adam_betas = [0.9, 0.999]
+adam_eps = 1e-10
 
 [scheduler]
-type = "cosine"
+type = "cosine_warmup"
 step_size = 10
 gamma = 0.1
 
@@ -28,4 +29,4 @@ num_layers = 5
 num_heads = 4
 graph_attention_type = "unified_mha"
 heterogenous_attention_type = "ghcna"
-num_timesteps = 8
+num_timesteps = 12
