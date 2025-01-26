@@ -170,6 +170,10 @@ def train_step(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoa
         if "offset" in name:
             print(f"{name}: {param}")
 
+    total_params = sum(p.numel() for p in model.parameters())
+    print(f"Total parameters: {total_params}")
+
+
     return res["loss"] / res["counter"]
 
 

@@ -29,4 +29,4 @@ num_layers = 5
 num_heads = 4
 graph_attention_type = "unified_mha"
 heterogenous_attention_type = "ghcna"
-num_timesteps = 12
+num_timesteps = 8

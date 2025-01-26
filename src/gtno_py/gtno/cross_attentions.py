@@ -7,7 +7,7 @@ from gtno_py.gtno.shape_utils import flatten_spatiotemporal, unflatten_spatiotem
 
 @final
 @torch.compile
-class TimeOnlyRoPEPerHeadOffset(nn.Module):
+class TemporalRoPEWithOffset(nn.Module):
     """
     Time-only Rotary Positional Embedding (RoPE) with per-head learnable offsets.
 
@@ -29,7 +29,7 @@ class TimeOnlyRoPEPerHeadOffset(nn.Module):
     - Consistent rotations across nodes within the same timestep.
     """
 
-    def __init__(self, num_timesteps: int, d_head: int, n_heads: int, base: float = 1000.0, learnable_offset: bool = True):
+    def __init__(self, num_timesteps: int, d_head: int, n_heads: int, base: float = 1000.0, learnable_offset: bool = False):
         super().__init__()
         assert d_head % 2 == 0, "d_head must be even for standard RoPE."
 
@@ -156,7 +156,7 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         self.rescale = nn.Linear(lifting_dim, lifting_dim, bias=False)
 
         if self.rope_on:
-            self.rope = TimeOnlyRoPEPerHeadOffset(num_timesteps=self.num_timesteps, d_head=self.d_head, n_heads=self.num_heads, base=1000.0, learnable_offset=True)
+            self.rope = TemporalRoPEWithOffset(num_timesteps=self.num_timesteps, d_head=self.d_head, n_heads=self.num_heads, base=1000.0, learnable_offset=False)
 
     @override
     def forward(self, batch: dict[str, torch.Tensor], q_data: torch.Tensor) -> dict[str, torch.Tensor]:
