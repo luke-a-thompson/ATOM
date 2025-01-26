@@ -119,6 +119,7 @@ match config["scheduler"]["type"]:
 
 loss_fn = nn.MSELoss(reduction="none")
 
+
 def train_step(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoader[dict[str, torch.Tensor]], dataset: MD17DynamicsDataset) -> float:
     _ = model.train()
     total_loss = 0.0
@@ -161,15 +162,14 @@ def train_step(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoa
         res["loss"] += losses[-1].item() * batch.batch_size[0]
         res["counter"] += batch.batch_size[0]
 
-        # loss: torch.Tensor = loss_fn(pred_coords, target_coords)
-
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=config["training"]["max_grad_norm"])
         optimizer.step()
-        # total_loss += loss.item()
 
-    # avg_loss = total_loss / len(dataloader)
-    # return avg_loss
+    for name, param in model.named_parameters():
+        if "offset" in name:
+            print(f"{name}: {param}")
+
     return res["loss"] / res["counter"]
 
 
@@ -210,8 +210,6 @@ def evaluate_step(model: nn.Module, dataloader: DataLoader[dict[str, torch.Tenso
 
         total_loss += loss.item()
 
-    # avg_loss = total_loss / len(dataloader)
-    # return avg_loss
     return res["loss"] / res["counter"]
 
 
