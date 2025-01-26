@@ -42,10 +42,12 @@ class TemporalRoPEWithOffset(nn.Module):
 
         if learnable_offset:
             # Each of n_heads gets its own offset, initialised to 0
-            self.offset = nn.Parameter(torch.zeros(n_heads))
+            self.offset = nn.Parameter(torch.zeros(n_heads, device="cuda"))
         else:
             # A fixed buffer, all zeros by default
-            self.register_buffer("offset", torch.zeros(n_heads), persistent=False)
+            self.register_buffer("offset", torch.zeros(n_heads, device="cuda"), persistent=False)
+
+        self.freqs = (1.0 / (self.base ** (2 * torch.arange(0, self.half_dim, device=self.offset.device).float() / d_head))).unsqueeze(0).unsqueeze(0)  # [1, 1, half_dim]
 
     @override
     def forward(self, tensor: torch.Tensor) -> torch.Tensor:
@@ -68,28 +70,25 @@ class TemporalRoPEWithOffset(nn.Module):
         times = torch.arange(self.num_timesteps, device=tensor.device).unsqueeze(1)  # [T,1]
         positions = torch.repeat_interleave(times, num_nodes, dim=1).flatten(0, 1)  # [N*T=seq_len]
 
-        # 2) Frequencies => shape [half_dim]
-        freqs = 1.0 / (self.base ** (2 * torch.arange(0, self.half_dim, device=tensor.device).float() / d_head))  # [half_dim]
-
         # 3) Construct angles per head: shape => [H, seq_len, half_dim].
         #    For each head i, angle_i = (positions + offset[i]) * freqs
         #    We'll broadcast offset[i] across all positions.
         #    offset: [H], positions: [seq_len]
         #    => positions + offset[i] => shape [H, seq_len], then multiply by freqs => shape [H, seq_len, half_dim].
-        offset_broadcast = self.offset.unsqueeze(-1)  # [H, 1]
+        offset_broadcast = self.offset.unsqueeze(-1)  # [H, 1], this adds the head dim
         positions_broadcast = positions.unsqueeze(0)  # [1, seq_len]
         # shape => [H, seq_len]
         shifted_positions = positions_broadcast + offset_broadcast
         # shape => [H, seq_len, half_dim]
-        angle = shifted_positions.unsqueeze(-1) * freqs.unsqueeze(0).unsqueeze(0)
+        angle = shifted_positions.unsqueeze(-1) * self.freqs
 
-        # 4) cos, sin => each [H, seq_len, half_dim]
-        cos_t = angle.cos()
-        sin_t = angle.sin()
+        # 4) cos, sin => each [1, H, seq_len, half_dim]
+        cos_t = angle.cos().unsqueeze(0)
+        sin_t = angle.sin().unsqueeze(0)
 
         # 5) Expand cos_t/sin_t to [B, H, seq_len, half_dim]
-        cos_t = cos_t.unsqueeze(0).expand(B, -1, seq_len, self.half_dim)
-        sin_t = sin_t.unsqueeze(0).expand(B, -1, seq_len, self.half_dim)
+        cos_t = cos_t.expand(B, -1, seq_len, self.half_dim)
+        sin_t = sin_t.expand(B, -1, seq_len, self.half_dim)
 
         # 6) Apply the rotation to the last dimension of 'tensor'
         #    Even indices => [0::2], odd => [1::2]
@@ -99,7 +98,7 @@ class TemporalRoPEWithOffset(nn.Module):
         rotated_0 = t1 * cos_t - t2 * sin_t
         rotated_1 = t1 * sin_t + t2 * cos_t
 
-        # Re-interleave
+        # Re-interleave - view_as does the interleaving
         rotated = torch.stack([rotated_0, rotated_1], dim=-1).view_as(tensor)
 
         return rotated
@@ -141,6 +140,8 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         self.num_timesteps = num_timesteps
         self.rope_on = rope_on
         self.d_head = self.lifting_dim // self.num_heads
+        self.attention_denom = torch.sqrt(torch.tensor(self.d_head, dtype=torch.float32))
+
         torch._assert(self.d_head % 2 == 0, "d_head must be even")
 
         # Query projection (applied to node embeddings)
@@ -209,12 +210,12 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
                 k_proj = self.rope(k_proj)
 
             # 1) scores = Q·K^T / sqrt(d_head)
-            scores = torch.matmul(q_proj, k_proj.transpose(-2, -1)) / torch.sqrt(torch.tensor(self.d_head, dtype=torch.float32))
+            scores = torch.matmul(q_proj, k_proj.transpose(-2, -1)) / self.attention_denom
             # 2) softmax over seq_k dimension (dim=-1)
             attn_weights = F.softmax(scores, dim=-1)
-            attn_weights = self.attention_dropout(attn_weights)
+            dropout_attn_weights: torch.Tensor = self.attention_dropout(attn_weights)
             # 3) multiply by V
-            out_i = torch.matmul(attn_weights, v_proj)
+            out_i = dropout_attn_weights @ v_proj
 
             # Gate
             gates = F.softmax(self.feature_weights, dim=0)  # ∑ gates = 1
@@ -233,3 +234,7 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         # Store result
         batch["x_0"] = out_sum
         return batch
+
+
+# First: Have model output the pairwise distances, and do MSE loss on that - Don't include it for benchmark losses
+# Add Brownian noise to positions, calculate pairwise distance from the noised positions
