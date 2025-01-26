@@ -6,6 +6,7 @@ from gtno_py.gtno.activations import FFNActivation, ReLU2, SwiGLU
 from tensordict import TensorDict
 from gtno_py.gtno.cross_attentions import QuadraticHeterogenousCrossAttention
 from gtno_py.gtno.graph_attentions import UnifiedInputMHA, SplitInputMHA
+from gtno_py.gtno.mlps import MLP
 
 
 class NormType(str, Enum):
@@ -82,11 +83,7 @@ class IMPGTNOBlock(nn.Module):
             case _:
                 raise ValueError(f"Invalid activation function: {activation}, select from one of {FFNActivation.__members__.keys()}")
 
-        self.ffn = nn.Sequential(
-            nn.Linear(in_features=lifting_dim, out_features=lifting_dim),
-            activation_fn,
-            nn.Linear(in_features=lifting_dim, out_features=lifting_dim),
-        )
+        self.ffn = MLP(in_features=lifting_dim, out_features=lifting_dim, hidden_features=lifting_dim, hidden_layers=2, activation=activation_fn)
 
         self.heterogenous_attention: nn.Module
         match heterogenous_attention_type:
@@ -102,30 +99,33 @@ class IMPGTNOBlock(nn.Module):
 
     @override
     def forward(self, batch: dict[str, torch.Tensor], q_data: torch.Tensor) -> dict[str, torch.Tensor]:
-        # Graph attention as message passing
-        match self.graph_attention:
-            case UnifiedInputMHA():
-                batch["concatenated_features"] = self.pre_norm(batch["concatenated_features"])
-                graph_attended_concat: torch.Tensor = batch["concatenated_features"] + self.graph_attention(batch)["concatenated_features"]  # Residual connection
-                batch["concatenated_features"] = self.ffn(graph_attended_concat)
-            case SplitInputMHA():
-                batch["x_0"] = self.pre_norm(batch["x_0"])  # We probably shouldn't normalise position/velocity right?
-                batch["v_0"] = self.pre_norm(batch["v_0"])
-                graph_attended_pos: torch.Tensor = batch["x_0"] + self.graph_attention(batch)["x_0"]  # Residual connection (with normalised - DOUBLE CHECK THIS)
-                graph_attended_vel: torch.Tensor = batch["v_0"] + self.graph_attention(batch)["v_0"]  # Residual connection
+        # # Graph attention as message passing
+        # match self.graph_attention:
+        #     case UnifiedInputMHA():
+        #         batch["concatenated_features"] = self.pre_norm(batch["concatenated_features"])
+        #         graph_attended_concat: torch.Tensor = batch["concatenated_features"] + self.graph_attention(batch)["concatenated_features"]  # Residual connection
+        #         batch["concatenated_features"] = self.ffn(graph_attended_concat)
+        #     case SplitInputMHA():
+        #         batch["x_0"] = self.pre_norm(batch["x_0"])  # We probably shouldn't normalise position/velocity right?
+        #         batch["v_0"] = self.pre_norm(batch["v_0"])
+        #         graph_attended_pos: torch.Tensor = batch["x_0"] + self.graph_attention(batch)["x_0"]  # Residual connection (with normalised - DOUBLE CHECK THIS)
+        #         graph_attended_vel: torch.Tensor = batch["v_0"] + self.graph_attention(batch)["v_0"]  # Residual connection
 
-                batch["x_0"] = self.ffn(graph_attended_pos)
-                batch["v_0"] = self.ffn(graph_attended_vel)
-            case _:
-                raise ValueError(f"Invalid graph attention type: {self.graph_attention}, select from one of {GraphAttentionType.__members__.keys()}")
+        #         batch["x_0"] = self.ffn(graph_attended_pos)
+        #         batch["v_0"] = self.ffn(graph_attended_vel)
+        #     case _:
+        #         raise ValueError(f"Invalid graph attention type: {self.graph_attention}, select from one of {GraphAttentionType.__members__.keys()}")
 
         match self.heterogenous_attention:
             case QuadraticHeterogenousCrossAttention():
+                batch["concatenated_features"] = self.pre_norm(batch["concatenated_features"])
+                batch["x_0"] = self.pre_norm(batch["x_0"])  # We probably shouldn't normalise position/velocity right?
+                batch["v_0"] = self.pre_norm(batch["v_0"])
+
                 hetero_attended_nodes: torch.Tensor = batch["x_0"] + self.heterogenous_attention(batch, q_data=q_data)["x_0"]  # Residual connection
                 batch["x_0"] = self.ffn(hetero_attended_nodes)
-            case QuadraticHeterogenousCrossAttention():
-                hetero_attended_nodes: torch.Tensor = batch["x_0"] + self.heterogenous_attention(batch, q_data=q_data)["x_0"]  # Residual connection
-                batch["x_0"] = self.ffn(hetero_attended_nodes)
+            case _:
+                raise ValueError(f"Invalid heterogenous attention type: {self.heterogenous_attention}, select from one of {GraphHeterogenousAttentionType.__members__.keys()}")
 
         return batch
 
@@ -144,7 +144,7 @@ class IMPGTNO(nn.Module):
         num_timesteps: int,
     ) -> None:
         """
-        Multi-step IMPGTNO model that always does T>1 predictions.
+        Multi-step IMPGTNO model that always does T>1 predictions. IMPGTNO is a graph transformer neural operator for predicting molecular dynamics trajectories.
         Args:
             lifting_dim: size of the lifted embedding dimension
             norm: type of normalisation (e.g., NormType.LAYER)
