@@ -235,7 +235,7 @@ class IMPGTNO(nn.Module):
     def _initialise_weights(model: nn.Module) -> None:
         for module in model.modules():
             if isinstance(module, nn.Linear):
-                _ = nn.init.kaiming_normal_(module.weight, nonlinearity="relu")
+                _ = nn.init.kaiming_normal_(module.weight, nonlinearity="leaky_relu")
                 if module.bias is not None:
                     _ = nn.init.zeros_(module.bias)
 
