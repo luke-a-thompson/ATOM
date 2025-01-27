@@ -3,6 +3,7 @@ import tensordict
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import pytorch_optimizer as pt_optim
 from gtno_py.dataloaders.egno_dataloder import MD17DynamicsDataset, MoleculeType, DataPartition
 from gtno_py.gtno.activations import FFNActivation
 from torch.utils.data import DataLoader
@@ -37,7 +38,7 @@ dataset_train = MD17DynamicsDataset(
     num_timesteps=config["model"]["num_timesteps"],
     data_dir="data/md17_npz/",
     split_dir="data/md17_egno_splits/",
-    molecule_type=MoleculeType.aspirin,
+    molecule_type=config["dataset"]["molecule_type"],
 )
 loader_train = DataLoader(dataset_train, batch_size=config["training"]["batch_size"], shuffle=True)
 
@@ -48,7 +49,7 @@ dataset_val = MD17DynamicsDataset(
     num_timesteps=config["model"]["num_timesteps"],
     data_dir="data/md17_npz/",
     split_dir="data/md17_egno_splits/",
-    molecule_type=MoleculeType.aspirin,
+    molecule_type=config["dataset"]["molecule_type"],
 )
 loader_val = DataLoader(dataset_val, batch_size=config["training"]["batch_size"], shuffle=False)
 
@@ -59,7 +60,7 @@ dataset_test = MD17DynamicsDataset(
     num_timesteps=config["model"]["num_timesteps"],
     data_dir="data/md17_npz/",
     split_dir="data/md17_egno_splits/",
-    molecule_type=MoleculeType.aspirin,
+    molecule_type=config["dataset"]["molecule_type"],
 )
 loader_test = DataLoader(dataset_test, batch_size=config["training"]["batch_size"], shuffle=False)
 
@@ -92,6 +93,11 @@ match config["model"]["model_type"]:
     case _:
         raise ValueError(f"Invalid model type: {config['model']['model_type']}")
 
+
+total_params = sum(p.numel() for p in model.parameters())
+model_name: str = config["model"]["model_type"]
+print(f"Initialised {model_name.capitalize()} model with {total_params} parameters")
+
 optimizer: optim.Optimizer
 match config["optimizer"]["type"]:
     case "adamw":
@@ -103,6 +109,8 @@ match config["optimizer"]["type"]:
             eps=config["optimizer"]["adam_eps"],
             amsgrad=True,
         )
+    case "shampoo":
+        optimizer = pt_optim.Shampoo(model.parameters(), lr=config["optimizer"]["learning_rate"], weight_decay=config["optimizer"]["weight_decay"])
     case _:
         raise ValueError(f"Invalid optimizer: {config['optimizer']['type']}")
 
@@ -120,10 +128,9 @@ match config["scheduler"]["type"]:
 loss_fn = nn.MSELoss(reduction="none")
 
 
-def train_step(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoader[dict[str, torch.Tensor]], dataset: MD17DynamicsDataset) -> float:
+def train_step(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoader[dict[str, torch.Tensor]]) -> float:
     _ = model.train()
-    total_loss = 0.0
-    res = {"epoch": epoch, "loss": 0, "counter": 0}
+    results = {"epoch": epoch, "loss": 0, "counter": 0}
     for batch in tqdm(dataloader, desc="Training", leave=False):
         batch = tensordict.from_dict(batch).to(device)
         x_t: torch.Tensor = batch.pop("x_t")  # Pop them out to avoid tiling in the model
@@ -159,8 +166,8 @@ def train_step(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoa
         losses = loss_fn(pred_coords, target_coords).view(config["model"]["num_timesteps"], batch.batch_size[0] * 13, 3)  # [T, B*13 (nodes), 3]
         losses: torch.Tensor = torch.mean(losses, dim=(1, 2))  # [T, B*13]
         loss = torch.mean(losses)
-        res["loss"] += losses[-1].item() * batch.batch_size[0]
-        res["counter"] += batch.batch_size[0]
+        results["loss"] += losses[-1].item() * batch.batch_size[0]
+        results["counter"] += batch.batch_size[0]
 
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=config["training"]["max_grad_norm"])
@@ -170,15 +177,11 @@ def train_step(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoa
         if "offset" in name:
             print(f"{name}: {param}")
 
-    total_params = sum(p.numel() for p in model.parameters())
-    print(f"Total parameters: {total_params}")
-
-
-    return res["loss"] / res["counter"]
+    return results["loss"] / results["counter"]
 
 
 @torch.inference_mode()
-def evaluate_step(model: nn.Module, dataloader: DataLoader[dict[str, torch.Tensor]], dataset: MD17DynamicsDataset) -> float:
+def evaluate_step(model: nn.Module, dataloader: DataLoader[dict[str, torch.Tensor]]) -> float:
     model.eval()
     total_loss = 0.0
     res = {"epoch": epoch, "loss": 0, "counter": 0}
@@ -222,12 +225,12 @@ eval_losses: list[float] = []
 num_epochs: int = config["training"]["epochs"]
 date: str = datetime.datetime.now().strftime("%Y%m%d")
 for epoch in range(num_epochs):
-    train_loss = train_step(model, optimizer, loader_train, dataset_train)
-    val_loss = evaluate_step(model, loader_val, dataset_val)
+    train_loss = train_step(model, optimizer, loader_train)
+    val_loss = evaluate_step(model, loader_val)
     eval_losses.append(val_loss)
     print(f"Epoch {epoch+1}/{num_epochs}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}")
 
-    if val_loss < best_eval_loss and epoch > 0.9 * num_epochs:
+    if val_loss < best_eval_loss and epoch > 0.8 * num_epochs:
         best_eval_loss = val_loss
         torch.save(model.state_dict(), f"trained_models/best_eval_model_{date}.pth")
         print(f"Saved best model to trained_models/best_eval_model_{date}.pth with val loss {val_loss:.4f}")
@@ -237,7 +240,7 @@ model.load_state_dict(torch.load(f"trained_models/best_eval_model_{date}.pth", w
 model.eval()  # Set the model to evaluation mode
 
 # Evaluate on the test set
-test_loss = evaluate_step(model, loader_test, dataset_test)
+test_loss = evaluate_step(model, loader_test)
 torch.save(model.state_dict(), f"trained_models/best_test_model_with_loss_{(test_loss * 1e2):.4f}e-2.pth")
 print(f"Best validation loss: {best_eval_loss:.4f}")
 print(f"Test Loss: {test_loss:.4f}, {(test_loss * 1e2):.4f}x10^-2")
