@@ -2,6 +2,9 @@
 project_name = "GTNO"
 run_name = "Test"
 
+[dataset]
+molecule_type = "malonaldehyde"
+
 [training]
 seed = 42
 batch_size = 128

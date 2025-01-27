@@ -221,27 +221,26 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
 
         assert len(x_0.shape) == len(v_0.shape) == 3, f"Expected the full shape of x_0 and v_0 to be [n_frames, n_nodes, 3], but got x_0.shape: {x_0.shape}, v_0.shape: {v_0.shape}"
         x_0_frame_one: npt.NDArray[np.float64] = x_0[0]
-        v_0_frame_one: npt.NDArray[np.float64] = v_0[0]
 
         # Loop through all node pairs (i, j), without self-loops
         for i in range(n_node):
             for j in range(n_node):
-                if i != j:
-                    inter_atomic_dist = np.linalg.norm(x_0_frame_one[i] - x_0_frame_one[j])
-                    # The below feature worsens performance considerably
-                    # cosine_vel_similarity = torch.nn.functional.cosine_similarity(v_0_frame_one[i], v_0_frame_one[j], dim=0).item()
+                if i == j:
+                    continue
+                else:
+                    first_frame_distance = np.linalg.norm(x_0_frame_one[i] - x_0_frame_one[j])
 
                     # One-hop edges
                     if one_hop_adjacency[i][j]:
                         rows.append(i)
                         cols.append(j)
-                        edge_attr.append([mole_idx[i], mole_idx[j], 1, inter_atomic_dist])
+                        edge_attr.append([mole_idx[i], mole_idx[j], 1, first_frame_distance])
                         assert not two_hop_adjacency[i][j]
                     # Two-hop edges
                     if two_hop_adjacency[i][j]:
                         rows.append(i)
                         cols.append(j)
-                        edge_attr.append([mole_idx[i], mole_idx[j], 2, inter_atomic_dist])
+                        edge_attr.append([mole_idx[i], mole_idx[j], 2, first_frame_distance])
                         assert not one_hop_adjacency[i][j]
 
         edges = [rows, cols]
