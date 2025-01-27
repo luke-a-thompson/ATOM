@@ -1,6 +1,8 @@
 import torch
 from gtno_py.gtno.shape_utils import flatten_spatiotemporal, unflatten_spatiotemporal
 
+device = "cuda"
+
 
 class TestShapeUtilsGrouped:
     def test_flatten_unflatten_spatiotemporal(self):
@@ -19,6 +21,7 @@ class TestShapeUtilsGrouped:
                 [[101, 102, 103, 104, 105], [106, 107, 108, 109, 110], [111, 112, 113, 114, 115], [116, 117, 118, 119, 120]],
             ],
             dtype=torch.int32,
+            device=device,
         )
 
         flattened_x = flatten_spatiotemporal(unflattened_x, num_timesteps)
@@ -43,6 +46,7 @@ class TestShapeUtilsGrouped:
                 [[101, 102, 103, 104, 105], [106, 107, 108, 109, 110], [111, 112, 113, 114, 115], [116, 117, 118, 119, 120]],
             ],
             dtype=torch.int32,
+            device=device,
         )
 
         flattened_x = flatten_spatiotemporal(unflattened_x, num_timesteps)
@@ -80,7 +84,8 @@ class TestShapeUtilsGrouped:
                     [111, 112, 113, 114, 115],
                     [116, 117, 118, 119, 120],
                 ],
-            ]
+            ],
+            device=device,
         )
 
         assert flattened_x.shape == expected_flattened_x.shape
@@ -123,7 +128,8 @@ class TestShapeUtilsGrouped:
                     [111, 112, 113, 114, 115],
                     [116, 117, 118, 119, 120],
                 ],
-            ]
+            ],
+            device=device,
         )
 
         # Batches = blue; Nodes = yellow
@@ -137,6 +143,7 @@ class TestShapeUtilsGrouped:
                 [[101, 102, 103, 104, 105], [106, 107, 108, 109, 110], [111, 112, 113, 114, 115], [116, 117, 118, 119, 120]],
             ],
             dtype=torch.int32,
+            device=device,
         )
 
         unflattened_x = unflatten_spatiotemporal(flattened_x, num_timesteps)

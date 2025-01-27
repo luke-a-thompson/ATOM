@@ -1,6 +1,8 @@
 import torch
 from gtno_py.gtno.cross_attentions import TemporalRoPEWithOffset
 
+device = "cuda"
+
 
 class TestTemporalRoPEWithOffsetGroup:
     def test_temporal_rope_vector_norm_unchanged(self):
@@ -51,7 +53,8 @@ class TestTemporalRoPEWithOffsetGroup:
                         [1, 1],
                     ],
                 ],
-            ]
+            ],
+            device=device,
         )
         # Freqs =  1.0, 0.0316227766016838
         rope_output = TemporalRoPEWithOffset(num_timesteps=num_timesteps, d_head=d_head, n_heads=num_heads).forward(flattened_x)
@@ -98,6 +101,7 @@ class TestTemporalRoPEWithOffsetGroup:
                 ],
             ],
             dtype=torch.float32,
+            device=device,
         )
 
         assert rope_output.shape == expected_rope_output.shape
@@ -129,10 +133,10 @@ class TestTemporalRoPEWithOffsetGroup:
         d_head = 4
 
         times = torch.arange(num_timesteps).unsqueeze(1)  # [T,1]
-        positions = torch.repeat_interleave(times, num_nodes, dim=1).flatten(0, 1)  # [N*T=seq_len]
+        positions = torch.repeat_interleave(times, num_nodes, dim=1).flatten(0, 1).to(device)  # [N*T=seq_len]
 
-        offset = torch.zeros(num_heads)
-        freqs = torch.tensor([[[1.0, 0.0316227766016838]]])  # Analytically derived from d_head = 4, manually unsqueezed
+        offset = torch.zeros(num_heads, device=device)
+        freqs = torch.tensor([[[1.0, 0.0316227766016838]]], device=device)  # Analytically derived from d_head = 4, manually unsqueezed
 
         positions_broadcast = positions.unsqueeze(0)  # [1, seq_len]
         offset_broadcast = offset.unsqueeze(-1)  # [H, 1]
@@ -170,6 +174,7 @@ class TestTemporalRoPEWithOffsetGroup:
                 ]
             ],
             dtype=torch.float32,
+            device=device,
         )
 
         expected_sin_t = torch.tensor(
@@ -194,6 +199,7 @@ class TestTemporalRoPEWithOffsetGroup:
                 ]
             ],
             dtype=torch.float32,
+            device=device,
         )
 
         assert torch.allclose(cos_t, expected_cos_t, atol=1e-3), f"cos_t: \n{cos_t}, \nexpected_cos_t: \n{expected_cos_t}"
