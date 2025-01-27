@@ -8,6 +8,9 @@ TODO:
 1. Add unit tests
 1. Architectural improvements as per comments
 
+# Data sources
+The same as used in EGNO: https://www.sgdml.org/
+
 Relevant papers:
 1. EGNO: https://arxiv.org/pdf/2401.11037
     * General graph neural operator architecture

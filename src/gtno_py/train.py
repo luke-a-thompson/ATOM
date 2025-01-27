@@ -41,6 +41,7 @@ dataset_train = MD17DynamicsDataset(
     molecule_type=config["dataset"]["molecule_type"],
 )
 loader_train = DataLoader(dataset_train, batch_size=config["training"]["batch_size"], shuffle=True)
+num_nodes: int = next(iter(loader_train))["x_0"].shape[1]
 
 dataset_val = MD17DynamicsDataset(
     partition=DataPartition.val,
@@ -163,7 +164,7 @@ def train_step(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoa
         assert target_coords.shape[-1] == 3, f"Predicted and target coordinates must have the last dimension of 3 (x, y, z). Got {target_coords.shape}"
 
         # Calculate MSE loss
-        losses = loss_fn(pred_coords, target_coords).view(config["model"]["num_timesteps"], batch.batch_size[0] * 13, 3)  # [T, B*13 (nodes), 3]
+        losses = loss_fn(pred_coords, target_coords).view(config["model"]["num_timesteps"], batch.batch_size[0] * num_nodes, 3)  # [T, B*13 (nodes), 3]
         losses: torch.Tensor = torch.mean(losses, dim=(1, 2))  # [T, B*13]
         loss = torch.mean(losses)
         results["loss"] += losses[-1].item() * batch.batch_size[0]
@@ -199,7 +200,7 @@ def evaluate_step(model: nn.Module, dataloader: DataLoader[dict[str, torch.Tenso
                 # We replicate this as a static method and call it here. It is functionally identical.
                 x_0, nodes, edges, edge_attr, v_0, loc_mean = EGNO.reshape_batch(batch, dataset_val)
                 pred_coords: torch.Tensor = model(x_0, nodes, edges, edge_attr, v_0, loc_mean=loc_mean)[0]  # Only retrive pred_coord
-                pred_coords = pred_coords.view(batch.batch_size[0], 13, config["model"]["num_timesteps"], 4)
+                pred_coords = pred_coords.view(batch.batch_size[0], num_nodes, config["model"]["num_timesteps"], 4)
                 pred_coords = pred_coords[:, :, :, :3]  # We dont do MSE on the norm
                 pred_coords = pred_coords.reshape(-1, 3)
             case _:
@@ -209,7 +210,7 @@ def evaluate_step(model: nn.Module, dataloader: DataLoader[dict[str, torch.Tenso
         target_coords: torch.Tensor = x_t.reshape(-1, 3)
 
         # Calculate MSE loss
-        losses = loss_fn(pred_coords, target_coords).view(config["model"]["num_timesteps"], batch.batch_size[0] * 13, 3)
+        losses = loss_fn(pred_coords, target_coords).view(config["model"]["num_timesteps"], batch.batch_size[0] * num_nodes, 3)
         losses: torch.Tensor = torch.mean(losses, dim=(1, 2))
         loss = torch.mean(losses)
         res["loss"] += losses[-1].item() * batch.batch_size[0]

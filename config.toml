@@ -3,7 +3,7 @@ project_name = "GTNO"
 run_name = "Test"
 
 [dataset]
-molecule_type = "malonaldehyde"
+molecule_type = "aspirin"
 
 [training]
 seed = 42
