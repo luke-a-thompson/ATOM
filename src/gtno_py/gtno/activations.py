@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from enum import Enum
-from typing import override
+from typing import override, final
 
 
 class FFNActivation(str, Enum):
@@ -24,12 +24,15 @@ class ReLU2(nn.Module):
 
 
 # SwiGLU Activation Function
+@final
 class SwiGLU(nn.Module):
-    def __init__(self):
-        super(SwiGLU, self).__init__()
+    def __init__(self, input_dim: int):  # 'dim' is the input dimension
+        super().__init__()
+        self.linear_gate = nn.Linear(input_dim, input_dim)  # Linear layer for the gate
+        self.linear_value = nn.Linear(input_dim, input_dim)  # Linear layer for the value
 
     @override
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # Split the input tensor into two halves along the last dimension
-        x1, x2 = x.chunk(2, dim=-1)
-        return x1 * F.silu(x2)
+        gate: torch.Tensor = self.linear_gate(x)
+        value: torch.Tensor = self.linear_value(x)
+        return F.silu(gate) * value  # Element-wise product
