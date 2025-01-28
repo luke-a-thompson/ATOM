@@ -99,7 +99,6 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         split_times = split_times[:max_samples]
 
         z = data["z"]
-        print("mol idx:", z)
         # Select all atoms with atomic number 'z' greater than 1
         x = x[:, z > 1, ...]
         v = v[:, z > 1, ...]
@@ -108,8 +107,6 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         x_0, v_0 = x[split_times], v[split_times]  # Initial timesteps
         # We want to load the next frame, so we add delta_frame to the split_times
         x_t, v_t = x[split_times + delta_frame], v[split_times + delta_frame]  # Target timesteps
-
-        print("Got {:d} samples!".format(x_0.shape[0]))
 
         mole_idx = z
         n_node = mole_idx.shape[0]
@@ -149,7 +146,6 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
                 raise FileNotFoundError("Force regeneration of dataset")
 
             with open(split_dir, "rb") as f:
-                print("Got Split!")
                 split: tuple[npt.NDArray[np.int_], npt.NDArray[np.int_], npt.NDArray[np.int_]] = pkl.load(f)
 
         except FileNotFoundError as e:
