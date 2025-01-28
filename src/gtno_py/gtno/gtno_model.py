@@ -63,7 +63,7 @@ class IMPGTNOBlock(nn.Module):
             case FFNActivation.SILU:
                 activation_fn = nn.SiLU()
             case FFNActivation.SWIGLU:
-                activation_fn = SwiGLU()
+                activation_fn = SwiGLU(input_dim=lifting_dim)
             case _:
                 raise ValueError(f"Invalid activation function: {activation}, select from one of {FFNActivation.__members__.keys()}")
 
@@ -87,6 +87,9 @@ class IMPGTNOBlock(nn.Module):
             case _:
                 raise ValueError(f"Invalid heterogenous attention type: {heterogenous_attention_type}, select from one of {GraphHeterogenousAttentionType.__members__.keys()}")  # type: ignore
 
+        self.lambda_v_residual = nn.Parameter(torch.tensor(0.5))  # Initialize lambda to 0.5
+        self.use_v_residual = True  # Flag to control value residual learning, you can set this from config
+
     @override
     def forward(self, batch: dict[str, torch.Tensor], q_data: torch.Tensor) -> dict[str, torch.Tensor]:
         match self.heterogenous_attention:
@@ -107,6 +110,17 @@ class IMPGTNOBlock(nn.Module):
                 batch["x_0"] = batch["x_0"] + out_dict["x_0"]
             case _:
                 raise ValueError(f"Invalid heterogenous attention type: {self.heterogenous_attention}, select from one of {GraphHeterogenousAttentionType.__members__.keys()}")
+
+        # Value Residual Learning (after heterogenous attention and FFN)
+        if self.use_v_residual:
+            # Access the value from the *input* batch, assuming the first block's output is stored as 'initial_v' in the batch.
+            # This requires modification in IMPGTNO.forward to pass and manage initial_v.
+            if "initial_v" not in batch:
+                batch["initial_v"] = batch["x_0"].clone()  # Store the output of the first block
+            else:
+                # Apply value residual learning for subsequent blocks
+                lambda_val = torch.sigmoid(self.lambda_v_residual)  # Ensure lambda is between 0 and 1
+                batch["x_0"] = lambda_val * batch["x_0"] + (1 - lambda_val) * batch["initial_v"]
 
         return batch
 
@@ -169,6 +183,7 @@ class IMPGTNO(nn.Module):
 
         # Final projection to (x, y, z)
         self.projection_layer = nn.Linear(in_features=lifting_dim, out_features=3)
+        self.post_norm = nn.LayerNorm(normalized_shape=lifting_dim)
 
         self._initialise_weights(self)
 
@@ -185,6 +200,9 @@ class IMPGTNO(nn.Module):
 
         for layer in self.layers:
             batch = layer(batch, q_data=batch["concatenated_features"])
+        
+        if "initial_v" in batch:
+            del batch["initial_v"]
 
         out: torch.Tensor = self.projection_layer(batch["x_0"])
         assert out.shape[-1] == 3, f"Output shape must have last dimension of 3 (x, y, z). Got {out.shape}"

@@ -69,7 +69,7 @@ match config["model"]["model_type"]:
         model = IMPGTNO(
             lifting_dim=config["model"]["lifting_dim"],
             norm=NormType.RMS,
-            activation=FFNActivation.SILU,
+            activation=FFNActivation.SWIGLU,
             num_layers=config["model"]["num_layers"],
             num_heads=config["model"]["num_heads"],
             graph_attention_type=GraphAttentionType.SPLIT_MHA,
@@ -96,9 +96,10 @@ match config["optimizer"]["type"]:
             betas=config["optimizer"]["adam_betas"],
             eps=config["optimizer"]["adam_eps"],
             amsgrad=True,
+            fused=True,
         )
-    case "shampoo":
-        optimizer = pt_optim.Shampoo(model.parameters(), lr=config["optimizer"]["learning_rate"], weight_decay=config["optimizer"]["weight_decay"])
+    case "muon":
+        optimizer = pt_optim.Muon(model.parameters(), lr=config["optimizer"]["learning_rate"], weight_decay=config["optimizer"]["weight_decay"])
     case _:
         raise ValueError(f"Invalid optimizer: {config['optimizer']['type']}")
 

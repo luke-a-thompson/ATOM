@@ -5,7 +5,7 @@ from typing import final, override
 
 @final
 class MLP(nn.Module):
-    def __init__(self, in_features: int, out_features: int, hidden_features: int, hidden_layers: int, activation: nn.Module, dropout_p: float = 0.0) -> None:
+    def __init__(self, in_features: int, out_features: int, hidden_features: int, hidden_layers: int, activation: nn.Module) -> None:
         """
         A simple MLP with a specified number of layers and hidden features.
 
@@ -23,7 +23,7 @@ class MLP(nn.Module):
         layers = []
         for i in range(hidden_layers):
             in_size = in_features if i == 0 else hidden_features
-            layers.extend([nn.Linear(in_size, hidden_features), activation, nn.Dropout(dropout_p)])
+            layers.extend([nn.Linear(in_size, hidden_features), activation])
         layers.append(nn.Linear(hidden_features, out_features))
         self.layers = nn.ModuleList(layers)
 
