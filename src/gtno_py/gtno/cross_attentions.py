@@ -2,11 +2,11 @@ from typing import final, override
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from gtno_py.gtno.mlps import MLP
 from gtno_py.gtno.shape_utils import flatten_spatiotemporal, unflatten_spatiotemporal
 
 
 @final
-@torch.compile
 class TemporalRoPEWithOffset(nn.Module):
     """
     Time-only Rotary Positional Embedding (RoPE) with per-head learnable offsets.
@@ -236,5 +236,81 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         return batch
 
 
-# First: Have model output the pairwise distances, and do MSE loss on that - Don't include it for benchmark losses
-# Add Brownian noise to positions, calculate pairwise distance from the noised positions
+class HamiltonianCrossAttentionVelPos(nn.Module):
+    """
+    Wraps QuadraticHeterogenousCrossAttention to treat x_0 and v_0 (each in embedding dimension)
+    as canonical position q and momentum p in a Hamiltonian system.
+    """
+
+    def __init__(
+        self,
+        lifting_dim: int = 128,  # embedding dimension
+        dt: float = 0.001,
+        hidden_dim: int = 128,
+    ):
+        """
+        Args:
+          lifting_dim: dimension of each of x_0 and v_0 embeddings
+          dt: time-step size for Hamiltonian integration
+          hidden_dim: dimension for the hidden layers of the Hamiltonian MLP
+        """
+        super().__init__()
+        self.cross_attention = QuadraticHeterogenousCrossAttention(
+            num_hetero_feats=4,
+            lifting_dim=lifting_dim,
+            num_heads=4,
+            num_timesteps=8,
+        )
+        self.lifting_dim = lifting_dim
+        self.dt = dt
+
+        # A small MLP to produce a scalar from concatenated x_0 and v_0 embeddings
+        self.hamiltonian_mlp = MLP(in_features=2 * lifting_dim, out_features=1, hidden_features=hidden_dim, hidden_layers=3, activation=nn.SiLU())
+
+    @override
+    def forward(self, batch: dict[str, torch.Tensor], q_data: torch.Tensor) -> dict[str, torch.Tensor]:
+        """
+        Expects:
+          batch["x_0"], batch["v_0"] each => [B*T, N, lifting_dim]
+        Returns updated batch with x_0, v_0 replaced by their symplectic updates.
+        """
+        batch = self.cross_attention(batch, q_data=q_data)
+
+        # Ensure x_0, v_0 require gradients BEFORE cross-attention
+        batch["x_0"].requires_grad_(True)
+        batch["v_0"].requires_grad_(True)
+
+        # (A) CROSS-ATTENTION
+        # Perform cross-attention to update batch["x_0"] (and optionally others)
+        batch = self.cross_attention(batch, q_data=q_data)
+
+        # Extract x_0 and v_0 from the updated batch
+        x_0 = batch["x_0"]  # shape [B*T, N, lifting_dim]
+        v_0 = batch["v_0"]  # shape [B*T, N, lifting_dim]
+
+        # (B) HAMILTONIAN => H(x_0, v_0)
+        # Concatenate along last dim => [B*T, N, 2*lifting_dim]
+        cat_xv = torch.cat([x_0, v_0], dim=-1)
+
+        # MLP -> scalar per node => [B*T, N, 1]
+        H_nodes = self.hamiltonian_mlp(cat_xv)
+
+        # Sum across nodes => [B*T], then sum over B*T => single scalar
+        H_per_example = H_nodes.sum(dim=1)  # sum over nodes
+        H = H_per_example.sum()  # total Hamiltonian scalar
+
+        # (C) PARTIAL DERIVATIVES
+        # Compute dH/dx_0 and dH/dv_0
+        dH_dx0, dH_dv0 = torch.autograd.grad(H, (x_0, v_0), create_graph=True)
+
+        # (D) SYMPLECTIC UPDATE
+        # Update x_0 and v_0 using the symplectic equations
+        dt = self.dt
+        x_0_new = x_0 + dt * dH_dv0
+        v_0_new = v_0 - dt * dH_dx0
+
+        # (E) Store the updated embeddings
+        batch["x_0"] = x_0_new
+        batch["v_0"] = v_0_new
+
+        return batch

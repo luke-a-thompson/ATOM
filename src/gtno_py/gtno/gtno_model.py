@@ -4,8 +4,7 @@ import torch.nn as nn
 from enum import Enum
 from gtno_py.gtno.activations import FFNActivation, ReLU2, SwiGLU
 from tensordict import TensorDict
-from gtno_py.gtno.cross_attentions import QuadraticHeterogenousCrossAttention
-from gtno_py.gtno.graph_attentions import UnifiedInputMHA, SplitInputMHA
+from gtno_py.gtno.cross_attentions import QuadraticHeterogenousCrossAttention, HamiltonianCrossAttentionVelPos
 from gtno_py.gtno.mlps import MLP
 
 
@@ -22,6 +21,7 @@ class GraphAttentionType(str, Enum):
 
 class GraphHeterogenousAttentionType(str, Enum):
     GHCA = "G-HCA"
+    HAMILTONIAN = "Hamiltonian"
 
 
 @final
@@ -52,22 +52,6 @@ class IMPGTNOBlock(nn.Module):
         if lifting_dim % num_heads != 0:
             raise ValueError(f"Lifting (embedding) dim {lifting_dim} must be divisible by num_heads ({num_heads})")
 
-        self.graph_attention: nn.Module
-        match graph_attention_type:
-            ## Add independent attentions for x_0, v_0, Z -> Heterogenous learns to compose learned graph representations
-            ### Context for position data
-            ### Heavy feature learning left to G-HNCA. Graph represnetation learning is done here
-            ### Possibly different graphormer-style priors for x_0, v_0, Z
-            case GraphAttentionType.UNIFIED_MHA:
-                # Add causal masking
-                self.graph_attention = UnifiedInputMHA(lifting_dim, num_heads, self.num_timesteps)
-            case GraphAttentionType.SPLIT_MHA:
-                self.graph_attention = SplitInputMHA(lifting_dim, num_heads, self.num_timesteps)
-            case GraphAttentionType.GRIT:
-                raise NotImplementedError("GRITAttention is not implemented")
-            case _:
-                raise ValueError(f"Invalid graph attention type: {graph_attention_type}, select from one of {GraphAttentionType.__members__.keys()}")
-
         activation_fn: nn.Module
         match activation:
             case FFNActivation.RELU:
@@ -94,36 +78,33 @@ class IMPGTNOBlock(nn.Module):
                     num_heads=num_heads,
                     num_timesteps=self.num_timesteps,
                 )
+            case GraphHeterogenousAttentionType.HAMILTONIAN:
+                self.heterogenous_attention = HamiltonianCrossAttentionVelPos(
+                    lifting_dim=lifting_dim,
+                    dt=0.001,
+                    hidden_dim=64,
+                )
             case _:
                 raise ValueError(f"Invalid heterogenous attention type: {heterogenous_attention_type}, select from one of {GraphHeterogenousAttentionType.__members__.keys()}")  # type: ignore
 
     @override
     def forward(self, batch: dict[str, torch.Tensor], q_data: torch.Tensor) -> dict[str, torch.Tensor]:
-        # # Graph attention as message passing
-        # match self.graph_attention:
-        #     case UnifiedInputMHA():
-        #         batch["concatenated_features"] = self.pre_norm(batch["concatenated_features"])
-        #         graph_attended_concat: torch.Tensor = batch["concatenated_features"] + self.graph_attention(batch)["concatenated_features"]  # Residual connection
-        #         batch["concatenated_features"] = self.ffn(graph_attended_concat)
-        #     case SplitInputMHA():
-        #         batch["x_0"] = self.pre_norm(batch["x_0"])  # We probably shouldn't normalise position/velocity right?
-        #         batch["v_0"] = self.pre_norm(batch["v_0"])
-        #         graph_attended_pos: torch.Tensor = batch["x_0"] + self.graph_attention(batch)["x_0"]  # Residual connection (with normalised - DOUBLE CHECK THIS)
-        #         graph_attended_vel: torch.Tensor = batch["v_0"] + self.graph_attention(batch)["v_0"]  # Residual connection
-
-        #         batch["x_0"] = self.ffn(graph_attended_pos)
-        #         batch["v_0"] = self.ffn(graph_attended_vel)
-        #     case _:
-        #         raise ValueError(f"Invalid graph attention type: {self.graph_attention}, select from one of {GraphAttentionType.__members__.keys()}")
-
         match self.heterogenous_attention:
             case QuadraticHeterogenousCrossAttention():
                 batch["concatenated_features"] = self.pre_norm(batch["concatenated_features"])
-                batch["x_0"] = self.pre_norm(batch["x_0"])  # We probably shouldn't normalise position/velocity right?
+                batch["x_0"] = self.pre_norm(batch["x_0"])
                 batch["v_0"] = self.pre_norm(batch["v_0"])
 
                 hetero_attended_nodes: torch.Tensor = batch["x_0"] + self.heterogenous_attention(batch, q_data=q_data)["x_0"]  # Residual connection
                 batch["x_0"] = self.ffn(hetero_attended_nodes)
+
+            case HamiltonianCrossAttentionVelPos():
+                batch["concatenated_features"] = self.pre_norm(batch["concatenated_features"])
+                batch["x_0"] = self.pre_norm(batch["x_0"])
+                batch["v_0"] = self.pre_norm(batch["v_0"])
+
+                out_dict = self.heterogenous_attention(batch, q_data=q_data)
+                batch["x_0"] = batch["x_0"] + out_dict["x_0"]
             case _:
                 raise ValueError(f"Invalid heterogenous attention type: {self.heterogenous_attention}, select from one of {GraphHeterogenousAttentionType.__members__.keys()}")
 
@@ -160,32 +141,13 @@ class IMPGTNO(nn.Module):
         assert num_timesteps > 1, f"num_timesteps must be greater than 1. Got {num_timesteps}"
         self.num_timesteps = num_timesteps
 
-        # One-time lifting to unified embedding space at model init. Keys must be in the batch dict
-        # We infer the shape of the features from the graph attention type - Unified MHA works on concatenated features, Split MHA works on x_0, v_0, Z
-        match graph_attention_type:
-            case GraphAttentionType.UNIFIED_MHA:
-                self.elements_to_lift = ["concatenated_features", "x_0", "v_0", "edge_attr"]
-                in_dims = {
-                    "concatenated_features": 9,
-                    "x_0": 4,
-                    "v_0": 4,
-                    "edge_attr": 5,
-                }
-                print("Message passing on concatenated features: x_0 (position) || v_0 (velocity) || edge_attr (bonds)")
-            case GraphAttentionType.SPLIT_MHA:
-                # We should find a way to infer this from the data
-                self.elements_to_lift = ["concatenated_features", "x_0", "v_0", "edge_attr"]
-                in_dims = {
-                    "concatenated_features": 9,
-                    "x_0": 4,
-                    "v_0": 4,
-                    "edge_attr": 5,
-                }
-                print("Message passing on each graph feature: x_0 (position), v_0 (velocity)")
-            case GraphAttentionType.GRIT:
-                raise NotImplementedError("GRITAttention is not implemented")
-            case _:
-                raise ValueError(f"Invalid graph attention type: {graph_attention_type}, select from one of {GraphAttentionType.__members__.keys()}")
+        self.elements_to_lift = ["concatenated_features", "x_0", "v_0", "edge_attr"]
+        in_dims = {
+            "concatenated_features": 9,
+            "x_0": 4,
+            "v_0": 4,
+            "edge_attr": 5,
+        }
 
         # Create one Linear layer per feature
         self.lifting_layers = nn.ModuleDict({key: nn.Linear(in_features=in_dims[key], out_features=lifting_dim) for key in self.elements_to_lift})
