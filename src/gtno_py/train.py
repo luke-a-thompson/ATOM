@@ -4,13 +4,12 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import pytorch_optimizer as pt_optim
-from gtno_py.dataloaders.egno_dataloder import MD17DynamicsDataset, MoleculeType, DataPartition
+from gtno_py.dataloaders.egno_dataloder import MD17DynamicsDataset, DataPartition
 from gtno_py.gtno.activations import FFNActivation
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 import tomllib
 from gtno_py.gtno.gtno_model import IMPGTNO, GraphAttentionType, GraphHeterogenousAttentionType, NormType
-from gtno_py.egno.egno_model import EGNO
 
 with open("config.toml", "rb") as file:
     config = tomllib.load(file)
@@ -77,20 +76,6 @@ match config["model"]["model_type"]:
             heterogenous_attention_type=GraphHeterogenousAttentionType.GHCA,
             num_timesteps=config["model"]["num_timesteps"],
         ).to(device)
-    case "egno":  # Default EGNO arguments
-        model = EGNO(
-            in_node_num_feats=5,
-            in_edge_num_feats=2 + 3,
-            hidden_num_feats=64,
-            device="cuda",
-            n_layers=5,
-            with_v=True,
-            flat=False,
-            activation=nn.SiLU(),
-            use_time_conv=True,
-            num_modes=2,
-            num_timesteps=8,
-        ).to(device)
     case _:
         raise ValueError(f"Invalid model type: {config['model']['model_type']}")
 
@@ -101,6 +86,8 @@ print(f"Initialised {model_name.capitalize()} model with {total_params} paramete
 
 optimizer: optim.Optimizer
 match config["optimizer"]["type"]:
+    case "sgd":
+        optimizer = optim.SGD(model.parameters(), lr=config["optimizer"]["learning_rate"], weight_decay=config["optimizer"]["weight_decay"])
     case "adamw":
         optimizer = optim.AdamW(
             model.parameters(),
@@ -115,14 +102,20 @@ match config["optimizer"]["type"]:
     case _:
         raise ValueError(f"Invalid optimizer: {config['optimizer']['type']}")
 
-scheduler: optim.lr_scheduler.LRScheduler
+scheduler: optim.lr_scheduler.LRScheduler | None
 match config["scheduler"]["type"]:
+    case "none":
+        scheduler = None
+    case "linear":
+        scheduler = optim.lr_scheduler.LinearLR(optimizer, start_factor=0.01, end_factor=1.0, total_iters=config["training"]["epochs"])
     case "step":
         scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=config["scheduler"]["step_size"], gamma=config["scheduler"]["gamma"])
-    case "cosine":
-        scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=config["training"]["epochs"])
-    case "cosine_warmup":
+    case "cosine_annealing":
+        scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=len(loader_train) * config["training"]["epochs"])
+    case "cosine_annealing_warmup":
         scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=10, T_mult=2)
+    case "onecycle":
+        scheduler = optim.lr_scheduler.OneCycleLR(optimizer, max_lr=config["optimizer"]["learning_rate"], epochs=config["training"]["epochs"], steps_per_epoch=len(loader_train))
     case _:
         raise ValueError(f"Invalid scheduler: {config['scheduler']['type']}")
 
@@ -130,11 +123,13 @@ loss_fn = nn.MSELoss(reduction="none")
 
 
 def train_step(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoader[dict[str, torch.Tensor]]) -> float:
-    _ = model.train()
+    model.train()
     results = {"epoch": epoch, "loss": 0, "counter": 0}
+
     for batch in tqdm(dataloader, desc="Training", leave=False):
         batch = tensordict.from_dict(batch).to(device)
         x_t: torch.Tensor = batch.pop("x_t")  # Pop them out to avoid tiling in the model
+        v_t: torch.Tensor = batch.pop("v_t")
         optimizer.zero_grad()
 
         # Get predicted coordinates
@@ -143,25 +138,12 @@ def train_step(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoa
             case "gtno":
                 pred_coords = model(batch)
                 pred_coords: torch.Tensor = pred_coords.reshape(-1, 3)
-            case "egno":
-                raise NotImplementedError("EGNO not implemented")
-                # In the original EGNO code, the batch is reshaped and the per-batch computations are done here.
-                # We replicate this as a static method and call it here. It is functionally identical.
-                # x_0, nodes, edges, edge_attr, v_0, loc_mean = EGNO.reshape_batch(batch, dataset)
-                # pred_coords: torch.Tensor = model(x_0, nodes, edges, edge_attr, v_0, loc_mean=loc_mean)[0]  # Only retrive pred_coord
-                # pred_coords = pred_coords.view(batch.batch_size[0], 13, config["model"]["num_timesteps"], 4)
-                # pred_coords = pred_coords[:, :, :, :3]  # We dont do MSE on the norm
-                # pred_coords = pred_coords.reshape(-1, 3)
             case _:
                 raise ValueError(f"Invalid model type: {config['model']['model_type']}")
 
         # Get target coordinates and reshape to align with predictions
         target_coords: torch.Tensor = x_t.reshape(-1, 3)
         assert pred_coords.shape == target_coords.shape, f"Predicted and target coordinates must have the same shape. Got {pred_coords.shape} and {target_coords.shape}"
-
-        assert pred_coords.shape[-1] == target_coords.shape[-1], f"Predicted and target coordinates must have the same shape. Got {pred_coords.shape} and {target_coords.shape}"
-        assert pred_coords.shape[-1] == 3, f"Predicted and target coordinates must have the last dimension of 3 (x, y, z). Got {pred_coords.shape}"
-        assert target_coords.shape[-1] == 3, f"Predicted and target coordinates must have the last dimension of 3 (x, y, z). Got {target_coords.shape}"
 
         # Calculate MSE loss
         losses = loss_fn(pred_coords, target_coords).view(config["model"]["num_timesteps"], batch.batch_size[0] * num_nodes, 3)  # [T, B*13 (nodes), 3]
@@ -174,6 +156,9 @@ def train_step(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoa
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=config["training"]["max_grad_norm"])
         optimizer.step()
 
+        if scheduler is not None:
+            scheduler.step()
+
     for name, param in model.named_parameters():
         if "offset" in name:
             print(f"{name}: {param}")
@@ -181,7 +166,6 @@ def train_step(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoa
     return results["loss"] / results["counter"]
 
 
-@torch.inference_mode()
 def evaluate_step(model: nn.Module, dataloader: DataLoader[dict[str, torch.Tensor]]) -> float:
     model.eval()
     total_loss = 0.0
@@ -195,14 +179,6 @@ def evaluate_step(model: nn.Module, dataloader: DataLoader[dict[str, torch.Tenso
         match config["model"]["model_type"]:
             case "gtno":
                 pred_coords: torch.Tensor = model(batch).reshape(-1, 3)
-            case "egno":
-                # In the original EGNO code, the batch is reshaped and the per-batch computations are done here.
-                # We replicate this as a static method and call it here. It is functionally identical.
-                x_0, nodes, edges, edge_attr, v_0, loc_mean = EGNO.reshape_batch(batch, dataset_val)
-                pred_coords: torch.Tensor = model(x_0, nodes, edges, edge_attr, v_0, loc_mean=loc_mean)[0]  # Only retrive pred_coord
-                pred_coords = pred_coords.view(batch.batch_size[0], num_nodes, config["model"]["num_timesteps"], 4)
-                pred_coords = pred_coords[:, :, :, :3]  # We dont do MSE on the norm
-                pred_coords = pred_coords.reshape(-1, 3)
             case _:
                 raise ValueError(f"Invalid model type: {config['model']['model_type']}")
 
@@ -229,7 +205,7 @@ for epoch in range(num_epochs):
     train_loss = train_step(model, optimizer, loader_train)
     val_loss = evaluate_step(model, loader_val)
     eval_losses.append(val_loss)
-    print(f"Epoch {epoch+1}/{num_epochs}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}")
+    print(f"Epoch {epoch+1}/{num_epochs}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}. LR: {optimizer.param_groups[0]['lr']:.2e}")
 
     if val_loss < best_eval_loss and epoch > 0.8 * num_epochs:
         best_eval_loss = val_loss
