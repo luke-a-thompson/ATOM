@@ -112,7 +112,7 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         lifting_dim: int,
         num_heads: int,
         num_timesteps: int,
-        rope_on: bool = True,
+        rope_on: bool = False,
         attention_dropout: float = 0.2,
     ) -> None:
         """
@@ -158,6 +158,9 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
 
         if self.rope_on:
             self.rope = TemporalRoPEWithOffset(num_timesteps=self.num_timesteps, d_head=self.d_head, n_heads=self.num_heads, base=1000.0, learnable_offset=False)
+
+        self.coord_mlp = nn.Sequential(nn.Linear(2 * lifting_dim + 1, 64), nn.ReLU(), nn.Linear(64, 1))  # outputs a single scalar
+        self.alpha_coord = 0.1
 
     @override
     def forward(self, batch: dict[str, torch.Tensor], q_data: torch.Tensor) -> dict[str, torch.Tensor]:
@@ -210,29 +213,109 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
                 k_proj = self.rope(k_proj)
 
             # 1) scores = Q·K^T / sqrt(d_head)
-            scores = torch.matmul(q_proj, k_proj.transpose(-2, -1)) / self.attention_denom
+            scores = q_proj @ k_proj.transpose(-2, -1) / self.attention_denom
             # 2) softmax over seq_k dimension (dim=-1)
-            attn_weights = F.softmax(scores, dim=-1)
-            dropout_attn_weights: torch.Tensor = self.attention_dropout(attn_weights)
+            attn_weights: torch.Tensor = self.attention_dropout(F.softmax(scores, dim=-1))
             # 3) multiply by V
-            out_i = dropout_attn_weights @ v_proj
+            out_i = attn_weights @ v_proj
 
             # Gate
             gates = F.softmax(self.feature_weights, dim=0)  # ∑ gates = 1
             out_sum = out_sum + gates[i] * out_i
 
-        # out_sum => [B, heads, seq_q, d_head]
-        # Merge heads => [B, seq_q, heads*d_head]
         out_sum = out_sum.permute(0, 2, 1, 3).reshape(B, seq_q, self.lifting_dim)
-
-        # Final linear projection
-        out_sum: torch.Tensor = self.out_proj(out_sum)
+        out_sum = self.out_proj(out_sum)
 
         # Unflatten => [B*T, N, d]
         out_sum = unflatten_spatiotemporal(out_sum, self.num_timesteps)
+        batch["x_0"] = out_sum  # stored result from attention
 
-        # Store result
-        batch["x_0"] = out_sum
+        # ----------------------------
+        # === 2) COORDINATE UPDATE ===
+        # ----------------------------
+        # We assume the first 3 dims of batch["x_0"] are the actual 3D coords.
+        # shape: [B*T, N, d], we isolate coords => [B*T, N, 3]
+        x_0_positions = batch["x_0"][..., :3]  # just (x,y,z)
+
+        # We'll treat batch_size = B*T, each with N nodes.
+        # Let's do an all-pairs approach for illustration (O(N^2)),
+        # or you can iterate edges if you have adjacency info.
+
+        # For building messages, we also need node features, e.g. the entire 'x_0' or some separate feature.
+        node_feats = batch["x_0"]  # shape [B*T, N, d]
+
+        # We'll do a naive all-pairs approach:
+        #   rel_ij = x_j - x_i
+        #   dist_ij = || rel_ij ||
+        #   mlp_input = cat( feats_i, feats_j, dist_ij )
+        #   message_ij = rel_ij * MLP(mlp_input)  # outputs a scalar
+        #   sum over j => delta_x_i
+        # Then x_i = x_i + alpha_coord * delta_x_i
+        #
+        # This can be expensive for large N. Typically you'd rely on neighbor lists, adjacency, or cutoffs.
+
+        BtimesT, N, _ = node_feats.shape
+
+        # We'll build i,j indices for all pairs
+        i_idx = torch.arange(N, device=node_feats.device).view(N, 1).expand(N, N).reshape(-1)
+        j_idx = torch.arange(N, device=node_feats.device).view(1, N).expand(N, N).reshape(-1)
+        # shape => [N*N]
+
+        # We'll skip diagonal i=j
+        mask = i_idx != j_idx
+        i_idx = i_idx[mask]
+        j_idx = j_idx[mask]
+
+        # Gather i, j positions
+        pos_i = x_0_positions[:, i_idx, :]  # [B*T, #pairs, 3]
+        pos_j = x_0_positions[:, j_idx, :]  # [B*T, #pairs, 3]
+        rel_ij = pos_j - pos_i
+        dist_ij = torch.norm(rel_ij, dim=-1, keepdim=True)  # [B*T, #pairs, 1]
+
+        # Gather node features
+        feats_i = node_feats[:, i_idx, :]  # [B*T, #pairs, d]
+        feats_j = node_feats[:, j_idx, :]  # [B*T, #pairs, d]
+
+        # MLP input: [feats_i, feats_j, dist_ij], shape => [B*T, #pairs, 2d+1]
+        mlp_input = torch.cat([feats_i, feats_j, dist_ij], dim=-1)
+
+        # scalar coefficient => [B*T, #pairs, 1]
+        msg_ij = self.coord_mlp(mlp_input)
+
+        # Weighted vector => [B*T, #pairs, 3]
+        weighted_rel_ij = rel_ij * msg_ij
+
+        # Now we sum each node i over all j that contribute.
+        # We can do scatter_add to sum over i_idx.
+        delta_x = torch.zeros_like(x_0_positions)  # [B*T, N, 3]
+        delta_x = delta_x.reshape(BtimesT * N, 3)  # flatten so we can scatter
+
+        # 1) Expand i_idx to shape [BtimesT, #pairs].
+        i_idx_expanded = i_idx.unsqueeze(0).expand(BtimesT, -1)  # [128, 156]
+
+        # 2) Build the offset similarly => shape [BtimesT, #pairs].
+        idx_offset = torch.arange(BtimesT, device=node_feats.device).unsqueeze(-1) * N
+        idx_offset = idx_offset.expand(BtimesT, i_idx.size(0))  # [128, 156]
+
+        # 3) Now add => shape [128, 156], then flatten => [128*156].
+        gather_i = i_idx_expanded + idx_offset
+        gather_i = gather_i.reshape(-1)  # [128*156]
+
+        # The same fix applies for j_idx if you do a scatter on j.
+
+        # Flatten weighted_rel_ij => [B*T*#pairs, 3]
+        weighted_rel_ij_flat = weighted_rel_ij.reshape(-1, 3)
+
+        # scatter_add into delta_x
+        delta_x.index_add_(0, gather_i, weighted_rel_ij_flat)
+        delta_x = delta_x.view(BtimesT, N, 3)
+
+        # final coordinate update
+        x_0_positions = x_0_positions + self.alpha_coord * delta_x
+
+        # Overwrite updated coords in batch["x_0"]
+        batch["x_0"] = torch.cat([x_0_positions, batch["x_0"][..., 3:]], dim=-1)
+
         return batch
 
 
@@ -274,7 +357,6 @@ class HamiltonianCrossAttentionVelPos(nn.Module):
           batch["x_0"], batch["v_0"] each => [B*T, N, lifting_dim]
         Returns updated batch with x_0, v_0 replaced by their symplectic updates.
         """
-        batch = self.cross_attention(batch, q_data=q_data)
 
         # Ensure x_0, v_0 require gradients BEFORE cross-attention
         batch["x_0"].requires_grad_(True)

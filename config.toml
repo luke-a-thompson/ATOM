@@ -1,5 +1,5 @@
 [wandb]
-project_name = "GTNO"
+project_name = "GTNO_no_deltav_update"
 run_name = "Test"
 
 [dataset]
@@ -24,10 +24,9 @@ type = "cosine_annealing"
 [model]
 model_type = "gtno"
 lifting_dim = 128
-norm = "rms"
-activation = "swiglu"
+norm = "RMSNorm"
+activation = "silu"
 num_layers = 5
 num_heads = 4
-graph_attention_type = "unified_mha"
-heterogenous_attention_type = "ghcna"
+heterogenous_attention_type = "GHCA"
 num_timesteps = 8

@@ -1,224 +1,219 @@
-import datetime
 import tensordict
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import pytorch_optimizer as pt_optim
 from gtno_py.dataloaders.egno_dataloder import MD17DynamicsDataset, DataPartition
-from gtno_py.gtno.activations import FFNActivation
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 import tomllib
-from gtno_py.gtno.gtno_model import IMPGTNO, GraphAttentionType, GraphHeterogenousAttentionType, NormType
+from gtno_py.gtno.gtno_model import GTNO
+import torch.nn.functional as F
+import json
+from datetime import datetime
 
+# Load configuration
 with open("config.toml", "rb") as file:
     config = tomllib.load(file)
 
-# wandb.login()
-# _ = wandb.init(
-#     project=config["wandb"]["project_name"],
-#     name=config["wandb"]["run_name"],
-#     config={
-#         "training": config["training"],
-#         "model": config["model"],
-#     },
-# )
-
-seed = config["training"]["seed"]
-_ = torch.manual_seed(seed)
-torch.cuda.manual_seed(seed)
-
+# Set device and seeds
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-dataset_train = MD17DynamicsDataset(
-    partition=DataPartition.train,
-    max_samples=500,
-    delta_frame=5000,
-    num_timesteps=config["model"]["num_timesteps"],
-    data_dir="data/md17_npz/",
-    split_dir="data/md17_egno_splits/",
-    molecule_type=config["dataset"]["molecule_type"],
-)
-loader_train = DataLoader(dataset_train, batch_size=config["training"]["batch_size"], shuffle=True)
-num_nodes: int = next(iter(loader_train))["x_0"].shape[1]
-
-dataset_val = MD17DynamicsDataset(
-    partition=DataPartition.val,
-    max_samples=2000,
-    delta_frame=5000,
-    num_timesteps=config["model"]["num_timesteps"],
-    data_dir="data/md17_npz/",
-    split_dir="data/md17_egno_splits/",
-    molecule_type=config["dataset"]["molecule_type"],
-)
-loader_val = DataLoader(dataset_val, batch_size=config["training"]["batch_size"], shuffle=False)
-
-dataset_test = MD17DynamicsDataset(
-    partition=DataPartition.test,
-    max_samples=2000,
-    delta_frame=5000,
-    num_timesteps=config["model"]["num_timesteps"],
-    data_dir="data/md17_npz/",
-    split_dir="data/md17_egno_splits/",
-    molecule_type=config["dataset"]["molecule_type"],
-)
-loader_test = DataLoader(dataset_test, batch_size=config["training"]["batch_size"], shuffle=False)
-
-match config["model"]["model_type"]:
-    case "gtno":
-        model = IMPGTNO(
-            lifting_dim=config["model"]["lifting_dim"],
-            norm=NormType.RMS,
-            activation=FFNActivation.SWIGLU,
-            num_layers=config["model"]["num_layers"],
-            num_heads=config["model"]["num_heads"],
-            graph_attention_type=GraphAttentionType.SPLIT_MHA,
-            heterogenous_attention_type=GraphHeterogenousAttentionType.GHCA,
-            num_timesteps=config["model"]["num_timesteps"],
-        ).to(device)
-    case _:
-        raise ValueError(f"Invalid model type: {config['model']['model_type']}")
+torch.manual_seed(config["training"]["seed"])
+torch.cuda.manual_seed(config["training"]["seed"])
 
 
-total_params = sum(p.numel() for p in model.parameters())
-model_name: str = config["model"]["model_type"]
-print(f"Initialised {model_name.capitalize()} model with {total_params} parameters")
+def create_dataloaders() -> tuple[DataLoader[dict[str, torch.Tensor]], DataLoader[dict[str, torch.Tensor]], DataLoader[dict[str, torch.Tensor]]]:
+    """Create train/val/test dataloaders."""
+    train_dataset = MD17DynamicsDataset(
+        partition=DataPartition.train,
+        max_samples=500,
+        delta_frame=3000,
+        num_timesteps=config["model"]["num_timesteps"],
+        data_dir="data/md17_npz/",
+        split_dir="data/md17_egno_splits/",
+        molecule_type=config["dataset"]["molecule_type"],
+    )
 
-optimizer: optim.Optimizer
-match config["optimizer"]["type"]:
-    case "sgd":
-        optimizer = optim.SGD(model.parameters(), lr=config["optimizer"]["learning_rate"], weight_decay=config["optimizer"]["weight_decay"])
-    case "adamw":
-        optimizer = optim.AdamW(
-            model.parameters(),
-            lr=config["optimizer"]["learning_rate"],
-            weight_decay=config["optimizer"]["weight_decay"],
-            betas=config["optimizer"]["adam_betas"],
-            eps=config["optimizer"]["adam_eps"],
-            amsgrad=True,
-            fused=True,
-        )
-    case "muon":
-        optimizer = pt_optim.Muon(model.parameters(), lr=config["optimizer"]["learning_rate"], weight_decay=config["optimizer"]["weight_decay"])
-    case _:
-        raise ValueError(f"Invalid optimizer: {config['optimizer']['type']}")
+    val_dataset = MD17DynamicsDataset(
+        partition=DataPartition.val,
+        max_samples=2000,
+        delta_frame=3000,
+        num_timesteps=config["model"]["num_timesteps"],
+        data_dir="data/md17_npz/",
+        split_dir="data/md17_egno_splits/",
+        molecule_type=config["dataset"]["molecule_type"],
+    )
 
-scheduler: optim.lr_scheduler.LRScheduler | None
-match config["scheduler"]["type"]:
-    case "none":
-        scheduler = None
-    case "linear":
-        scheduler = optim.lr_scheduler.LinearLR(optimizer, start_factor=0.01, end_factor=1.0, total_iters=config["training"]["epochs"])
-    case "step":
-        scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=config["scheduler"]["step_size"], gamma=config["scheduler"]["gamma"])
-    case "cosine_annealing":
-        scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=len(loader_train) * config["training"]["epochs"])
-    case "cosine_annealing_warmup":
-        scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=10, T_mult=2)
-    case "onecycle":
-        scheduler = optim.lr_scheduler.OneCycleLR(optimizer, max_lr=config["optimizer"]["learning_rate"], epochs=config["training"]["epochs"], steps_per_epoch=len(loader_train))
-    case _:
-        raise ValueError(f"Invalid scheduler: {config['scheduler']['type']}")
+    test_dataset = MD17DynamicsDataset(
+        partition=DataPartition.test,
+        max_samples=2000,
+        delta_frame=3000,
+        num_timesteps=config["model"]["num_timesteps"],
+        data_dir="data/md17_npz/",
+        split_dir="data/md17_egno_splits/",
+        molecule_type=config["dataset"]["molecule_type"],
+    )
 
-loss_fn = nn.MSELoss(reduction="none")
+    train_loader = DataLoader(train_dataset, batch_size=config["training"]["batch_size"], shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=config["training"]["batch_size"], shuffle=False)
+    test_loader = DataLoader(test_dataset, batch_size=config["training"]["batch_size"], shuffle=False)
+
+    return train_loader, val_loader, test_loader
 
 
-def train_step(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoader[dict[str, torch.Tensor]]) -> float:
+def initialize_model() -> nn.Module:
+    """Initialize model with config parameters."""
+    return GTNO(
+        lifting_dim=config["model"]["lifting_dim"],
+        norm=config["model"]["norm"],
+        activation=config["model"]["activation"],
+        num_layers=config["model"]["num_layers"],
+        num_heads=config["model"]["num_heads"],
+        heterogenous_attention_type=config["model"]["heterogenous_attention_type"],
+        num_timesteps=config["model"]["num_timesteps"],
+    ).to(device)
+
+
+def initialize_optimizer(model: nn.Module) -> optim.Optimizer:
+    """Initialize optimizer based on config."""
+    match config["optimizer"]["type"]:
+        case "sgd":
+            return optim.SGD(model.parameters(), lr=config["optimizer"]["learning_rate"], weight_decay=config["optimizer"]["weight_decay"])
+        case "adamw":
+            return optim.AdamW(
+                model.parameters(),
+                lr=config["optimizer"]["learning_rate"],
+                weight_decay=config["optimizer"]["weight_decay"],
+                betas=config["optimizer"]["adam_betas"],
+                eps=config["optimizer"]["adam_eps"],
+                amsgrad=True,
+                fused=True,
+            )
+        case "muon":
+            return pt_optim.Muon(model.parameters(), lr=config["optimizer"]["learning_rate"], weight_decay=config["optimizer"]["weight_decay"])
+        case _:
+            raise ValueError(f"Invalid optimizer: {config['optimizer']['type']}")
+
+
+def train_step(model: nn.Module, optimizer: optim.Optimizer, loader: DataLoader[dict[str, torch.Tensor]], scheduler: optim.lr_scheduler._LRScheduler | None) -> float:
+    """Single training epoch."""
     model.train()
-    results = {"epoch": epoch, "loss": 0, "counter": 0}
+    total_loss = 0.0
+    num_nodes = next(iter(loader))["x_0"].shape[1]
 
-    for batch in tqdm(dataloader, desc="Training", leave=False):
+    for batch in loader:
         batch = tensordict.from_dict(batch).to(device)
-        x_t: torch.Tensor = batch.pop("x_t")  # Pop them out to avoid tiling in the model
-        v_t: torch.Tensor = batch.pop("v_t")
+        target_coords = batch.pop("x_t").reshape(-1, 3)
+
         optimizer.zero_grad()
-
-        # Get predicted coordinates
-        pred_coords: torch.Tensor
-        match config["model"]["model_type"]:
-            case "gtno":
-                pred_coords = model(batch)
-                pred_coords: torch.Tensor = pred_coords.reshape(-1, 3)
-            case _:
-                raise ValueError(f"Invalid model type: {config['model']['model_type']}")
-
-        # Get target coordinates and reshape to align with predictions
-        target_coords: torch.Tensor = x_t.reshape(-1, 3)
-        assert pred_coords.shape == target_coords.shape, f"Predicted and target coordinates must have the same shape. Got {pred_coords.shape} and {target_coords.shape}"
+        pred_coords = model(batch).reshape(-1, 3)
 
         # Calculate MSE loss
-        losses = loss_fn(pred_coords, target_coords).view(config["model"]["num_timesteps"], batch.batch_size[0] * num_nodes, 3)  # [T, B*13 (nodes), 3]
-        losses: torch.Tensor = torch.mean(losses, dim=(1, 2))  # [T, B*13]
-        loss = torch.mean(losses)
-        results["loss"] += losses[-1].item() * batch.batch_size[0]
-        results["counter"] += batch.batch_size[0]
+        loss = F.mse_loss(pred_coords, target_coords)
+        total_loss += loss.item() * batch.batch_size[0]
 
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=config["training"]["max_grad_norm"])
+        torch.nn.utils.clip_grad_norm_(model.parameters(), config["training"]["max_grad_norm"])
         optimizer.step()
 
-        if scheduler is not None:
+        if scheduler:
             scheduler.step()
 
-    for name, param in model.named_parameters():
-        if "offset" in name:
-            print(f"{name}: {param}")
-
-    return results["loss"] / results["counter"]
+    return total_loss / len(loader.dataset)
 
 
-def evaluate_step(model: nn.Module, dataloader: DataLoader[dict[str, torch.Tensor]]) -> float:
+def evaluate(model: nn.Module, loader: DataLoader[dict[str, torch.Tensor]]) -> float:
+    """Evaluation loop."""
     model.eval()
     total_loss = 0.0
-    res = {"epoch": epoch, "loss": 0, "counter": 0}
 
-    for batch in tqdm(dataloader, desc="Evaluating", leave=False):
-        batch = tensordict.from_dict(batch).to(device)
-        x_t: torch.Tensor = batch.pop("x_t")  # Pop them out to avoid tiling in the model
+    with torch.no_grad():
+        for batch in loader:
+            batch = tensordict.from_dict(batch).to(device)
+            target_coords = batch.pop("x_t").reshape(-1, 3)
 
-        # Get predicted coordinates
-        match config["model"]["model_type"]:
-            case "gtno":
-                pred_coords: torch.Tensor = model(batch).reshape(-1, 3)
-            case _:
-                raise ValueError(f"Invalid model type: {config['model']['model_type']}")
+            pred_coords = model(batch).reshape(-1, 3)
+            loss = F.mse_loss(pred_coords, target_coords)
+            total_loss += loss.item() * batch.batch_size[0]
 
-        # Get target coordinates and reshape to align with predictions
-        target_coords: torch.Tensor = x_t.reshape(-1, 3)
-
-        # Calculate MSE loss
-        losses = loss_fn(pred_coords, target_coords).view(config["model"]["num_timesteps"], batch.batch_size[0] * num_nodes, 3)
-        losses: torch.Tensor = torch.mean(losses, dim=(1, 2))
-        loss = torch.mean(losses)
-        res["loss"] += losses[-1].item() * batch.batch_size[0]
-        res["counter"] += batch.batch_size[0]
-
-        total_loss += loss.item()
-
-    return res["loss"] / res["counter"]
+    return total_loss / len(loader.dataset)
 
 
-best_eval_loss: float = float("inf")
-eval_losses: list[float] = []
-num_epochs: int = config["training"]["epochs"]
-date: str = datetime.datetime.now().strftime("%Y%m%d")
-for epoch in range(num_epochs):
-    train_loss = train_step(model, optimizer, loader_train)
-    val_loss = evaluate_step(model, loader_val)
-    eval_losses.append(val_loss)
-    print(f"Epoch {epoch+1}/{num_epochs}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}. LR: {optimizer.param_groups[0]['lr']:.2e}")
+def main(num_epochs: int = 100) -> tuple[float, float]:
+    """Full training pipeline."""
+    start_time = datetime.now()
 
-    if val_loss < best_eval_loss and epoch > 0.8 * num_epochs:
-        best_eval_loss = val_loss
-        torch.save(model.state_dict(), f"trained_models/best_eval_model_{date}.pth")
-        print(f"Saved best model to trained_models/best_eval_model_{date}.pth with val loss {val_loss:.4f}")
+    # Initialize components
+    train_loader, val_loader, test_loader = create_dataloaders()
+    model = initialize_model()
+    optimizer = initialize_optimizer(model)
 
-# Load the saved model weights into a new model instance
-model.load_state_dict(torch.load(f"trained_models/best_eval_model_{date}.pth", weights_only=True))
-model.eval()  # Set the model to evaluation mode
+    # Training loop
+    best_val_loss = float("inf")
+    num_epochs = num_epochs or config["training"]["epochs"]
 
-# Evaluate on the test set
-test_loss = evaluate_step(model, loader_test)
-torch.save(model.state_dict(), f"trained_models/best_test_model_with_loss_{(test_loss * 1e2):.4f}e-2.pth")
-print(f"Best validation loss: {best_eval_loss:.4f}")
-print(f"Test Loss: {test_loss:.4f}, {(test_loss * 1e2):.4f}x10^-2")
+    for epoch in tqdm(range(num_epochs), desc="Training", leave=False):
+        train_loss = train_step(model, optimizer, train_loader, None)
+        val_loss = evaluate(model, val_loader)
+
+        # Save best model
+        if val_loss < best_val_loss and epoch > 0.5 * num_epochs:
+            best_val_loss = val_loss
+            torch.save(model.state_dict(), "benchmark_runs/temp_best_model.pth")
+
+    # Final evaluation
+    _ = model.load_state_dict(torch.load("benchmark_runs/temp_best_model.pth", weights_only=True))
+    test_loss = evaluate(model, test_loader)
+
+    total_time = (datetime.now() - start_time).total_seconds()
+    return test_loss, total_time
+
+
+def benchmark(n_runs: int = 5, k_epochs: int = 100) -> None:
+    """Benchmarking function with JSON results logging."""
+    results = {"config_name": config["wandb"]["project_name"], "runs": {}, "summary": {}, "timestamp": datetime.now().isoformat()}
+
+    for run in range(n_runs):
+        print(f"Run {run+1}/{n_runs}")
+        start_time = datetime.now()
+        test_loss, duration = main(num_epochs=k_epochs)
+        end_time = datetime.now()
+
+        # Store run results
+        results["runs"][f"run{run+1}"] = {"loss": float(test_loss), "time_seconds": float(duration), "start_time": start_time.isoformat(), "end_time": end_time.isoformat()}
+
+        print(f"Run {run+1} - Test Loss: {test_loss:.4f}, Duration: {duration:.1f}s")
+
+    # Calculate summary statistics
+    losses = [r["loss"] for r in results["runs"].values()]
+    times = [r["time_seconds"] for r in results["runs"].values()]
+
+    results["summary"] = {
+        "mean_loss": float(sum(losses) / len(losses)),
+        "std_loss": float(torch.std(torch.tensor(losses)).item()),
+        "mean_time": float(sum(times) / len(times)),
+        "total_time": float(sum(times)),
+        "min_loss": float(min(losses)),
+        "max_loss": float(max(losses)),
+        "config": config,
+    }
+
+    # Save to JSON
+    filename = f"benchmark_runs/benchmark_{config['wandb']['project_name']}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    with open(filename, "w") as f:
+        json.dump(results, f, indent=2)
+
+    print(f"\nSaved benchmark results to {filename}")
+    print(f"Benchmark Results ({n_runs} runs, {k_epochs} epochs/run):")
+    print(f"  Average Test Loss: {results['summary']['mean_loss']:.4f} ± {results['summary']['std_loss']:.4f}")
+    print(f"  Average Time per Run: {results['summary']['mean_time']:.1f}s")
+    print(f"  Total Benchmark Time: {results['summary']['total_time']:.1f}s")
+
+
+if __name__ == "__main__":
+    # For single run
+    # test_loss, duration = main()
+    # print(f"Final test loss: {test_loss:.4f} | Duration: {duration:.1f}s")
+
+    # For benchmarking (uncomment)
+    benchmark(n_runs=3, k_epochs=100)

@@ -246,37 +246,38 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
 
     def _compute_all_edges(self, x: npt.NDArray[np.float64], z: npt.NDArray[np.int_], threshold: float = 1.6) -> dict[tuple[int, int], list[list[int]]]:
         """
-        Builds a dictionary of edges keyed by (atom type i, atom type j), where each value
-        is a list of pairs of atom indices that are close (distance < threshold).
+        Efficiently builds a dictionary of edges keyed by sorted atom type pairs (high, low),
+        where each value is a list of atom index pairs within the distance threshold.
         """
-
-        def d(_i: int, _j: int, _t: int) -> float:
-            return np.sqrt(np.sum((x[_t][_i] - x[_t][_j]) ** 2))
-
+        from collections import defaultdict
         n = z.shape[0]
-        all_edges: dict[tuple[int, int], list[list[int]]] = {}
-        for i in range(n):
-            for j in range(i + 1, n):
-                _d = d(i, j, 0)
-                if _d < threshold:
-                    idx_i, idx_j = z[i], z[j]
-                    if idx_i < idx_j:
-                        idx_i, idx_j = idx_j, idx_i
-                    if (idx_i, idx_j) in all_edges:
-                        all_edges[(idx_i, idx_j)].append([i, j])
-                    else:
-                        all_edges[(idx_i, idx_j)] = [[i, j]]
-
-        return all_edges
+        positions = x[0]  # Assuming x[0] is the relevant coordinate set
+        
+        # Calculate upper triangle indices (i < j)
+        i_indices, j_indices = np.triu_indices(n, k=1)
+        
+        # Vectorized distance calculation for all pairs (i < j)
+        deltas = positions[i_indices] - positions[j_indices]
+        distances = np.sqrt(np.einsum('ij,ij->i', deltas, deltas))  # Faster than sum
+        
+        # Apply distance threshold
+        mask = distances < threshold
+        valid_i = i_indices[mask]
+        valid_j = j_indices[mask]
+        
+        # Determine atom type pairs and sort them
+        type_pairs = np.sort(np.column_stack([z[valid_i], z[valid_j]]), axis=1)
+        
+        # Group edges by type pairs using defaultdict
+        all_edges: dict[tuple[int, int], list[list[int]]] = defaultdict(list)
+        for (a, b), i, j in zip(type_pairs, valid_i, valid_j):
+            all_edges[(a, b)].append([int(i), int(j)])  # Ensure Python int types
+        
+        return dict(all_edges)
 
     def _compute_conf_edges(self, all_edges: dict[tuple[int, int], list[list[int]]]) -> list[list[int]]:
-        """
-        Based on all_edges, select and combine edges that preserve bond constraints.
-        """
         conf_edges = []
         for key in all_edges:
-            # if True:
-            assert abs(key[0] - key[1]) <= 2
             conf_edges.extend(all_edges[key])
         return conf_edges
 
@@ -314,8 +315,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         return cfg
 
     @override
-    def __getitem__(self, i) -> dict[str, torch.Tensor]:
-
+    def __getitem__(self, i: int) -> dict[str, torch.Tensor]:
         cfg = self.cfg
 
         edge_attr = self.edge_attr
@@ -360,8 +360,17 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
             # 'Stick': [n_sticks, 2]: stick constraint by atom indices.
             # 'Isolated': [n_isolated, 1]: index of isolated atoms.
             "cfg": cfg_tensors,
-            # # 'concatenated_features': [n_nodes, 9]: concatenated (x,y,z,norm(x),vx,vy,vz,norm(v),Z)
-            "concatenated_features": torch.cat([self.x_0[i], self.v_0[i], self.Z.unsqueeze(-1)], dim=-1),
+            # 'concatenated_features': [n_nodes, 9]: concatenated (x,y,z,vx,vy,vz,norm(x),norm(v),Z)
+            "concatenated_features": torch.cat(
+                [
+                    self.x_0[i][..., :3],  # First 3 elements of x_0 (x,y,z)
+                    self.v_0[i][..., :3],  # First 3 elements of v_0 (vx,vy,vz)
+                    self.x_0[i][..., 3:],  # Last element of x_0 (norm(x))
+                    self.v_0[i][..., 3:],  # Last element of v_0 (norm(v))
+                    self.Z.unsqueeze(-1),  # Z values
+                ],
+                dim=-1,
+            ),
         }
 
     def __len__(self):
