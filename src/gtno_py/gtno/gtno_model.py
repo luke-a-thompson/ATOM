@@ -5,7 +5,7 @@ from enum import Enum
 from gtno_py.gtno.activations import FFNActivation, ReLU2, SwiGLU
 from tensordict import TensorDict
 from gtno_py.gtno.cross_attentions import QuadraticHeterogenousCrossAttention, HamiltonianCrossAttentionVelPos
-from gtno_py.gtno.mlps import MLP
+from gtno_py.gtno.mlps import MLP, E3NNLiftingTensorProduct, E3NNLifting
 
 
 class NormType(str, Enum):
@@ -20,7 +20,7 @@ class GraphAttentionType(str, Enum):
 
 
 class GraphHeterogenousAttentionType(str, Enum):
-    GHCA = "G-HCA"
+    GHCA = "GHCA"
     HAMILTONIAN = "Hamiltonian"
 
 
@@ -32,9 +32,10 @@ class IMPGTNOBlock(nn.Module):
         norm: NormType,
         activation: FFNActivation,
         num_heads: int,
-        graph_attention_type: GraphAttentionType,
         heterogenous_attention_type: GraphHeterogenousAttentionType,
         num_timesteps: int,
+        use_value_residuals: bool = True,
+        learnable_value_residual_lambda: bool = True,
     ) -> None:
         super().__init__()
 
@@ -87,8 +88,14 @@ class IMPGTNOBlock(nn.Module):
             case _:
                 raise ValueError(f"Invalid heterogenous attention type: {heterogenous_attention_type}, select from one of {GraphHeterogenousAttentionType.__members__.keys()}")  # type: ignore
 
-        self.lambda_v_residual = nn.Parameter(torch.tensor(0.5))  # Initialize lambda to 0.5
-        self.use_v_residual = True  # Flag to control value residual learning, you can set this from config
+        self.use_value_residuals = use_value_residuals
+        self.learnable_value_residual_lambda = learnable_value_residual_lambda
+
+        self.lambda_v_residual: nn.Parameter | torch.Tensor
+        if self.learnable_value_residual_lambda:
+            self.lambda_v_residual = nn.Parameter(torch.tensor(0.5))  # Initialize lambda to 0.5
+        else:
+            self.lambda_v_residual = torch.tensor(0.5)
 
     @override
     def forward(self, batch: dict[str, torch.Tensor], q_data: torch.Tensor) -> dict[str, torch.Tensor]:
@@ -112,7 +119,7 @@ class IMPGTNOBlock(nn.Module):
                 raise ValueError(f"Invalid heterogenous attention type: {self.heterogenous_attention}, select from one of {GraphHeterogenousAttentionType.__members__.keys()}")
 
         # Value Residual Learning (after heterogenous attention and FFN)
-        if self.use_v_residual:
+        if self.use_value_residuals:
             # Access the value from the *input* batch, assuming the first block's output is stored as 'initial_v' in the batch.
             # This requires modification in IMPGTNO.forward to pass and manage initial_v.
             if "initial_v" not in batch:
@@ -126,7 +133,7 @@ class IMPGTNOBlock(nn.Module):
 
 
 @final
-class IMPGTNO(nn.Module):
+class GTNO(nn.Module):
     def __init__(
         self,
         lifting_dim: int,
@@ -134,12 +141,12 @@ class IMPGTNO(nn.Module):
         activation: FFNActivation,
         num_layers: int,
         num_heads: int,
-        graph_attention_type: GraphAttentionType,
         heterogenous_attention_type: GraphHeterogenousAttentionType,
         num_timesteps: int,
     ) -> None:
         """
-        Multi-step IMPGTNO model that always does T>1 predictions. IMPGTNO is a graph transformer neural operator for predicting molecular dynamics trajectories.
+        A GTNO model that always does T>1 predictions. GTNO is a graph transformer neural operator for predicting molecular dynamics trajectories.
+
         Args:
             lifting_dim: size of the lifted embedding dimension
             norm: type of normalisation (e.g., NormType.LAYER)
@@ -155,16 +162,14 @@ class IMPGTNO(nn.Module):
         assert num_timesteps > 1, f"num_timesteps must be greater than 1. Got {num_timesteps}"
         self.num_timesteps = num_timesteps
 
-        self.elements_to_lift = ["concatenated_features", "x_0", "v_0", "edge_attr"]
-        in_dims = {
-            "concatenated_features": 9,
-            "x_0": 4,
-            "v_0": 4,
-            "edge_attr": 5,
-        }
-
-        # Create one Linear layer per feature
-        self.lifting_layers = nn.ModuleDict({key: nn.Linear(in_features=in_dims[key], out_features=lifting_dim) for key in self.elements_to_lift})
+        self.lifting_layers = nn.ModuleDict(
+            {
+                "x_0": E3NNLiftingTensorProduct(in_irreps="1x1o + 1x0e", out_irreps="42x1o + 2x0e"),  # Use e3nn lifting for equivariant embedding
+                "v_0": E3NNLiftingTensorProduct(in_irreps="1x1o + 1x0e", out_irreps="42x1o + 2x0e"),  # Same for velocity
+                "concatenated_features": E3NNLiftingTensorProduct(in_irreps="2x1o + 3x0e", out_irreps="42x1o + 2x0e"),  # Keep standard MLP for other inputs
+                "edge_attr": nn.Linear(5, lifting_dim),
+            }
+        )
 
         self.layers = nn.Sequential(
             *[
@@ -173,7 +178,6 @@ class IMPGTNO(nn.Module):
                     norm,
                     activation,
                     num_heads,
-                    graph_attention_type,
                     heterogenous_attention_type,
                     num_timesteps,
                 )
@@ -195,12 +199,13 @@ class IMPGTNO(nn.Module):
         batch = self._replicate_tensordict_BxT(batch, self.num_timesteps)  # [Batch * timesteps, Nodes, 4]
         # Project this batch feature from its original dimension to `lifting_dim`
         # Use the same "key" to pick the lifting layer from `self.lifting_layers` and the corresponding feature from the `batch` dict.
-        for key in self.elements_to_lift:
+        # Apply lifting
+        for key in self.lifting_layers:  # Use e3nn only for equivariant tensors
             batch[key] = self.lifting_layers[key](batch[key])
 
         for layer in self.layers:
             batch = layer(batch, q_data=batch["concatenated_features"])
-        
+
         if "initial_v" in batch:
             del batch["initial_v"]
 
@@ -220,13 +225,14 @@ class IMPGTNO(nn.Module):
                     _ = nn.init.zeros_(module.bias)
 
     @staticmethod
-    def _replicate_tensordict_BxT(batch: TensorDict, T: int) -> TensorDict:
+    def _replicate_tensordict_BxT(batch: TensorDict, num_timesteps: int) -> TensorDict:
         """
         Replicates the entire tensordict along the batch dimension T times.
-        Resulting TensorDict has batch_size = [T * B].
+        Resulting TensorDict has batch_size = [T * B]. This is necessary to generate
+        a trajectory of T timesteps for each of the B entries in the original tensordict.
 
         Specifically, if the original tensordict has batch_size = [B], then
-        we generate a new tensordict with batch_size = [T * B], where each
+        we generate a new tensordict with batch_size = [B * T], where each
         of the B entries is repeated T times.
 
         Args:
@@ -234,18 +240,18 @@ class IMPGTNO(nn.Module):
             T (int): The number of times to replicate the batch dimension.
 
         Returns:
-            TensorDict: A new tensordict whose batch_size = [T * B], with each
+            TensorDict: A new tensordict whose batch_size = [B * T], with each
             field in the original tensordict replicated T times.
 
         Example:
             >>> # Suppose 'batch' has batch_size [32].
             >>> # We want 8 future timesteps -> T=8.
-            >>> # The returned tensordict will have batch_size [256].
+            >>> # The returned tensordict will have batch_size [32 * 8].
             >>> expanded = replicate_tensordict(batch, 8)
             >>> print(expanded.batch_size)  # torch.Size([256])
         """
         B = batch.batch_size[0]
-        new_shape = (T, B)  # We'll reshape to [T * B] eventually.
+        new_shape = (num_timesteps, B)  # We'll reshape to [T * B] eventually.
 
         # 1) Insert a new dimension at index 0 -> shape = [1, B].
         out: torch.Tensor = batch.unsqueeze(0)
