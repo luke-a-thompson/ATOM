@@ -126,7 +126,7 @@ class IMPGTNOBlock(nn.Module):
                 raise ValueError(f"Invalid heterogenous attention type: {self.heterogenous_attention}, select from one of {GraphHeterogenousAttentionType.__members__.keys()}")
 
         # Value Residual Learning (after heterogenous attention and FFN)
-        if self.use_value_residuals:
+        if self.value_residual_type == ValueResidualType.LEARNABLE:
             # Access the value from the *input* batch, assuming the first block's output is stored as 'initial_v' in the batch.
             # This requires modification in IMPGTNO.forward to pass and manage initial_v.
             if "initial_v" not in batch:
