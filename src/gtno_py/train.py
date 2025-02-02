@@ -143,7 +143,7 @@ def evaluate(model: nn.Module, loader: DataLoader[dict[str, torch.Tensor]]) -> f
     return total_loss / len(loader.dataset)
 
 
-def main(num_epochs: int) -> tuple[float, float]:
+def main(num_epochs: int) -> tuple[float, float, int]:
     """Full training pipeline."""
     start_time = datetime.now()
 
@@ -154,6 +154,7 @@ def main(num_epochs: int) -> tuple[float, float]:
 
     # Training loop
     best_val_loss = float("inf")
+    best_val_loss_epoch = 0
 
     progress_bar = tqdm(range(num_epochs), desc="Training", leave=False, unit="epoch")
     for epoch in progress_bar:
@@ -163,6 +164,7 @@ def main(num_epochs: int) -> tuple[float, float]:
         # Save best model
         if val_loss < best_val_loss and epoch > 0.5 * num_epochs:
             best_val_loss = val_loss
+            best_val_loss_epoch = epoch
             torch.save(model.state_dict(), "benchmark_runs/temp_best_model.pth")
 
         # Update progress bar with losses
@@ -173,26 +175,32 @@ def main(num_epochs: int) -> tuple[float, float]:
     test_loss = evaluate(model, test_loader)
 
     total_time = (datetime.now() - start_time).total_seconds()
-    return test_loss, total_time
+    return test_loss, total_time, best_val_loss_epoch
 
 
-def benchmark(runs: int = 5, epochs_per_run: int = 100) -> None:
+def benchmark(runs: int, epochs_per_run: int) -> None:
     """Benchmarking function with JSON results logging."""
     results = {"config_name": config["wandb"]["project_name"], "runs": {}, "summary": {}, "timestamp": datetime.now().isoformat()}
 
     for run in range(runs):
         print(f"Run {run+1}/{runs}")
         start_time = datetime.now()
-        test_loss, duration = main(num_epochs=epochs_per_run)
+        test_loss, duration, best_val_loss_epoch = main(num_epochs=epochs_per_run)
         end_time = datetime.now()
 
         # Store run results
-        results["runs"][f"run{run+1}"] = {"loss": float(test_loss), "time_seconds": float(duration), "start_time": start_time.isoformat(), "end_time": end_time.isoformat()}
+        results["runs"][f"run{run+1}"] = {
+            "test_loss": float(test_loss),
+            "best_val_loss_epoch": float(best_val_loss_epoch),
+            "time_seconds": float(duration),
+            "start_time": start_time.isoformat(),
+            "end_time": end_time.isoformat(),
+        }
 
         print(f"Run {run+1} - Test Loss: {test_loss:.4f}, Duration: {duration:.1f}s")
 
     # Calculate summary statistics
-    losses = [res["loss"] for res in results["runs"].values()]
+    losses = [res["test_loss"] for res in results["runs"].values()]
     times = [res["time_seconds"] for res in results["runs"].values()]
 
     results["summary"] = {
@@ -223,4 +231,4 @@ if __name__ == "__main__":
     # print(f"Final test loss: {test_loss:.4f} | Duration: {duration:.1f}s")
 
     # For benchmarking (uncomment)
-    benchmark(1, config["training"]["epochs"])
+    benchmark(2, config["training"]["epochs"])
