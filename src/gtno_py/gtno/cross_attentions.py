@@ -148,8 +148,7 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         self.query = nn.Linear(lifting_dim, lifting_dim)
 
         # Keys/Values for heterogeneous features
-        self.keys = nn.ModuleList([nn.Linear(lifting_dim, lifting_dim) for _ in range(self.num_hetero_feats)])
-        self.values = nn.ModuleList([nn.Linear(lifting_dim, lifting_dim) for _ in range(self.num_hetero_feats)])
+        self.kv_projs = nn.ModuleList([nn.Linear(lifting_dim, 2 * lifting_dim) for _ in range(num_hetero_feats)])
         self.out_proj = nn.Linear(lifting_dim, lifting_dim)
         self.attention_dropout = nn.Dropout(attention_dropout)
 
@@ -206,8 +205,10 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
             assert d_k == self.lifting_dim, f"Expected {self.lifting_dim}, got {d_k}"
 
             # Project K and V => [B, heads, seq_k, d_head]
-            k_proj: torch.Tensor = self.keys[i](feat_flat).view(B, seq_k, self.num_heads, self.d_head).permute(0, 2, 1, 3)
-            v_proj: torch.Tensor = self.values[i](feat_flat).view(B, seq_k, self.num_heads, self.d_head).permute(0, 2, 1, 3)
+            kv = self.kv_projs[i](feat_flat)
+            k_proj, v_proj = torch.chunk(kv, 2, dim=-1)
+            k_proj = k_proj.view(B, seq_k, self.num_heads, self.d_head).permute(0, 2, 1, 3)
+            v_proj = v_proj.view(B, seq_k, self.num_heads, self.d_head).permute(0, 2, 1, 3)
 
             if self.rope_on:
                 k_proj = self.rope(k_proj)
@@ -230,91 +231,43 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         out_sum = unflatten_spatiotemporal(out_sum, self.num_timesteps)
         batch["x_0"] = out_sum  # stored result from attention
 
-        # ----------------------------
-        # === 2) COORDINATE UPDATE ===
-        # ----------------------------
-        # We assume the first 3 dims of batch["x_0"] are the actual 3D coords.
-        # shape: [B*T, N, d], we isolate coords => [B*T, N, 3]
-        x_0_positions = batch["x_0"][..., :3]  # just (x,y,z)
+        # === 2) VECTORZIED COORDINATE UPDATE ===
+        # We assume that the first 3 dimensions of batch["x_0"] are the actual 3D coordinates.
+        # Let:
+        #   - x_0_positions be of shape [B*T, N, 3]
+        #   - node_feats be of shape [B*T, N, d] (all node features)
+        x_0_positions = batch["x_0"][..., :3]  # [B*T, N, 3]
+        node_feats = batch["x_0"]  # [B*T, N, d]
 
-        # We'll treat batch_size = B*T, each with N nodes.
-        # Let's do an all-pairs approach for illustration (O(N^2)),
-        # or you can iterate edges if you have adjacency info.
+        # Compute all pairwise position differences: shape [B*T, N, N, 3]
+        pos_diff = x_0_positions.unsqueeze(2) - x_0_positions.unsqueeze(1)
+        # Compute Euclidean distances (with an extra dim): shape [B*T, N, N, 1]
+        dist = pos_diff.norm(dim=-1, keepdim=True)
 
-        # For building messages, we also need node features, e.g. the entire 'x_0' or some separate feature.
-        node_feats = batch["x_0"]  # shape [B*T, N, d]
+        # Prepare pairwise node features:
+        # feats_i and feats_j: both of shape [B*T, N, N, d]
+        feats_i = node_feats.unsqueeze(2).expand(-1, -1, node_feats.shape[1], -1)
+        feats_j = node_feats.unsqueeze(1).expand(-1, node_feats.shape[1], -1, -1)
 
-        # We'll do a naive all-pairs approach:
-        #   rel_ij = x_j - x_i
-        #   dist_ij = || rel_ij ||
-        #   mlp_input = cat( feats_i, feats_j, dist_ij )
-        #   message_ij = rel_ij * MLP(mlp_input)  # outputs a scalar
-        #   sum over j => delta_x_i
-        # Then x_i = x_i + alpha_coord * delta_x_i
-        #
-        # This can be expensive for large N. Typically you'd rely on neighbor lists, adjacency, or cutoffs.
+        # Concatenate features and distance along the last dimension: shape [B*T, N, N, 2*d + 1]
+        mlp_input = torch.cat([feats_i, feats_j, dist], dim=-1)
 
-        BtimesT, N, _ = node_feats.shape
+        # Pass through the coordinate MLP to obtain a scalar weight per edge: [B*T, N, N, 1]
+        msg = self.coord_mlp(mlp_input)
 
-        # We'll build i,j indices for all pairs
-        i_idx = torch.arange(N, device=node_feats.device).view(N, 1).expand(N, N).reshape(-1)
-        j_idx = torch.arange(N, device=node_feats.device).view(1, N).expand(N, N).reshape(-1)
-        # shape => [N*N]
+        # Compute the weighted sum of relative differences:
+        # Multiply the relative differences by the message weights and sum over neighbors (axis=2)
+        delta_x = (pos_diff * msg).sum(dim=2)  # [B*T, N, 3]
 
-        # We'll skip diagonal i=j
-        mask = i_idx != j_idx
-        i_idx = i_idx[mask]
-        j_idx = j_idx[mask]
+        # Update coordinates using the weighted sum:
+        x_0_positions_updated: torch.Tensor = x_0_positions + self.alpha_coord * delta_x
 
-        # Gather i, j positions
-        pos_i = x_0_positions[:, i_idx, :]  # [B*T, #pairs, 3]
-        pos_j = x_0_positions[:, j_idx, :]  # [B*T, #pairs, 3]
-        rel_ij = pos_j - pos_i
-        dist_ij = torch.norm(rel_ij, dim=-1, keepdim=True)  # [B*T, #pairs, 1]
-
-        # Gather node features
-        feats_i = node_feats[:, i_idx, :]  # [B*T, #pairs, d]
-        feats_j = node_feats[:, j_idx, :]  # [B*T, #pairs, d]
-
-        # MLP input: [feats_i, feats_j, dist_ij], shape => [B*T, #pairs, 2d+1]
-        mlp_input = torch.cat([feats_i, feats_j, dist_ij], dim=-1)
-
-        # scalar coefficient => [B*T, #pairs, 1]
-        msg_ij = self.coord_mlp(mlp_input)
-
-        # Weighted vector => [B*T, #pairs, 3]
-        weighted_rel_ij = rel_ij * msg_ij
-
-        # Now we sum each node i over all j that contribute.
-        # We can do scatter_add to sum over i_idx.
-        delta_x = torch.zeros_like(x_0_positions)  # [B*T, N, 3]
-        delta_x = delta_x.reshape(BtimesT * N, 3)  # flatten so we can scatter
-
-        # 1) Expand i_idx to shape [BtimesT, #pairs].
-        i_idx_expanded = i_idx.unsqueeze(0).expand(BtimesT, -1)  # [128, 156]
-
-        # 2) Build the offset similarly => shape [BtimesT, #pairs].
-        idx_offset = torch.arange(BtimesT, device=node_feats.device).unsqueeze(-1) * N
-        idx_offset = idx_offset.expand(BtimesT, i_idx.size(0))  # [128, 156]
-
-        # 3) Now add => shape [128, 156], then flatten => [128*156].
-        gather_i = i_idx_expanded + idx_offset
-        gather_i = gather_i.reshape(-1)  # [128*156]
-
-        # The same fix applies for j_idx if you do a scatter on j.
-
-        # Flatten weighted_rel_ij => [B*T*#pairs, 3]
-        weighted_rel_ij_flat = weighted_rel_ij.reshape(-1, 3)
-
-        # scatter_add into delta_x
-        delta_x.index_add_(0, gather_i, weighted_rel_ij_flat)
-        delta_x = delta_x.view(BtimesT, N, 3)
-
-        # final coordinate update
-        x_0_positions = x_0_positions + self.alpha_coord * delta_x
-
-        # Overwrite updated coords in batch["x_0"]
-        batch["x_0"] = torch.cat([x_0_positions, batch["x_0"][..., 3:]], dim=-1)
+        # Replace the coordinates in batch["x_0"] with the updated ones.
+        # If the full node feature dimension exceeds 3, keep the remaining features unchanged.
+        if batch["x_0"].shape[-1] > 3:
+            batch["x_0"] = torch.cat([x_0_positions_updated, batch["x_0"][..., 3:]], dim=-1)
+        else:
+            batch["x_0"] = x_0_positions_updated
 
         return batch
 
