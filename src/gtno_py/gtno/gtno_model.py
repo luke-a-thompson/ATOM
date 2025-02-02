@@ -9,8 +9,14 @@ from gtno_py.gtno.mlps import MLP, E3NNLiftingTensorProduct, E3NNLifting
 
 
 class NormType(str, Enum):
-    LAYER = "LayerNorm"
-    RMS = "RMSNorm"
+    LAYER = "layer"
+    RMS = "rms"
+
+
+class ValueResidualType(str, Enum):
+    NONE = "none"
+    LEARNABLE = "learnable"
+    FIXED = "fixed"
 
 
 class GraphAttentionType(str, Enum):
@@ -34,8 +40,7 @@ class IMPGTNOBlock(nn.Module):
         num_heads: int,
         heterogenous_attention_type: GraphHeterogenousAttentionType,
         num_timesteps: int,
-        use_value_residuals: bool = True,
-        learnable_value_residual_lambda: bool = True,
+        value_residual_type: ValueResidualType,
     ) -> None:
         super().__init__()
 
@@ -88,14 +93,16 @@ class IMPGTNOBlock(nn.Module):
             case _:
                 raise ValueError(f"Invalid heterogenous attention type: {heterogenous_attention_type}, select from one of {GraphHeterogenousAttentionType.__members__.keys()}")  # type: ignore
 
-        self.use_value_residuals = use_value_residuals
-        self.learnable_value_residual_lambda = learnable_value_residual_lambda
+        self.value_residual_type = value_residual_type
 
         self.lambda_v_residual: nn.Parameter | torch.Tensor
-        if self.learnable_value_residual_lambda:
-            self.lambda_v_residual = nn.Parameter(torch.tensor(0.5))  # Initialize lambda to 0.5
-        else:
-            self.lambda_v_residual = torch.tensor(0.5)
+        match self.value_residual_type:
+            case ValueResidualType.LEARNABLE:
+                self.lambda_v_residual = nn.Parameter(torch.tensor(0.5))  # Initialize lambda to 0.5
+            case ValueResidualType.FIXED:
+                self.lambda_v_residual = torch.tensor(0.5)
+            case _:
+                raise ValueError(f"Invalid value residual type: {self.value_residual_type}, select from one of {ValueResidualType.__members__.keys()}")
 
     @override
     def forward(self, batch: dict[str, torch.Tensor], q_data: torch.Tensor) -> dict[str, torch.Tensor]:
@@ -143,6 +150,8 @@ class GTNO(nn.Module):
         num_heads: int,
         heterogenous_attention_type: GraphHeterogenousAttentionType,
         num_timesteps: int,
+        use_equivariant_lifting: bool,
+        value_residual_type: ValueResidualType,
     ) -> None:
         """
         A GTNO model that always does T>1 predictions. GTNO is a graph transformer neural operator for predicting molecular dynamics trajectories.
@@ -162,14 +171,27 @@ class GTNO(nn.Module):
         assert num_timesteps > 1, f"num_timesteps must be greater than 1. Got {num_timesteps}"
         self.num_timesteps = num_timesteps
 
-        self.lifting_layers = nn.ModuleDict(
-            {
-                "x_0": E3NNLiftingTensorProduct(in_irreps="1x1o + 1x0e", out_irreps="42x1o + 2x0e"),  # Use e3nn lifting for equivariant embedding
-                "v_0": E3NNLiftingTensorProduct(in_irreps="1x1o + 1x0e", out_irreps="42x1o + 2x0e"),  # Same for velocity
-                "concatenated_features": E3NNLiftingTensorProduct(in_irreps="2x1o + 3x0e", out_irreps="42x1o + 2x0e"),  # Keep standard MLP for other inputs
-                "edge_attr": nn.Linear(5, lifting_dim),
-            }
-        )
+        match use_equivariant_lifting:
+            case True:
+                self.lifting_layers = nn.ModuleDict(
+                    {
+                        "x_0": E3NNLiftingTensorProduct(in_irreps="1x1o + 1x0e", out_irreps="42x1o + 2x0e"),  # Use e3nn lifting for equivariant embedding
+                        "v_0": E3NNLiftingTensorProduct(in_irreps="1x1o + 1x0e", out_irreps="42x1o + 2x0e"),  # Same for velocity
+                        "concatenated_features": E3NNLiftingTensorProduct(in_irreps="2x1o + 3x0e", out_irreps="42x1o + 2x0e"),  # Keep standard MLP for other inputs
+                        "edge_attr": nn.Linear(5, lifting_dim),
+                    }
+                )
+            case False:
+                self.lifting_layers = nn.ModuleDict(
+                    {
+                        "x_0": nn.Linear(4, lifting_dim),
+                        "v_0": nn.Linear(4, lifting_dim),
+                        "concatenated_features": nn.Linear(9, lifting_dim),
+                        "edge_attr": nn.Linear(5, lifting_dim),
+                    }
+                )
+            case _:
+                raise ValueError(f"Invalid equivariant lifting type: {use_equivariant_lifting}, select from one of {bool.__members__.keys()}")
 
         self.layers = nn.Sequential(
             *[
@@ -180,6 +202,7 @@ class GTNO(nn.Module):
                     num_heads,
                     heterogenous_attention_type,
                     num_timesteps,
+                    value_residual_type,
                 )
                 for _ in range(num_layers)
             ]
