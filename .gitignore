@@ -10,3 +10,5 @@
 *.py[cod]
 __pycache__/
 *.pyc
+*.json
+*.pth

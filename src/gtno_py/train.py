@@ -54,9 +54,9 @@ def create_dataloaders() -> tuple[DataLoader[dict[str, torch.Tensor]], DataLoade
         molecule_type=config["dataset"]["molecule_type"],
     )
 
-    train_loader = DataLoader(train_dataset, batch_size=config["training"]["batch_size"], shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=config["training"]["batch_size"], shuffle=False)
-    test_loader = DataLoader(test_dataset, batch_size=config["training"]["batch_size"], shuffle=False)
+    train_loader = DataLoader(train_dataset, batch_size=config["training"]["batch_size"], shuffle=True, persistent_workers=True, num_workers=4)
+    val_loader = DataLoader(val_dataset, batch_size=config["training"]["batch_size"], shuffle=False, persistent_workers=True, num_workers=4)
+    test_loader = DataLoader(test_dataset, batch_size=config["training"]["batch_size"], shuffle=False, persistent_workers=True, num_workers=4)
 
     return train_loader, val_loader, test_loader
 
@@ -71,6 +71,8 @@ def initialize_model() -> nn.Module:
         num_heads=config["model"]["num_heads"],
         heterogenous_attention_type=config["model"]["heterogenous_attention_type"],
         num_timesteps=config["model"]["num_timesteps"],
+        use_equivariant_lifting=config["model"]["use_equivariant_lifting"],
+        value_residual_type=config["model"]["value_residual_type"],
     ).to(device)
 
 
@@ -91,6 +93,8 @@ def initialize_optimizer(model: nn.Module) -> optim.Optimizer:
             )
         case "muon":
             return pt_optim.Muon(model.parameters(), lr=config["optimizer"]["learning_rate"], weight_decay=config["optimizer"]["weight_decay"])
+        case "kron":
+            return pt_optim.Kron(model.parameters(), lr=config["optimizer"]["learning_rate"] / 3, weight_decay=config["optimizer"]["weight_decay"])
         case _:
             raise ValueError(f"Invalid optimizer: {config['optimizer']['type']}")
 
@@ -99,7 +103,7 @@ def train_step(model: nn.Module, optimizer: optim.Optimizer, loader: DataLoader[
     """Single training epoch."""
     model.train()
     total_loss = 0.0
-    num_nodes = next(iter(loader))["x_0"].shape[1]
+    num_nodes: int = next(iter(loader))["x_0"].shape[1]
 
     for batch in loader:
         batch = tensordict.from_dict(batch).to(device)
@@ -112,8 +116,8 @@ def train_step(model: nn.Module, optimizer: optim.Optimizer, loader: DataLoader[
         loss = F.mse_loss(pred_coords, target_coords)
         total_loss += loss.item() * batch.batch_size[0]
 
-        loss.backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), config["training"]["max_grad_norm"])
+        _ = loss.backward()
+        _ = torch.nn.utils.clip_grad_norm_(model.parameters(), config["training"]["max_grad_norm"])
         optimizer.step()
 
         if scheduler:
@@ -132,14 +136,14 @@ def evaluate(model: nn.Module, loader: DataLoader[dict[str, torch.Tensor]]) -> f
             batch = tensordict.from_dict(batch).to(device)
             target_coords = batch.pop("x_t").reshape(-1, 3)
 
-            pred_coords = model(batch).reshape(-1, 3)
+            pred_coords: torch.Tensor = model(batch).reshape(-1, 3)
             loss = F.mse_loss(pred_coords, target_coords)
             total_loss += loss.item() * batch.batch_size[0]
 
     return total_loss / len(loader.dataset)
 
 
-def main(num_epochs: int = 100) -> tuple[float, float]:
+def main(num_epochs: int) -> tuple[float, float]:
     """Full training pipeline."""
     start_time = datetime.now()
 
@@ -150,9 +154,9 @@ def main(num_epochs: int = 100) -> tuple[float, float]:
 
     # Training loop
     best_val_loss = float("inf")
-    num_epochs = num_epochs or config["training"]["epochs"]
 
-    for epoch in tqdm(range(num_epochs), desc="Training", leave=False):
+    progress_bar = tqdm(range(num_epochs), desc="Training", leave=False, unit="epoch")
+    for epoch in progress_bar:
         train_loss = train_step(model, optimizer, train_loader, None)
         val_loss = evaluate(model, val_loader)
 
@@ -160,6 +164,9 @@ def main(num_epochs: int = 100) -> tuple[float, float]:
         if val_loss < best_val_loss and epoch > 0.5 * num_epochs:
             best_val_loss = val_loss
             torch.save(model.state_dict(), "benchmark_runs/temp_best_model.pth")
+
+        # Update progress bar with losses
+        progress_bar.set_postfix({"Train loss": f"{train_loss:.4f}", "Val loss": f"{val_loss:.4f}", "Best val loss": f"{best_val_loss:.4f}"})
 
     # Final evaluation
     _ = model.load_state_dict(torch.load("benchmark_runs/temp_best_model.pth", weights_only=True))
@@ -169,14 +176,14 @@ def main(num_epochs: int = 100) -> tuple[float, float]:
     return test_loss, total_time
 
 
-def benchmark(n_runs: int = 5, k_epochs: int = 100) -> None:
+def benchmark(runs: int = 5, epochs_per_run: int = 100) -> None:
     """Benchmarking function with JSON results logging."""
     results = {"config_name": config["wandb"]["project_name"], "runs": {}, "summary": {}, "timestamp": datetime.now().isoformat()}
 
-    for run in range(n_runs):
-        print(f"Run {run+1}/{n_runs}")
+    for run in range(runs):
+        print(f"Run {run+1}/{runs}")
         start_time = datetime.now()
-        test_loss, duration = main(num_epochs=k_epochs)
+        test_loss, duration = main(num_epochs=epochs_per_run)
         end_time = datetime.now()
 
         # Store run results
@@ -185,8 +192,8 @@ def benchmark(n_runs: int = 5, k_epochs: int = 100) -> None:
         print(f"Run {run+1} - Test Loss: {test_loss:.4f}, Duration: {duration:.1f}s")
 
     # Calculate summary statistics
-    losses = [r["loss"] for r in results["runs"].values()]
-    times = [r["time_seconds"] for r in results["runs"].values()]
+    losses = [res["loss"] for res in results["runs"].values()]
+    times = [res["time_seconds"] for res in results["runs"].values()]
 
     results["summary"] = {
         "mean_loss": float(sum(losses) / len(losses)),
@@ -204,10 +211,10 @@ def benchmark(n_runs: int = 5, k_epochs: int = 100) -> None:
         json.dump(results, f, indent=2)
 
     print(f"\nSaved benchmark results to {filename}")
-    print(f"Benchmark Results ({n_runs} runs, {k_epochs} epochs/run):")
+    print(f"Benchmark Results ({runs} runs, {epochs_per_run} epochs/run):")
     print(f"  Average Test Loss: {results['summary']['mean_loss']:.4f} ± {results['summary']['std_loss']:.4f}")
     print(f"  Average Time per Run: {results['summary']['mean_time']:.1f}s")
-    print(f"  Total Benchmark Time: {results['summary']['total_time']:.1f}s")
+    print(f"  Total Benchmark Time: {results['summary']['total_time']:.1f}s ()")
 
 
 if __name__ == "__main__":
@@ -216,4 +223,4 @@ if __name__ == "__main__":
     # print(f"Final test loss: {test_loss:.4f} | Duration: {duration:.1f}s")
 
     # For benchmarking (uncomment)
-    benchmark(n_runs=3, k_epochs=100)
+    benchmark(1, config["training"]["epochs"])
