@@ -8,7 +8,7 @@ molecule_type = "aspirin"
 [training]
 seed = 42
 batch_size = 128
-epochs = 100
+epochs = 1000
 max_grad_norm = 1.0
 
 [optimizer]
@@ -24,9 +24,11 @@ type = "cosine_annealing"
 [model]
 model_type = "gtno"
 lifting_dim = 128
-norm = "RMSNorm"
+num_timesteps = 8
+norm = "rms"
 activation = "silu"
+heterogenous_attention_type = "GHCA"
+value_residual_type = "learnable"
+use_equivariant_lifting = true
 num_layers = 5
 num_heads = 4
-heterogenous_attention_type = "GHCA"
-num_timesteps = 8
