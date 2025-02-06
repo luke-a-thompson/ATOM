@@ -11,6 +11,7 @@ from gtno_py.gtno.gtno_model import GTNO
 import torch.nn.functional as F
 import json
 from datetime import datetime
+from gtno_py.dataloaders.egno_dataloder import MoleculeType
 
 # Load configuration
 with open("config.toml", "rb") as file:
@@ -22,7 +23,7 @@ torch.manual_seed(config["training"]["seed"])
 torch.cuda.manual_seed(config["training"]["seed"])
 
 
-def create_dataloaders() -> tuple[DataLoader[dict[str, torch.Tensor]], DataLoader[dict[str, torch.Tensor]], DataLoader[dict[str, torch.Tensor]]]:
+def create_dataloaders(molecule_type: MoleculeType) -> tuple[DataLoader[dict[str, torch.Tensor]], DataLoader[dict[str, torch.Tensor]], DataLoader[dict[str, torch.Tensor]]]:
     """Create train/val/test dataloaders."""
     train_dataset = MD17DynamicsDataset(
         partition=DataPartition.train,
@@ -31,7 +32,7 @@ def create_dataloaders() -> tuple[DataLoader[dict[str, torch.Tensor]], DataLoade
         num_timesteps=config["model"]["num_timesteps"],
         data_dir="data/md17_npz/",
         split_dir="data/md17_egno_splits/",
-        molecule_type=config["dataset"]["molecule_type"],
+        molecule_type=molecule_type,
     )
 
     val_dataset = MD17DynamicsDataset(
@@ -41,7 +42,7 @@ def create_dataloaders() -> tuple[DataLoader[dict[str, torch.Tensor]], DataLoade
         num_timesteps=config["model"]["num_timesteps"],
         data_dir="data/md17_npz/",
         split_dir="data/md17_egno_splits/",
-        molecule_type=config["dataset"]["molecule_type"],
+        molecule_type=molecule_type,
     )
 
     test_dataset = MD17DynamicsDataset(
@@ -51,7 +52,7 @@ def create_dataloaders() -> tuple[DataLoader[dict[str, torch.Tensor]], DataLoade
         num_timesteps=config["model"]["num_timesteps"],
         data_dir="data/md17_npz/",
         split_dir="data/md17_egno_splits/",
-        molecule_type=config["dataset"]["molecule_type"],
+        molecule_type=molecule_type,
     )
 
     train_loader = DataLoader(train_dataset, batch_size=config["training"]["batch_size"], shuffle=True, persistent_workers=True, num_workers=4)
@@ -71,6 +72,8 @@ def initialize_model() -> nn.Module:
         num_heads=config["model"]["num_heads"],
         heterogenous_attention_type=config["model"]["heterogenous_attention_type"],
         num_timesteps=config["model"]["num_timesteps"],
+        use_rope=config["model"]["use_rope"],
+        use_spherical_harmonics=config["model"]["use_spherical_harmonics"],
         use_equivariant_lifting=config["model"]["use_equivariant_lifting"],
         value_residual_type=config["model"]["value_residual_type"],
     ).to(device)
@@ -99,6 +102,13 @@ def initialize_optimizer(model: nn.Module) -> optim.Optimizer:
             raise ValueError(f"Invalid optimizer: {config['optimizer']['type']}")
 
 
+def reset_weights(model: torch.nn.Module):
+    """Reinitialize model weights without recompiling."""
+    for layer in model.modules():
+        if hasattr(layer, "reset_parameters"):  # Applies to layers like Linear, Conv, etc.
+            layer.reset_parameters()
+
+
 def train_step(model: nn.Module, optimizer: optim.Optimizer, loader: DataLoader[dict[str, torch.Tensor]], scheduler: optim.lr_scheduler._LRScheduler | None) -> float:
     """Single training epoch."""
     model.train()
@@ -108,11 +118,13 @@ def train_step(model: nn.Module, optimizer: optim.Optimizer, loader: DataLoader[
     for batch in loader:
         batch = tensordict.from_dict(batch).to(device)
         target_coords = batch.pop("x_t").reshape(-1, 3)
+        _ = batch.pop("v_t")
 
         optimizer.zero_grad()
-        pred_coords = model(batch).reshape(-1, 3)
+        pred_coords: torch.Tensor = model(batch).reshape(-1, 3)
 
         # Calculate MSE loss
+        assert pred_coords.shape == target_coords.shape, f"{pred_coords.shape} != {target_coords.shape}"
         loss = F.mse_loss(pred_coords, target_coords)
         total_loss += loss.item() * batch.batch_size[0]
 
@@ -135,6 +147,7 @@ def evaluate(model: nn.Module, loader: DataLoader[dict[str, torch.Tensor]]) -> f
         for batch in loader:
             batch = tensordict.from_dict(batch).to(device)
             target_coords = batch.pop("x_t").reshape(-1, 3)
+            _ = batch.pop("v_t")
 
             pred_coords: torch.Tensor = model(batch).reshape(-1, 3)
             loss = F.mse_loss(pred_coords, target_coords)
@@ -143,20 +156,20 @@ def evaluate(model: nn.Module, loader: DataLoader[dict[str, torch.Tensor]]) -> f
     return total_loss / len(loader.dataset)
 
 
-def main(num_epochs: int) -> tuple[float, float, int]:
+def main(num_epochs: int, model: nn.Module, molecule_type: MoleculeType) -> tuple[float, float, int]:
     """Full training pipeline."""
     start_time = datetime.now()
 
     # Initialize components
-    train_loader, val_loader, test_loader = create_dataloaders()
-    model = initialize_model()
+    train_loader, val_loader, test_loader = create_dataloaders(molecule_type)
+    reset_weights(model)
     optimizer = initialize_optimizer(model)
 
     # Training loop
     best_val_loss = float("inf")
     best_val_loss_epoch = 0
 
-    progress_bar = tqdm(range(num_epochs), desc="Training", leave=False, unit="epoch")
+    progress_bar = tqdm(range(num_epochs), desc="Training", leave=False, unit="epoch", position=2)
     for epoch in progress_bar:
         train_loss = train_step(model, optimizer, train_loader, None)
         val_loss = evaluate(model, val_loader)
@@ -178,57 +191,62 @@ def main(num_epochs: int) -> tuple[float, float, int]:
     return test_loss, total_time, best_val_loss_epoch
 
 
-def benchmark(runs: int, epochs_per_run: int) -> None:
+def benchmark(runs: int, epochs_per_run: int, compile: bool) -> None:
     """Benchmarking function with JSON results logging."""
     results = {"config_name": config["wandb"]["project_name"], "runs": {}, "summary": {}, "timestamp": datetime.now().isoformat()}
+    molecules = list(MoleculeType)
 
-    for run in range(runs):
-        print(f"Run {run+1}/{runs}")
-        start_time = datetime.now()
-        test_loss, duration, best_val_loss_epoch = main(num_epochs=epochs_per_run)
-        end_time = datetime.now()
+    if compile:
+        model = torch.compile(initialize_model(), dynamic=True)
+    else:
+        model = initialize_model()
 
-        # Store run results
-        results["runs"][f"run{run+1}"] = {
-            "test_loss": float(test_loss),
-            "best_val_loss_epoch": float(best_val_loss_epoch),
-            "time_seconds": float(duration),
-            "start_time": start_time.isoformat(),
-            "end_time": end_time.isoformat(),
+    molecule_progress_bar = tqdm(molecules, leave=False, unit="molecule", position=0)
+    for molecule in molecule_progress_bar:
+        molecule_progress_bar.set_description(f"Running {molecule.value}")
+        runs_progress_bar = tqdm(range(runs), leave=False, unit="run", position=1)
+        for run in runs_progress_bar:
+            runs_progress_bar.set_description(f"Run {run+1}/{runs}")
+            start_time = datetime.now()
+            test_loss, duration, best_val_loss_epoch = main(epochs_per_run, model, molecule)
+            end_time = datetime.now()
+
+            # Store run results
+            results["runs"][f"run{run+1}"] = {
+                "test_loss": float(test_loss),
+                "best_val_loss_epoch": float(best_val_loss_epoch),
+                "time_seconds": float(duration),
+                "start_time": start_time.isoformat(),
+                "end_time": end_time.isoformat(),
+            }
+
+            # tqdm.write(f"Run {run+1} - Test Loss: {test_loss:.4f}, Duration: {duration:.1f}s")
+
+        # Calculate summary statistics
+        losses = [res["test_loss"] for res in results["runs"].values()]
+        times = [res["time_seconds"] for res in results["runs"].values()]
+
+        results["summary"] = {
+            "mean_test_loss": float(sum(losses) / len(losses)),
+            "std_dev_test_loss": float(torch.std(torch.tensor(losses)).item()),
+            "mean_secs_per_run": float(sum(times) / len(times)),
+            "total_secs": float(sum(times)),
+            "min_test_loss": float(min(losses)),
+            "max_test_loss": float(max(losses)),
+            "config": config,
         }
 
-        print(f"Run {run+1} - Test Loss: {test_loss:.4f}, Duration: {duration:.1f}s")
+        # Save to JSON
+        filename = f"benchmark_runs/benchmark_{config['wandb']['project_name']}_{molecule.value}_{datetime.now().strftime('%d-%b-%Y_%H-%M-%S')}.json"
+        with open(filename, "w") as f:
+            json.dump(results, f, indent=2)
 
-    # Calculate summary statistics
-    losses = [res["test_loss"] for res in results["runs"].values()]
-    times = [res["time_seconds"] for res in results["runs"].values()]
-
-    results["summary"] = {
-        "mean_loss": float(sum(losses) / len(losses)),
-        "std_loss": float(torch.std(torch.tensor(losses)).item()),
-        "mean_time": float(sum(times) / len(times)),
-        "total_time": float(sum(times)),
-        "min_loss": float(min(losses)),
-        "max_loss": float(max(losses)),
-        "config": config,
-    }
-
-    # Save to JSON
-    filename = f"benchmark_runs/benchmark_{config['wandb']['project_name']}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-    with open(filename, "w") as f:
-        json.dump(results, f, indent=2)
-
-    print(f"\nSaved benchmark results to {filename}")
-    print(f"Benchmark Results ({runs} runs, {epochs_per_run} epochs/run):")
-    print(f"  Average Test Loss: {results['summary']['mean_loss']:.4f} ± {results['summary']['std_loss']:.4f}")
-    print(f"  Average Time per Run: {results['summary']['mean_time']:.1f}s")
-    print(f"  Total Benchmark Time: {results['summary']['total_time']:.1f}s ()")
+        tqdm.write(f"\nSaved benchmark results to {filename}")
+        tqdm.write(f"Benchmark Results ({runs} runs, {epochs_per_run} epochs/run):")
+        tqdm.write(f"  Average Test Loss: {results['summary']['mean_test_loss']:.4f} ± {results['summary']['std_dev_test_loss']:.4f}")
+        tqdm.write(f"  Average Time per Run: {results['summary']['mean_secs_per_run']:.1f}s")
+        tqdm.write(f"  Total Benchmark Time: {results['summary']['total_secs']:.1f}s")
 
 
 if __name__ == "__main__":
-    # For single run
-    # test_loss, duration = main()
-    # print(f"Final test loss: {test_loss:.4f} | Duration: {duration:.1f}s")
-
-    # For benchmarking (uncomment)
-    benchmark(2, config["training"]["epochs"])
+    benchmark(config["benchmark"]["runs"], config["training"]["epochs"], config["benchmark"]["compile"])
