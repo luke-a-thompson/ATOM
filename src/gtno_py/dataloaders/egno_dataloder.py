@@ -19,7 +19,7 @@ class DataPartition(str, Enum):
 @final
 class MoleculeType(str, Enum):
     aspirin = "aspirin"
-    benzene_old = "benzene_old"
+    benzene = "benzene"
     ethanol = "ethanol"
     malonaldehyde = "malonaldehyde"
     naphthalene = "naphthalene"
@@ -250,29 +250,30 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         where each value is a list of atom index pairs within the distance threshold.
         """
         from collections import defaultdict
+
         n = z.shape[0]
         positions = x[0]  # Assuming x[0] is the relevant coordinate set
-        
+
         # Calculate upper triangle indices (i < j)
         i_indices, j_indices = np.triu_indices(n, k=1)
-        
+
         # Vectorized distance calculation for all pairs (i < j)
         deltas = positions[i_indices] - positions[j_indices]
-        distances = np.sqrt(np.einsum('ij,ij->i', deltas, deltas))  # Faster than sum
-        
+        distances = np.sqrt(np.einsum("ij,ij->i", deltas, deltas))  # Faster than sum
+
         # Apply distance threshold
         mask = distances < threshold
         valid_i = i_indices[mask]
         valid_j = j_indices[mask]
-        
+
         # Determine atom type pairs and sort them
         type_pairs = np.sort(np.column_stack([z[valid_i], z[valid_j]]), axis=1)
-        
+
         # Group edges by type pairs using defaultdict
         all_edges: dict[tuple[int, int], list[list[int]]] = defaultdict(list)
         for (a, b), i, j in zip(type_pairs, valid_i, valid_j):
             all_edges[(a, b)].append([int(i), int(j)])  # Ensure Python int types
-        
+
         return dict(all_edges)
 
     def _compute_conf_edges(self, all_edges: dict[tuple[int, int], list[list[int]]]) -> list[list[int]]:
@@ -286,7 +287,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         Kinematics Decomposition
         """
         cfg = {}
-        if self.molecule_type == "benzene_old":
+        if self.molecule_type == "benzene":
             cfg["Stick"] = [(0, 1), (2, 3), (4, 5)]
         elif self.molecule_type == "aspirin":
             cfg["Stick"] = [(0, 2), (1, 3), (5, 6), (7, 10), (11, 12)]
@@ -347,19 +348,16 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
             # 'v_0': [n_nodes, 4]: 3D velocity (vx,vy,vz, norm(v)) in starting frame.
             "v_0": self.v_0[i],
             # 'edge_attr': [n_edges, 4]: atom type 1, atom type 2, path distance (1 or 2), stick indicator.
-            "edge_attr": edge_attr,
             # 'mole_idx': [n_nodes, 1]: molecule ID for each atom.
-            "mole_idx": self.mole_idx.unsqueeze(-1),
             # 'x_t': [n_nodes, 3]: 3D coords at future timestep.
             "x_t": self.x_t[i],
             # 'v_t': [n_nodes, 3]: 3D velocity at future timestep.
             "v_t": self.v_t[i],
             # 'Z': [n_nodes, 1]: atomic number for each atom.
-            "Z": self.Z.unsqueeze(-1),
+            # "Z": self.Z.unsqueeze(-1),
             # 'cfg': special groupings or constraints.
             # 'Stick': [n_sticks, 2]: stick constraint by atom indices.
             # 'Isolated': [n_isolated, 1]: index of isolated atoms.
-            "cfg": cfg_tensors,
             # 'concatenated_features': [n_nodes, 9]: concatenated (x,y,z,vx,vy,vz,norm(x),norm(v),Z)
             "concatenated_features": torch.cat(
                 [
@@ -493,7 +491,6 @@ class MD17DynamicsDataset(MD17Dataset):
             if force_regenerate:
                 raise FileNotFoundError("Force regeneration of dataset")
             with open(split_dir, "rb") as f:
-                print("Got Split!")
                 split: tuple[npt.NDArray[np.int_], npt.NDArray[np.int_], npt.NDArray[np.int_]] = pkl.load(f)
         except Exception as e:
             print(f"Error loading split file: {e}")
@@ -533,7 +530,6 @@ class MD17DynamicsDataset(MD17Dataset):
         st = st[:max_samples]
 
         z: npt.NDArray[np.int_] = data["z"]
-        print("mol idx:", z)
         # Filter out atoms with atomic number <= 1
         x = x[:, z > 1, ...]
         v = v[:, z > 1, ...]
@@ -548,8 +544,6 @@ class MD17DynamicsDataset(MD17Dataset):
         x_t = np.stack(x_t, axis=2)
         v_t: list[npt.NDArray[np.float64]] = [v[st + delta_frame * i // num_timesteps] for i in range(1, num_timesteps + 1)]
         v_t = np.stack(v_t, axis=2)
-
-        print(f"Got {x_0.shape[0]} samples!")
 
         mole_idx: npt.NDArray[np.int_] = z
         n_node: int = mole_idx.shape[0]
