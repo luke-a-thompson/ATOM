@@ -4,7 +4,7 @@ import torch.nn as nn
 from enum import Enum
 from gtno_py.gtno.activations import FFNActivation, ReLU2, SwiGLU
 from tensordict import TensorDict
-from gtno_py.gtno.cross_attentions import QuadraticHeterogenousCrossAttention, HamiltonianCrossAttentionVelPos
+from gtno_py.gtno.cross_attentions import QuadraticHeterogenousCrossAttention
 from gtno_py.gtno.mlps import MLP, E3NNLiftingTensorProduct, E3NNLifting
 
 
@@ -19,19 +19,12 @@ class ValueResidualType(str, Enum):
     FIXED = "fixed"
 
 
-class GraphAttentionType(str, Enum):
-    UNIFIED_MHA = "Unified MHA"
-    SPLIT_MHA = "Split MHA"
-    GRIT = "GRIT"
-
-
 class GraphHeterogenousAttentionType(str, Enum):
     GHCA = "GHCA"
-    HAMILTONIAN = "Hamiltonian"
 
 
 @final
-class IMPGTNOBlock(nn.Module):
+class GTNOBlock(nn.Module):
     def __init__(
         self,
         lifting_dim: int,
@@ -40,6 +33,8 @@ class IMPGTNOBlock(nn.Module):
         num_heads: int,
         heterogenous_attention_type: GraphHeterogenousAttentionType,
         num_timesteps: int,
+        use_rope: bool,
+        use_spherical_harmonics: bool,
         value_residual_type: ValueResidualType,
     ) -> None:
         super().__init__()
@@ -79,16 +74,12 @@ class IMPGTNOBlock(nn.Module):
         match heterogenous_attention_type:
             case GraphHeterogenousAttentionType.GHCA:
                 self.heterogenous_attention = QuadraticHeterogenousCrossAttention(
-                    num_hetero_feats=4,
+                    num_hetero_feats=3,
                     lifting_dim=lifting_dim,
                     num_heads=num_heads,
                     num_timesteps=self.num_timesteps,
-                )
-            case GraphHeterogenousAttentionType.HAMILTONIAN:
-                self.heterogenous_attention = HamiltonianCrossAttentionVelPos(
-                    lifting_dim=lifting_dim,
-                    dt=0.001,
-                    hidden_dim=64,
+                    use_rope=use_rope,
+                    use_spherical_harmonics=use_spherical_harmonics,
                 )
             case _:
                 raise ValueError(f"Invalid heterogenous attention type: {heterogenous_attention_type}, select from one of {GraphHeterogenousAttentionType.__members__.keys()}")  # type: ignore
@@ -105,38 +96,25 @@ class IMPGTNOBlock(nn.Module):
                 raise ValueError(f"Invalid value residual type: {self.value_residual_type}, select from one of {ValueResidualType.__members__.keys()}")
 
     @override
-    def forward(self, batch: dict[str, torch.Tensor], q_data: torch.Tensor) -> dict[str, torch.Tensor]:
-        match self.heterogenous_attention:
-            case QuadraticHeterogenousCrossAttention():
-                batch["concatenated_features"] = self.pre_norm(batch["concatenated_features"])
-                batch["x_0"] = self.pre_norm(batch["x_0"])
-                batch["v_0"] = self.pre_norm(batch["v_0"])
+    def forward(
+        self, batch: TensorDict, x_0: torch.Tensor, v_0: torch.Tensor, concatenated_features: torch.Tensor, q_data: torch.Tensor, initial_v: torch.Tensor | None = None
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        concatenated_features = self.pre_norm(concatenated_features)
+        x_0 = self.pre_norm(x_0)
+        v_0 = self.pre_norm(v_0)
 
-                hetero_attended_nodes: torch.Tensor = batch["x_0"] + self.heterogenous_attention(batch, q_data=q_data)["x_0"]  # Residual connection
-                batch["x_0"] = self.ffn(hetero_attended_nodes)
+        hetero_attended_nodes: torch.Tensor = x_0 + self.heterogenous_attention(x_0, v_0, concatenated_features, q_data=q_data)
+        x_0 = self.ffn(hetero_attended_nodes)
 
-            case HamiltonianCrossAttentionVelPos():
-                batch["concatenated_features"] = self.pre_norm(batch["concatenated_features"])
-                batch["x_0"] = self.pre_norm(batch["x_0"])
-                batch["v_0"] = self.pre_norm(batch["v_0"])
-
-                out_dict = self.heterogenous_attention(batch, q_data=q_data)
-                batch["x_0"] = batch["x_0"] + out_dict["x_0"]
-            case _:
-                raise ValueError(f"Invalid heterogenous attention type: {self.heterogenous_attention}, select from one of {GraphHeterogenousAttentionType.__members__.keys()}")
-
-        # Value Residual Learning (after heterogenous attention and FFN)
         if self.value_residual_type == ValueResidualType.LEARNABLE:
-            # Access the value from the *input* batch, assuming the first block's output is stored as 'initial_v' in the batch.
-            # This requires modification in IMPGTNO.forward to pass and manage initial_v.
-            if "initial_v" not in batch:
-                batch["initial_v"] = batch["x_0"].clone()  # Store the output of the first block
+            # Set initial_v if not provided; otherwise apply value residual
+            if initial_v is None:
+                initial_v = x_0.clone()
             else:
-                # Apply value residual learning for subsequent blocks
-                lambda_val = torch.sigmoid(self.lambda_v_residual)  # Ensure lambda is between 0 and 1
-                batch["x_0"] = lambda_val * batch["x_0"] + (1 - lambda_val) * batch["initial_v"]
+                lambda_val = torch.sigmoid(self.lambda_v_residual)
+                x_0 = lambda_val * x_0 + (1 - lambda_val) * initial_v
 
-        return batch
+        return x_0, initial_v
 
 
 @final
@@ -150,6 +128,8 @@ class GTNO(nn.Module):
         num_heads: int,
         heterogenous_attention_type: GraphHeterogenousAttentionType,
         num_timesteps: int,
+        use_rope: bool,
+        use_spherical_harmonics: bool,
         use_equivariant_lifting: bool,
         value_residual_type: ValueResidualType,
     ) -> None:
@@ -178,7 +158,6 @@ class GTNO(nn.Module):
                         "x_0": E3NNLiftingTensorProduct(in_irreps="1x1o + 1x0e", out_irreps="42x1o + 2x0e"),  # Use e3nn lifting for equivariant embedding
                         "v_0": E3NNLiftingTensorProduct(in_irreps="1x1o + 1x0e", out_irreps="42x1o + 2x0e"),  # Same for velocity
                         "concatenated_features": E3NNLiftingTensorProduct(in_irreps="2x1o + 3x0e", out_irreps="42x1o + 2x0e"),  # Keep standard MLP for other inputs
-                        "edge_attr": nn.Linear(5, lifting_dim),
                     }
                 )
             case False:
@@ -187,21 +166,22 @@ class GTNO(nn.Module):
                         "x_0": nn.Linear(4, lifting_dim),
                         "v_0": nn.Linear(4, lifting_dim),
                         "concatenated_features": nn.Linear(9, lifting_dim),
-                        "edge_attr": nn.Linear(5, lifting_dim),
                     }
                 )
             case _:
                 raise ValueError(f"Invalid equivariant lifting type: {use_equivariant_lifting}, select from one of {bool.__members__.keys()}")
 
-        self.layers = nn.Sequential(
+        self.transformer_blocks = nn.Sequential(
             *[
-                IMPGTNOBlock(
+                GTNOBlock(
                     lifting_dim,
                     norm,
                     activation,
                     num_heads,
                     heterogenous_attention_type,
                     num_timesteps,
+                    use_rope,
+                    use_spherical_harmonics,
                     value_residual_type,
                 )
                 for _ in range(num_layers)
@@ -210,7 +190,6 @@ class GTNO(nn.Module):
 
         # Final projection to (x, y, z)
         self.projection_layer = nn.Linear(in_features=lifting_dim, out_features=3)
-        self.post_norm = nn.LayerNorm(normalized_shape=lifting_dim)
 
         self._initialise_weights(self)
 
@@ -223,17 +202,15 @@ class GTNO(nn.Module):
         # Project this batch feature from its original dimension to `lifting_dim`
         # Use the same "key" to pick the lifting layer from `self.lifting_layers` and the corresponding feature from the `batch` dict.
         # Apply lifting
-        for key in self.lifting_layers:  # Use e3nn only for equivariant tensors
-            batch[key] = self.lifting_layers[key](batch[key])
+        x_0: torch.Tensor = self.lifting_layers["x_0"](batch["x_0"])
+        v_0: torch.Tensor = self.lifting_layers["v_0"](batch["v_0"])
+        concatenated_features: torch.Tensor = self.lifting_layers["concatenated_features"](batch["concatenated_features"])
 
-        for layer in self.layers:
-            batch = layer(batch, q_data=batch["concatenated_features"])
+        initial_v: torch.Tensor | None = None  # Starts as none, becomes x_0 the first layer
+        for layer in self.transformer_blocks:
+            x_0, initial_v = layer(batch, x_0, v_0, concatenated_features, q_data=concatenated_features, initial_v=initial_v)
 
-        if "initial_v" in batch:
-            del batch["initial_v"]
-
-        out: torch.Tensor = self.projection_layer(batch["x_0"])
-        assert out.shape[-1] == 3, f"Output shape must have last dimension of 3 (x, y, z). Got {out.shape}"
+        out: torch.Tensor = self.projection_layer(x_0)
 
         # 6) Reshape to [B, N, T, 3]
         out = out.view(self.num_timesteps, B, N, 3).permute(1, 2, 0, 3).contiguous()
@@ -273,16 +250,15 @@ class GTNO(nn.Module):
             >>> expanded = replicate_tensordict(batch, 8)
             >>> print(expanded.batch_size)  # torch.Size([256])
         """
-        B = batch.batch_size[0]
-        new_shape = (num_timesteps, B)  # We'll reshape to [T * B] eventually.
+        new_shape = (num_timesteps, *batch.batch_size)  # We'll reshape to [T * B] eventually.
 
         # 1) Insert a new dimension at index 0 -> shape = [1, B].
         out: torch.Tensor = batch.unsqueeze(0)
 
         # 2) Expand along that new dimension T times -> shape = [T, B].
-        out = out.expand(*new_shape)
+        out = out.expand(new_shape)
 
         # 3) Make memory contiguous, then flatten the first two dims -> [T * B].
-        out = out.contiguous().view(-1)
+        out = out.contiguous().view(-1, *batch.batch_size[1:])
 
         return out
