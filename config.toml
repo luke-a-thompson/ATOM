@@ -1,9 +1,9 @@
 [wandb]
-project_name = "GTNO_no_deltav_update"
-run_name = "Test"
+project_name = "GTNO"
 
-[dataset]
-molecule_type = "aspirin"
+[benchmark]
+runs = 3
+compile = true
 
 [training]
 seed = 42
@@ -28,6 +28,8 @@ num_timesteps = 8
 norm = "rms"
 activation = "silu"
 heterogenous_attention_type = "GHCA"
+use_rope = true
+use_spherical_harmonics = false
 value_residual_type = "learnable"
 use_equivariant_lifting = true
 num_layers = 5

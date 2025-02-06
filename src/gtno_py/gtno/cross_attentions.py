@@ -4,6 +4,14 @@ import torch.nn as nn
 import torch.nn.functional as F
 from gtno_py.gtno.mlps import MLP
 from gtno_py.gtno.shape_utils import flatten_spatiotemporal, unflatten_spatiotemporal
+from e3nn import o3
+from enum import Enum
+
+
+class RoPEType(str, Enum):
+    NONE = "none"
+    TEMPORAL = "temporal"
+    EQUIVARIANT = "equivariant_temporal"
 
 
 @final
@@ -53,11 +61,14 @@ class TemporalRoPEWithOffset(nn.Module):
     def forward(self, tensor: torch.Tensor) -> torch.Tensor:
         """
         Args:
-          tensor: shape [B, n_heads, seq_len, d_head].
-                  Must have seq_len divisible by num_timesteps.
+            tensor: shape [B, n_heads, seq_len, d_head].
+                  ` seq_len = num_nodes * num_timesteps
+                  ` B = batch size
+                  ` d_head = hidden dimension
+                  ` n_heads = number of attention heads
 
         Returns:
-          Rotated tensor of the same shape, with per-head time offsets applied.
+            rotated: shape [B, n_heads, seq_len, d_head] tensor with RoPE applied to each group of `num_nodes`.
         """
         B, H, seq_len, d_head = tensor.shape
         assert H == self.n_heads, f"Expected n_heads={self.n_heads}, got {H}"
@@ -105,6 +116,65 @@ class TemporalRoPEWithOffset(nn.Module):
 
 
 @final
+class SphericalHarmonicsAttentionBias(nn.Module):
+    """
+    Computes a bias for attention logits from the relative node coordinates.
+    For each pair of sequence elements, the module computes the relative difference,
+    encodes it using spherical harmonics up to a chosen maximum degree, and then maps
+    the concatenated coefficients through an MLP to produce a scalar bias per head.
+
+    Args:
+        max_degree (int): Maximum spherical harmonics degree (l) to compute (default: 1).
+        num_heads (int): Number of attention heads.
+        hidden_dim (int): Hidden dimension in the intermediate MLP.
+    """
+
+    def __init__(self, num_timesteps: int, max_degree: int, num_heads: int, hidden_dim: int):
+        super().__init__()
+        self.max_degree = max_degree
+        self.num_heads = num_heads
+        # Total number of coefficients from l=0 to max_degree.
+        self.num_coeff = sum(2 * l + 1 for l in range(max_degree + 1))
+        self.num_timesteps = num_timesteps
+        self.mlp = MLP(in_features=self.num_coeff, out_features=num_heads, hidden_features=hidden_dim, hidden_layers=2, activation=nn.SiLU())
+        self.eps = 1e-6
+
+    @override
+    def forward(self, coords: torch.Tensor) -> torch.Tensor:
+        """
+        Args:
+            coords: shape [B, seq_len, 3].
+                  ` seq_len = num_nodes * num_timesteps
+                  ` B = batch size
+                  ` 3 = x, y, z coordinates
+
+        Returns:
+            bias: shape [B, num_heads, seq_len, seq_len] tensor to be added to attention logits.
+        """
+        B, S, _ = coords.shape
+        coords = flatten_spatiotemporal(coords, self.num_timesteps)  # now shape [B, N*T, 3]
+        # Compute pairwise relative differences: r_ij = coords_i - coords_j.
+        relative_distance: torch.Tensor = coords.unsqueeze(2) - coords.unsqueeze(1)  # [B, S, S, 3]
+        # Compute the norm (magnitude) and normalized direction.
+        norm: torch.Tensor = relative_distance.norm(dim=-1, keepdim=True)  # [B, S, S, 1]
+        unit_rel = relative_distance / (norm + self.eps)  # [B, S, S, 3]
+
+        sh_features = []
+        # For each degree l = 0, 1, ..., max_degree, compute spherical harmonics.
+        for l in range(self.max_degree + 1):
+            # o3.spherical_harmonics returns shape [B, S, S, 2l+1].
+            Y_l = o3.spherical_harmonics(l, unit_rel, normalize=True)
+            sh_features.append(Y_l)
+        # Concatenate coefficients over l to form shape [B, S, S, num_coeff].
+        sh_cat = torch.cat(sh_features, dim=-1)
+        # Map the concatenated coefficients to a bias per head.
+        bias: torch.Tensor = self.mlp(sh_cat)  # [B, S, S, num_heads]
+        # Rearrange to [B, num_heads, S, S].
+        bias = bias.permute(0, 3, 1, 2)
+        return bias
+
+
+@final
 class QuadraticHeterogenousCrossAttention(nn.Module):
     def __init__(
         self,
@@ -112,7 +182,8 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         lifting_dim: int,
         num_heads: int,
         num_timesteps: int,
-        rope_on: bool = False,
+        use_rope: bool,
+        use_spherical_harmonics: bool,
         attention_dropout: float = 0.2,
     ) -> None:
         """
@@ -138,7 +209,8 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         self.num_hetero_feats = num_hetero_feats
         self.lifting_dim = lifting_dim
         self.num_timesteps = num_timesteps
-        self.rope_on = rope_on
+        self.use_rope = use_rope
+        self.use_spherical_harmonics = use_spherical_harmonics
         self.d_head = self.lifting_dim // self.num_heads
         self.attention_denom = torch.sqrt(torch.tensor(self.d_head, dtype=torch.float32))
 
@@ -155,14 +227,17 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         self.feature_weights = nn.Parameter(torch.randn(self.num_hetero_feats) * 0.1)
         self.rescale = nn.Linear(lifting_dim, lifting_dim, bias=False)
 
-        if self.rope_on:
+        if use_rope:
             self.rope = TemporalRoPEWithOffset(num_timesteps=self.num_timesteps, d_head=self.d_head, n_heads=self.num_heads, base=1000.0, learnable_offset=False)
+
+        if use_spherical_harmonics:
+            self.spherical_harmonics = SphericalHarmonicsAttentionBias(num_timesteps=self.num_timesteps, max_degree=1, num_heads=self.num_heads, hidden_dim=16)
 
         self.coord_mlp = nn.Sequential(nn.Linear(2 * lifting_dim + 1, 64), nn.ReLU(), nn.Linear(64, 1))  # outputs a single scalar
         self.alpha_coord = 0.1
 
     @override
-    def forward(self, batch: dict[str, torch.Tensor], q_data: torch.Tensor) -> dict[str, torch.Tensor]:
+    def forward(self, x_0: torch.Tensor, v_0: torch.Tensor, concatenated_features: torch.Tensor, q_data: torch.Tensor) -> dict[str, torch.Tensor]:
         """
         1. Flatten queries => [B, seq_q, d], then project to [B, heads, seq_q, d_head].
         2. For each heterogeneous feature, do:
@@ -183,18 +258,20 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         # Project Q => [B, heads, seq_q, d_head]
         q_proj: torch.Tensor = self.query(q_data).view(B, seq_q, self.num_heads, self.d_head).permute(0, 2, 1, 3)  # [B, heads, seq_q, d_head]
 
-        if self.rope_on:
+        if self.use_rope:
             q_proj = self.rope(q_proj)
 
+        if self.use_spherical_harmonics:
+            bias: torch.Tensor = self.spherical_harmonics(x_0[..., :3])
+
         # We'll accumulate over multiple heterogeneous features
-        out_sum = torch.zeros_like(q_proj)  # same shape as q_proj
+        out_sum = torch.zeros_like(q_proj)
 
         # Collect the features
         hetero_features = [
-            batch["x_0"],
-            batch["v_0"],
-            batch["edge_attr"],
-            batch["concatenated_features"],
+            x_0,
+            v_0,
+            concatenated_features,
         ]
         assert len(hetero_features) == self.num_hetero_feats
 
@@ -210,12 +287,14 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
             k_proj = k_proj.view(B, seq_k, self.num_heads, self.d_head).permute(0, 2, 1, 3)
             v_proj = v_proj.view(B, seq_k, self.num_heads, self.d_head).permute(0, 2, 1, 3)
 
-            if self.rope_on:
+            if self.use_rope:
                 k_proj = self.rope(k_proj)
 
             # 1) scores = Q·K^T / sqrt(d_head)
             scores = q_proj @ k_proj.transpose(-2, -1) / self.attention_denom
             # 2) softmax over seq_k dimension (dim=-1)
+            if self.use_spherical_harmonics:
+                scores = scores + bias
             attn_weights: torch.Tensor = self.attention_dropout(F.softmax(scores, dim=-1))
             # 3) multiply by V
             out_i = attn_weights @ v_proj
@@ -229,123 +308,5 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
 
         # Unflatten => [B*T, N, d]
         out_sum = unflatten_spatiotemporal(out_sum, self.num_timesteps)
-        batch["x_0"] = out_sum  # stored result from attention
 
-        # === 2) VECTORZIED COORDINATE UPDATE ===
-        # We assume that the first 3 dimensions of batch["x_0"] are the actual 3D coordinates.
-        # Let:
-        #   - x_0_positions be of shape [B*T, N, 3]
-        #   - node_feats be of shape [B*T, N, d] (all node features)
-        x_0_positions = batch["x_0"][..., :3]  # [B*T, N, 3]
-        node_feats = batch["x_0"]  # [B*T, N, d]
-
-        # Compute all pairwise position differences: shape [B*T, N, N, 3]
-        pos_diff = x_0_positions.unsqueeze(2) - x_0_positions.unsqueeze(1)
-        # Compute Euclidean distances (with an extra dim): shape [B*T, N, N, 1]
-        dist = pos_diff.norm(dim=-1, keepdim=True)
-
-        # Prepare pairwise node features:
-        # feats_i and feats_j: both of shape [B*T, N, N, d]
-        feats_i = node_feats.unsqueeze(2).expand(-1, -1, node_feats.shape[1], -1)
-        feats_j = node_feats.unsqueeze(1).expand(-1, node_feats.shape[1], -1, -1)
-
-        # Concatenate features and distance along the last dimension: shape [B*T, N, N, 2*d + 1]
-        mlp_input = torch.cat([feats_i, feats_j, dist], dim=-1)
-
-        # Pass through the coordinate MLP to obtain a scalar weight per edge: [B*T, N, N, 1]
-        msg = self.coord_mlp(mlp_input)
-
-        # Compute the weighted sum of relative differences:
-        # Multiply the relative differences by the message weights and sum over neighbors (axis=2)
-        delta_x = (pos_diff * msg).sum(dim=2)  # [B*T, N, 3]
-
-        # Update coordinates using the weighted sum:
-        x_0_positions_updated: torch.Tensor = x_0_positions + self.alpha_coord * delta_x
-
-        # Replace the coordinates in batch["x_0"] with the updated ones.
-        # If the full node feature dimension exceeds 3, keep the remaining features unchanged.
-        if batch["x_0"].shape[-1] > 3:
-            batch["x_0"] = torch.cat([x_0_positions_updated, batch["x_0"][..., 3:]], dim=-1)
-        else:
-            batch["x_0"] = x_0_positions_updated
-
-        return batch
-
-
-class HamiltonianCrossAttentionVelPos(nn.Module):
-    """
-    Wraps QuadraticHeterogenousCrossAttention to treat x_0 and v_0 (each in embedding dimension)
-    as canonical position q and momentum p in a Hamiltonian system.
-    """
-
-    def __init__(
-        self,
-        lifting_dim: int = 128,  # embedding dimension
-        dt: float = 0.001,
-        hidden_dim: int = 128,
-    ):
-        """
-        Args:
-          lifting_dim: dimension of each of x_0 and v_0 embeddings
-          dt: time-step size for Hamiltonian integration
-          hidden_dim: dimension for the hidden layers of the Hamiltonian MLP
-        """
-        super().__init__()
-        self.cross_attention = QuadraticHeterogenousCrossAttention(
-            num_hetero_feats=4,
-            lifting_dim=lifting_dim,
-            num_heads=4,
-            num_timesteps=8,
-        )
-        self.lifting_dim = lifting_dim
-        self.dt = dt
-
-        # A small MLP to produce a scalar from concatenated x_0 and v_0 embeddings
-        self.hamiltonian_mlp = MLP(in_features=2 * lifting_dim, out_features=1, hidden_features=hidden_dim, hidden_layers=3, activation=nn.SiLU())
-
-    @override
-    def forward(self, batch: dict[str, torch.Tensor], q_data: torch.Tensor) -> dict[str, torch.Tensor]:
-        """
-        Expects:
-          batch["x_0"], batch["v_0"] each => [B*T, N, lifting_dim]
-        Returns updated batch with x_0, v_0 replaced by their symplectic updates.
-        """
-
-        # Ensure x_0, v_0 require gradients BEFORE cross-attention
-        batch["x_0"].requires_grad_(True)
-        batch["v_0"].requires_grad_(True)
-
-        # (A) CROSS-ATTENTION
-        # Perform cross-attention to update batch["x_0"] (and optionally others)
-        batch = self.cross_attention(batch, q_data=q_data)
-
-        # Extract x_0 and v_0 from the updated batch
-        x_0 = batch["x_0"]  # shape [B*T, N, lifting_dim]
-        v_0 = batch["v_0"]  # shape [B*T, N, lifting_dim]
-
-        # (B) HAMILTONIAN => H(x_0, v_0)
-        # Concatenate along last dim => [B*T, N, 2*lifting_dim]
-        cat_xv = torch.cat([x_0, v_0], dim=-1)
-
-        # MLP -> scalar per node => [B*T, N, 1]
-        H_nodes = self.hamiltonian_mlp(cat_xv)
-
-        # Sum across nodes => [B*T], then sum over B*T => single scalar
-        H_per_example = H_nodes.sum(dim=1)  # sum over nodes
-        H = H_per_example.sum()  # total Hamiltonian scalar
-
-        # (C) PARTIAL DERIVATIVES
-        # Compute dH/dx_0 and dH/dv_0
-        dH_dx0, dH_dv0 = torch.autograd.grad(H, (x_0, v_0), create_graph=True)
-
-        # (D) SYMPLECTIC UPDATE
-        # Update x_0 and v_0 using the symplectic equations
-        dt = self.dt
-        x_0_new = x_0 + dt * dH_dv0
-        v_0_new = v_0 - dt * dH_dx0
-
-        # (E) Store the updated embeddings
-        batch["x_0"] = x_0_new
-        batch["v_0"] = v_0_new
-
-        return batch
+        return out_sum
