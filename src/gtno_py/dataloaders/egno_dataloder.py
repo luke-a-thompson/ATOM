@@ -47,6 +47,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         test_par: float = 0.05,
         seed: int = 100,
         force_regenerate: bool = False,
+        num_timesteps: int = 1,  # Added for dynamics dataset compatibility, default to 1 for standard dataset
     ):
         """
         Args:
@@ -59,7 +60,13 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
             train_par (float): The percentage of the data to use for training.
             val_par (float): The percentage of the data to use for validation.
             test_par (float): The percentage of the data to use for testing.
+            num_timesteps (int): Number of timesteps for dynamics dataset, default 1 for static.
         """
+
+        self.partition: DataPartition = partition
+        self.molecule_type: MoleculeType = molecule_type
+        self.delta_frame: int = delta_frame
+        self.num_timesteps: int = num_timesteps
 
         # setup a split, tentative setting
         train_par, val_par, test_par = train_par, val_par, test_par
@@ -67,10 +74,6 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         split_dir = os.path.join(split_dir + molecule_type + "_split.pkl")
         data: np.lib.npyio.NpzFile = np.load(full_dir)
 
-        if molecule_type in MoleculeType.__members__.values():
-            self.molecule_type: MoleculeType = molecule_type
-        else:
-            raise ValueError(f"Invalid molecule type: {molecule_type}, select from one of {MoleculeType.__members__.keys()}")
         x: npt.NDArray[np.float64] = data["R"]
         v: npt.NDArray[np.float64] = x[1:] - x[:-1]
         x = x[:-1]
@@ -82,9 +85,10 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
             train_par=train_par,
             val_par=val_par,
             test_par=test_par,
+            force_regenerate=force_regenerate,
+            seed=seed,
         )
 
-        self.partition: DataPartition = partition
         match partition:
             case DataPartition.train:
                 split_times = split[0]
@@ -97,16 +101,25 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
 
         #  st is the index of the first frame to load, this gives the max number of samples from the split
         split_times = split_times[:max_samples]
+        self.split_times = split_times  # Store split_times for potential reuse in subclasses
 
         z = data["z"]
         # Select all atoms with atomic number 'z' greater than 1
-        x = x[:, z > 1, ...]
-        v = v[:, z > 1, ...]
-        z = z[z > 1]
+        heavy_atom_mask: npt.NDArray[np.bool_] = z > 1
+        x = x[:, heavy_atom_mask, ...]
+        v = v[:, heavy_atom_mask, ...]
+        z = z[heavy_atom_mask]
 
-        x_0, v_0 = x[split_times], v[split_times]  # Initial timesteps
-        # We want to load the next frame, so we add delta_frame to the split_times
-        x_t, v_t = x[split_times + delta_frame], v[split_times + delta_frame]  # Target timesteps
+        self.x_all = x  # Store for potential reuse in subclasses
+        self.v_all = v  # Store for potential reuse in subclasses
+        self.z_all = z  # Store for potential reuse in subclasses
+
+        self.process_data(split_times, x, v, z)
+
+    def process_data(self, split_times, x, v, z):
+        """Processes the loaded data, common to both MD17Dataset and MD17DynamicsDataset"""
+        x_0, v_0 = self.get_initial_frames(split_times, x, v)
+        x_t, v_t = self.get_target_frames(split_times, x, v)
 
         mole_idx = z
         n_node = mole_idx.shape[0]
@@ -126,12 +139,54 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         # Convert to tensors
         self.x_0 = torch.cat([torch.Tensor(x_0), torch.norm(torch.Tensor(x_0), dim=-1, keepdim=True)], dim=-1)
         self.v_0 = torch.cat([torch.Tensor(v_0), torch.norm(torch.Tensor(v_0), dim=-1, keepdim=True)], dim=-1)
-        self.x_t = torch.Tensor(x_t)
-        self.v_t = torch.Tensor(v_t)
         self.mole_idx = torch.Tensor(mole_idx)
         self.Z = torch.Tensor(z)
-
         self.cfg = self.sample_cfg()
+
+        # Conditionally convert x_t and v_t to tensors only if they are not None
+        if x_t is not None:
+            self.x_t: torch.Tensor = torch.Tensor(x_t)
+        if v_t is not None:
+            self.v_t: torch.Tensor = torch.Tensor(v_t)
+
+        self.concatenated_features: torch.Tensor = self._compute_concatenated_features()
+
+    def _compute_concatenated_features(self) -> torch.Tensor:
+        """Pre-compute concatenated features for all samples."""
+        x_0_xyz = self.x_0[..., :3]  # First 3 elements of x_0 (x,y,z)
+        v_0_xyz = self.v_0[..., :3]  # First 3 elements of v_0 (vx,vy,vz)
+        x_0_norm = self.x_0[..., 3:]  # Last element of x_0 (norm(x))
+        v_0_norm = self.v_0[..., 3:]  # Last element of v_0 (norm(v))
+        Z_unsqueeze = self.Z.unsqueeze(-1)  # Z values
+
+        concatenated_features = torch.cat(
+            [
+                x_0_xyz,
+                v_0_xyz,
+                x_0_norm,
+                v_0_norm,
+                Z_unsqueeze.expand(self.x_0.shape[0], -1, -1),  # expand Z to match batch size
+            ],
+            dim=-1,
+        )
+
+        return concatenated_features
+
+    def get_initial_frames(
+        self, split_times: npt.NDArray[np.int_], x: npt.NDArray[np.float64], v: npt.NDArray[np.float64]
+    ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+        """Get initial frames x_0, v_0. Can be overridden for different dataset types."""
+        x_0 = x[split_times]
+        v_0 = v[split_times]
+        return x_0, v_0
+
+    def get_target_frames(
+        self, split_times: npt.NDArray[np.int_], x: npt.NDArray[np.float64], v: npt.NDArray[np.float64]
+    ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+        """Get target frames x_t, v_t. Can be overridden for different dataset types."""
+        x_t = x[split_times + self.delta_frame]
+        v_t = v[split_times + self.delta_frame]
+        return x_t, v_t
 
     def _get_or_generate_split(
         self, split_dir: str, x: npt.NDArray[np.float64], train_par: float, val_par: float, test_par: float, force_regenerate: bool = False, seed: int = 100
@@ -287,21 +342,21 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         Kinematics Decomposition
         """
         cfg = {}
-        if self.molecule_type == "benzene":
+        if self.molecule_type == MoleculeType.benzene:
             cfg["Stick"] = [(0, 1), (2, 3), (4, 5)]
-        elif self.molecule_type == "aspirin":
+        elif self.molecule_type == MoleculeType.aspirin:
             cfg["Stick"] = [(0, 2), (1, 3), (5, 6), (7, 10), (11, 12)]
-        elif self.molecule_type == "ethanol":
+        elif self.molecule_type == MoleculeType.ethanol:
             cfg["Stick"] = [(0, 1)]
-        elif self.molecule_type == "malonaldehyde":
+        elif self.molecule_type == MoleculeType.malonaldehyde:
             cfg["Stick"] = [(1, 2)]
-        elif self.molecule_type == "naphthalene":
+        elif self.molecule_type == MoleculeType.naphthalene:
             cfg["Stick"] = [(0, 1), (2, 3), (4, 9), (5, 6), (7, 8)]
-        elif self.molecule_type == "salicylic":
+        elif self.molecule_type == MoleculeType.salicylic:
             cfg["Stick"] = [(0, 9), (1, 2), (4, 5), (6, 7)]
-        elif self.molecule_type == "toluene":
+        elif self.molecule_type == MoleculeType.toluene:
             cfg["Stick"] = [(2, 3), (5, 6), (0, 1)]
-        elif self.molecule_type == "uracil":
+        elif self.molecule_type == MoleculeType.uracil:
             cfg["Stick"] = [(0, 1), (3, 4)]
         else:
             raise NotImplementedError()
@@ -317,58 +372,12 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
 
     @override
     def __getitem__(self, i: int) -> dict[str, torch.Tensor]:
-        cfg = self.cfg
-
-        edge_attr = self.edge_attr
-        stick_ind = torch.zeros_like(edge_attr)[..., -1].unsqueeze(-1)
-        edges = self.edges
-
-        for m in range(len(edges[0])):
-            row, col = edges[0][m], edges[1][m]
-            if "Stick" in cfg:
-                for stick in cfg["Stick"]:
-                    if (row, col) in [(stick[0], stick[1]), (stick[1], stick[0])]:
-                        stick_ind[m] = 1
-            if "Hinge" in cfg:
-                for hinge in cfg["Hinge"]:
-                    if (row, col) in [
-                        (hinge[0], hinge[1]),
-                        (hinge[1], hinge[0]),
-                        (hinge[0], hinge[2]),
-                        (hinge[2], hinge[0]),
-                    ]:
-                        stick_ind[m] = 2
-        edge_attr = torch.cat((edge_attr, stick_ind), dim=-1)  # [edge, 4]
-        cfg = {_: torch.from_numpy(np.array(cfg[_])) for _ in cfg}
-        cfg_tensors = {key: torch.from_numpy(np.array(cfg[key])) for key in cfg}
-
         return {
-            # 'x_0': [n_nodes, 4]: 3D coords (x,y,z, norm(x)) in starting frame.
             "x_0": self.x_0[i],
-            # 'v_0': [n_nodes, 4]: 3D velocity (vx,vy,vz, norm(v)) in starting frame.
             "v_0": self.v_0[i],
-            # 'edge_attr': [n_edges, 4]: atom type 1, atom type 2, path distance (1 or 2), stick indicator.
-            # 'mole_idx': [n_nodes, 1]: molecule ID for each atom.
-            # 'x_t': [n_nodes, 3]: 3D coords at future timestep.
             "x_t": self.x_t[i],
-            # 'v_t': [n_nodes, 3]: 3D velocity at future timestep.
             "v_t": self.v_t[i],
-            # 'Z': [n_nodes, 1]: atomic number for each atom.
-            # "Z": self.Z.unsqueeze(-1),
-            # 'cfg': special groupings or constraints.
-            # 'Stick': [n_sticks, 2]: stick constraint by atom indices.
-            # 'Isolated': [n_isolated, 1]: index of isolated atoms.
-            # 'concatenated_features': [n_nodes, 9]: concatenated (x,y,z,vx,vy,vz,norm(x),norm(v),Z)
-            "concatenated_features": torch.cat(
-                [
-                    self.x_0[i][..., :3],  # First 3 elements of x_0 (x,y,z)
-                    self.v_0[i][..., :3],  # First 3 elements of v_0 (vx,vy,vz)
-                    self.x_0[i][..., 3:],  # Last element of x_0 (norm(x))
-                    self.v_0[i][..., 3:],  # Last element of v_0 (norm(v))
-                    self.Z.unsqueeze(-1),  # Z values
-                ],
-                dim=-1,
-            ),
+            "concatenated_features": self.concatenated_features[i],  # Use pre-computed features
         }
 
     def __len__(self):
@@ -390,30 +399,6 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
     def get_cfg(batch_size: int, n_nodes: int, cfg: TensorDict) -> TensorDict:
         """
         Expands a molecule's configuration dictionary (cfg) to a batch.
-
-        This function takes a base configuration dictionary `cfg` (defined per molecule)
-        and replicates it for each molecule in a batch, adjusting atom indices to
-        account for the batch structure. It's used to represent structural
-        constraints or groupings (e.g., rigid bodies) within a molecule.
-
-        Args:
-            batch_size (int): The number of molecules in the batch.
-            n_nodes (int): The number of atoms (nodes) per molecule.
-            cfg (TensorDict): A dictionary containing the base configuration
-                for a single molecule. Keys are typically strings like "Stick" or
-                "Isolated", and values are lists of atom index tuples (for "Stick") or
-                lists of atom indices (for "Isolated").
-
-        Returns:
-            TensorDict: A new TensorDict with the expanded configuration. The keys
-            remain the same (e.g., "Stick", "Isolated"), but the values are now
-            modified to reflect the batch structure. Atom indices are offset
-            by `n_nodes` for each molecule in the batch.
-
-        Example:
-            If `cfg` is `{'Stick': [(0, 1), (2, 3)], 'Isolated': [[4]]}` for a single molecule with 5 nodes,
-            and `batch_size` is 2, the function will return:
-            `{'Stick': tensor([[0, 1], [2, 3], [5, 6], [7, 8]]), 'Isolated': tensor([4, 9])}`.
         """
 
         # Make sure offset is on the same device as cfg
@@ -458,7 +443,7 @@ class MD17DynamicsDataset(MD17Dataset):
         seed: int = 100,
         force_regenerate: bool = False,
     ):
-        # First call the parent constructor so we inherit shared logic
+        # First call the parent constructor to load and process common data
         super().__init__(
             partition=partition,
             max_samples=max_samples,
@@ -471,111 +456,64 @@ class MD17DynamicsDataset(MD17Dataset):
             test_par=test_par,
             seed=seed,
             force_regenerate=force_regenerate,
+            num_timesteps=num_timesteps,  # Pass num_timesteps to base class
         )
+        self.x_t, self.v_t = self.get_dynamic_target_frames()
 
-        # setup a split, tentative setting
-        train_par, val_par, test_par = train_par, val_par, test_par
-        full_dir = os.path.join(data_dir + "md17_" + molecule_type + ".npz")
-        split_dir = os.path.join(split_dir + molecule_type + "_split.pkl")
-        data: np.lib.npyio.NpzFile = np.load(full_dir)
+        # Overwrite x_t and v_t with the multi-step versions
+        self.x_t = torch.Tensor(self.x_t)
+        self.v_t = torch.Tensor(self.v_t)
 
-        self.partition: DataPartition = partition
-        self.molecule_type: MoleculeType = molecule_type
+    def get_dynamic_target_frames(self):
+        """
+        Generates multi-step target frames for dynamics dataset.
+        Uses attributes initialized in the parent class.
+        """
+        x = self.x_all
+        v = self.v_all
+        split_times = self.split_times
+        delta_frame = self.delta_frame
+        num_timesteps = self.num_timesteps
 
-        x: npt.NDArray[np.float64] = data["R"]
-        v: npt.NDArray[np.float64] = x[1:] - x[:-1]
-        x = x[:-1]
+        x_t_list: list[npt.NDArray[np.float64]] = [x[split_times + delta_frame * i // num_timesteps] for i in range(1, num_timesteps + 1)]
+        x_t = np.stack(x_t_list, axis=2)
+        v_t_list: list[npt.NDArray[np.float64]] = [v[split_times + delta_frame * i // num_timesteps] for i in range(1, num_timesteps + 1)]
+        v_t = np.stack(v_t_list, axis=2)
+        return x_t, v_t
 
-        # Attempt to load or generate the split
-        try:
-            if force_regenerate:
-                raise FileNotFoundError("Force regeneration of dataset")
-            with open(split_dir, "rb") as f:
-                split: tuple[npt.NDArray[np.int_], npt.NDArray[np.int_], npt.NDArray[np.int_]] = pkl.load(f)
-        except Exception as e:
-            print(f"Error loading split file: {e}")
-            np.random.seed(seed)
-
-            _x = x[10000:-10000]
-            train_idx: np.ndarray = np.random.choice(np.arange(_x.shape[0]), size=int(train_par * _x.shape[0]), replace=False)
-            flag: np.ndarray = np.zeros(_x.shape[0])
-            for _ in train_idx:
-                flag[_] = 1
-            rest = [_ for _ in range(_x.shape[0]) if not flag[_]]
-            val_idx: np.ndarray = np.random.choice(rest, size=int(val_par * _x.shape[0]), replace=False)
-            for _ in val_idx:
-                flag[_] = 1
-            rest = [_ for _ in range(_x.shape[0]) if not flag[_]]
-            test_idx: np.ndarray = np.random.choice(rest, size=int(test_par * _x.shape[0]), replace=False)
-
-            train_idx += 10000
-            val_idx += 10000
-            test_idx += 10000
-            split = (train_idx, val_idx, test_idx)
-
-            with open(split_dir, "wb") as f:
-                pkl.dump(split, f)
-            print("Generate and save split!")
-
-        match partition:
-            case DataPartition.train:
-                st = split[0]
-            case DataPartition.val:
-                st = split[1]
-            case DataPartition.test:
-                st = split[2]
-            case _:
-                raise ValueError(f"Invalid partition: {partition}")
-
-        st = st[:max_samples]
-
-        z: npt.NDArray[np.int_] = data["z"]
-        # Filter out atoms with atomic number <= 1
-        x = x[:, z > 1, ...]
-        v = v[:, z > 1, ...]
-        z = z[z > 1]
-
-        # Select starting and velocity frames
-        x_0: npt.NDArray[np.float64] = x[st]
-        v_0: npt.NDArray[np.float64] = v[st]
-
-        # Create multi-step x_t, v_t sequences
-        x_t: list[npt.NDArray[np.float64]] = [x[st + delta_frame * i // num_timesteps] for i in range(1, num_timesteps + 1)]
-        x_t = np.stack(x_t, axis=2)
-        v_t: list[npt.NDArray[np.float64]] = [v[st + delta_frame * i // num_timesteps] for i in range(1, num_timesteps + 1)]
-        v_t = np.stack(v_t, axis=2)
-
-        mole_idx: npt.NDArray[np.int_] = z
-        n_node: int = mole_idx.shape[0]
-        self.n_node: int = n_node
-
-        # Convert arrays to torch tensors
-        self.x_0 = torch.cat([torch.Tensor(x_0), torch.norm(torch.Tensor(x_0), dim=-1, keepdim=True)], dim=-1)
-        self.v_0 = torch.cat([torch.Tensor(v_0), torch.norm(torch.Tensor(v_0), dim=-1, keepdim=True)], dim=-1)
-        self.x_t = torch.Tensor(x_t)
-        self.v_t = torch.Tensor(v_t)
-        self.mole_idx = torch.Tensor(mole_idx)
-        self.Z = torch.Tensor(z)
-
-        # Use the parent's helper functions for edge construction and bond constraints
-        one_hop_adjacency, two_hop_adjacency = self._compute_adjacency_matrix(x, n_node, threshold=1.6)
-
-        edge_attr, edges = self._build_edge_attributes(one_hop_adjacency, two_hop_adjacency, mole_idx, x_0, v_0)
-        self.edge_attr = edge_attr
-        self.edges = edges
-
-        all_edges = self._compute_all_edges(x, z, threshold=1.6)
-        conf_edges = self._compute_conf_edges(all_edges)
-        self.conf_edges = conf_edges
-
-        # Re-sample configuration from the parent
-        self.cfg = self.sample_cfg()
+    @override
+    def get_target_frames(self, split_times, x, v):
+        """Override to prevent single frame target loading in dynamics dataset"""
+        # In MD17DynamicsDataset, target frames are handled in `get_dynamic_target_frames`
+        return None, None  # Return None to indicate no single frame target loading, will be overwritten by multi-frame targets
 
 
 if __name__ == "__main__":
     from torch.utils.data import DataLoader
 
-    dataset = MD17DynamicsDataset(
+    # Test MD17Dataset
+    dataset_static = MD17Dataset(
+        partition=DataPartition.train,
+        max_samples=5000,
+        delta_frame=5000,
+        data_dir="data/md17_npz/",
+        split_dir="data/md17_egno_splits/",
+        molecule_type=MoleculeType.aspirin,
+        force_regenerate=True,
+    )
+    dataloader_static: DataLoader[dict[str, torch.Tensor]] = DataLoader(dataset_static, batch_size=1, shuffle=True)
+    print("MD17Dataset Output Shapes:")
+    for data in dataloader_static:
+        for key in data:
+            if key not in ["cfg", "edge_attr"]:
+                print(f"  {key}:", data[key].shape)
+        print("  cfg shapes:")
+        for key in data["cfg"]:
+            print(f"    {key}:", data["cfg"][key].shape)
+        break
+
+    # Test MD17DynamicsDataset
+    dataset_dynamic = MD17DynamicsDataset(
         partition=DataPartition.train,
         max_samples=5000,
         delta_frame=5000,
@@ -585,13 +523,14 @@ if __name__ == "__main__":
         force_regenerate=True,
     )
 
-    dataloader: DataLoader[dict[str, torch.Tensor]] = DataLoader(dataset, batch_size=1, shuffle=True)
-    for data in dataloader:
+    dataloader_dynamic: DataLoader[dict[str, torch.Tensor]] = DataLoader(dataset_dynamic, batch_size=1, shuffle=True)
+    print("\nMD17DynamicsDataset Output Shapes:")
+    for data in dataloader_dynamic:
         for key in data:
             if key not in ["cfg", "edge_attr"]:
-                print(f"{key}:", data[key].shape)
+                print(f"  {key}:", data[key].shape)
 
-        print("cfg shapes:")
+        print("  cfg shapes:")
         for key in data["cfg"]:
-            print(f"  {key}:", data["cfg"][key].shape)
+            print(f"    {key}:", data["cfg"][key].shape)
         break
