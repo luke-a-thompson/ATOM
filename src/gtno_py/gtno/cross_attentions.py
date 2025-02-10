@@ -214,7 +214,7 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         self.d_head = self.lifting_dim // self.num_heads
         self.attention_denom = torch.sqrt(torch.tensor(self.d_head, dtype=torch.float32))
 
-        torch._assert(self.d_head % 2 == 0, "d_head must be even")
+        assert self.d_head % 2 == 0, "d_head must be even"
 
         # Query projection (applied to node embeddings)
         self.query = nn.Linear(lifting_dim, lifting_dim)
@@ -225,16 +225,12 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         self.attention_dropout = nn.Dropout(attention_dropout)
 
         self.feature_weights = nn.Parameter(torch.randn(self.num_hetero_feats) * 0.1)
-        self.rescale = nn.Linear(lifting_dim, lifting_dim, bias=False)
 
         if use_rope:
             self.rope = TemporalRoPEWithOffset(num_timesteps=self.num_timesteps, d_head=self.d_head, n_heads=self.num_heads, base=1000.0, learnable_offset=False)
 
         if use_spherical_harmonics:
             self.spherical_harmonics = SphericalHarmonicsAttentionBias(num_timesteps=self.num_timesteps, max_degree=1, num_heads=self.num_heads, hidden_dim=16)
-
-        self.coord_mlp = nn.Sequential(nn.Linear(2 * lifting_dim + 1, 64), nn.ReLU(), nn.Linear(64, 1))  # outputs a single scalar
-        self.alpha_coord = 0.1
 
     @override
     def forward(self, x_0: torch.Tensor, v_0: torch.Tensor, concatenated_features: torch.Tensor, q_data: torch.Tensor) -> dict[str, torch.Tensor]:
@@ -267,7 +263,7 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         # We'll accumulate over multiple heterogeneous features
         out_sum = torch.zeros_like(q_proj)
 
-        # Collect the features
+        # Collect the features of shape [B, N*T, d]
         hetero_features = [
             x_0,
             v_0,
@@ -275,6 +271,7 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         ]
         assert len(hetero_features) == self.num_hetero_feats
 
+        gates = F.softmax(self.feature_weights, dim=0)  # Precompute gates; ∑ gates = 1
         for i, h_feat in enumerate(hetero_features):
             # Flatten => [B, N_or_E * T, d]
             feat_flat = flatten_spatiotemporal(h_feat, self.num_timesteps)
@@ -300,7 +297,6 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
             out_i = attn_weights @ v_proj
 
             # Gate
-            gates = F.softmax(self.feature_weights, dim=0)  # ∑ gates = 1
             out_sum = out_sum + gates[i] * out_i
 
         out_sum = out_sum.permute(0, 2, 1, 3).reshape(B, seq_q, self.lifting_dim)
