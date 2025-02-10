@@ -5,11 +5,16 @@ from e3nn import o3
 
 
 class E3NNLifting(nn.Module):
-    def __init__(self):
+    def __init__(self, in_irreps: str, out_irreps: str):
         super().__init__()
-        # Map 4 input dims => 128 output dims (with mostly l=1 and a couple of l=0)
-        self.lift = o3.Linear(o3.Irreps("1x1o + 1x0e"), o3.Irreps("42x1o + 2x0e"))  # in: (x,y,z) + scalar  # out: 126 + 2 = 128
+        self.irreps_in = o3.Irreps(in_irreps)
+        self.irreps_out = o3.Irreps(out_irreps)
 
+        self.scalar_irreps = o3.Irreps("0e")
+
+        self.lift = o3.Linear(self.irreps_in, self.irreps_out)
+
+    @override
     def forward(self, x):
         # x shape is [..., 4], returning [..., 128]
         return self.lift(x)
@@ -57,7 +62,7 @@ class E3NNLiftingTensorProduct(nn.Module):
         s = torch.ones_like(x[..., :1])
 
         # out shape => [..., irreps_out.dim]
-        out = self.tp(x, s)
+        out: torch.Tensor = self.tp(x, s)
         return out
 
 

@@ -97,7 +97,7 @@ class GTNOBlock(nn.Module):
 
     @override
     def forward(
-        self, batch: TensorDict, x_0: torch.Tensor, v_0: torch.Tensor, concatenated_features: torch.Tensor, q_data: torch.Tensor, initial_v: torch.Tensor | None = None
+        self, x_0: torch.Tensor, v_0: torch.Tensor, concatenated_features: torch.Tensor, q_data: torch.Tensor, initial_v: torch.Tensor | None = None
     ) -> tuple[torch.Tensor, torch.Tensor]:
         concatenated_features = self.pre_norm(concatenated_features)
         x_0 = self.pre_norm(x_0)
@@ -107,7 +107,7 @@ class GTNOBlock(nn.Module):
         x_0 = self.ffn(hetero_attended_nodes)
 
         if self.value_residual_type == ValueResidualType.LEARNABLE:
-            # Set initial_v if not provided; otherwise apply value residual
+            # Set initial_v if not provided (first layer); otherwise apply value residual
             if initial_v is None:
                 initial_v = x_0.clone()
             else:
@@ -155,8 +155,8 @@ class GTNO(nn.Module):
             case True:
                 self.lifting_layers = nn.ModuleDict(
                     {
-                        "x_0": E3NNLiftingTensorProduct(in_irreps="1x1o + 1x0e", out_irreps="42x1o + 2x0e"),  # Use e3nn lifting for equivariant embedding
-                        "v_0": E3NNLiftingTensorProduct(in_irreps="1x1o + 1x0e", out_irreps="42x1o + 2x0e"),  # Same for velocity
+                        "x_0": E3NNLifting(in_irreps="1x1o + 1x0e", out_irreps="42x1o + 2x0e"),  # Use e3nn lifting for equivariant embedding
+                        "v_0": E3NNLifting(in_irreps="1x1o + 1x0e", out_irreps="42x1o + 2x0e"),  # Same for velocity
                         "concatenated_features": E3NNLiftingTensorProduct(in_irreps="2x1o + 3x0e", out_irreps="42x1o + 2x0e"),  # Keep standard MLP for other inputs
                     }
                 )
@@ -208,7 +208,7 @@ class GTNO(nn.Module):
 
         initial_v: torch.Tensor | None = None  # Starts as none, becomes x_0 the first layer
         for layer in self.transformer_blocks:
-            x_0, initial_v = layer(batch, x_0, v_0, concatenated_features, q_data=concatenated_features, initial_v=initial_v)
+            x_0, initial_v = layer(x_0, v_0, concatenated_features, q_data=concatenated_features, initial_v=initial_v)
 
         out: torch.Tensor = self.projection_layer(x_0)
 
