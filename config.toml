@@ -1,19 +1,25 @@
 [wandb]
-project_name = "GTNO"
+project_name = "confirm_before_commit"
 
 [benchmark]
 runs = 3
 compile = true
+molecule_type = "salicylic"
 
 [training]
 seed = 42
 batch_size = 128
-epochs = 1000
+epochs = 100  # 800
 max_grad_norm = 1.0
+
+[dataloader]
+persistent_workers = true
+num_workers = 4
+pin_memory = true
 
 [optimizer]
 type = "adamw"
-learning_rate = 1e-4
+learning_rate = 1e-2
 weight_decay = 1e-5
 adam_betas = [0.9, 0.999]
 adam_eps = 1e-10
@@ -26,11 +32,11 @@ model_type = "gtno"
 lifting_dim = 128
 num_timesteps = 8
 norm = "rms"
-activation = "silu"
+activation = "swiglu"
 heterogenous_attention_type = "GHCA"
 use_rope = true
 use_spherical_harmonics = false
 value_residual_type = "learnable"
 use_equivariant_lifting = true
 num_layers = 5
-num_heads = 4
+num_heads = 8

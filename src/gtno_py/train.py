@@ -12,6 +12,7 @@ import torch.nn.functional as F
 import json
 from datetime import datetime
 from gtno_py.dataloaders.egno_dataloder import MoleculeType
+from typing import Literal
 
 # Load configuration
 with open("config.toml", "rb") as file:
@@ -55,9 +56,30 @@ def create_dataloaders(molecule_type: MoleculeType) -> tuple[DataLoader[dict[str
         molecule_type=molecule_type,
     )
 
-    train_loader = DataLoader(train_dataset, batch_size=config["training"]["batch_size"], shuffle=True, persistent_workers=True, num_workers=4)
-    val_loader = DataLoader(val_dataset, batch_size=config["training"]["batch_size"], shuffle=False, persistent_workers=True, num_workers=4)
-    test_loader = DataLoader(test_dataset, batch_size=config["training"]["batch_size"], shuffle=False, persistent_workers=True, num_workers=4)
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=config["training"]["batch_size"],
+        shuffle=True,
+        persistent_workers=config["dataloader"]["persistent_workers"],
+        num_workers=config["dataloader"]["num_workers"],
+        pin_memory=config["dataloader"]["pin_memory"],
+    )
+    val_loader = DataLoader(
+        val_dataset,
+        batch_size=config["training"]["batch_size"],
+        shuffle=False,
+        persistent_workers=config["dataloader"]["persistent_workers"],
+        num_workers=config["dataloader"]["num_workers"],
+        pin_memory=config["dataloader"]["pin_memory"],
+    )
+    test_loader = DataLoader(
+        test_dataset,
+        batch_size=config["training"]["batch_size"],
+        shuffle=False,
+        persistent_workers=config["dataloader"]["persistent_workers"],
+        num_workers=config["dataloader"]["num_workers"],
+        pin_memory=config["dataloader"]["pin_memory"],
+    )
 
     return train_loader, val_loader, test_loader
 
@@ -89,7 +111,7 @@ def initialize_optimizer(model: nn.Module) -> optim.Optimizer:
                 model.parameters(),
                 lr=config["optimizer"]["learning_rate"],
                 weight_decay=config["optimizer"]["weight_decay"],
-                betas=config["optimizer"]["adam_betas"],
+                betas=tuple(config["optimizer"]["adam_betas"]),
                 eps=config["optimizer"]["adam_eps"],
                 amsgrad=True,
                 fused=True,
@@ -97,7 +119,7 @@ def initialize_optimizer(model: nn.Module) -> optim.Optimizer:
         case "muon":
             return pt_optim.Muon(model.parameters(), lr=config["optimizer"]["learning_rate"], weight_decay=config["optimizer"]["weight_decay"])
         case "kron":
-            return pt_optim.Kron(model.parameters(), lr=config["optimizer"]["learning_rate"] / 3, weight_decay=config["optimizer"]["weight_decay"])
+            return pt_optim.Kron(model.parameters(), lr=config["optimizer"]["learning_rate"], weight_decay=config["optimizer"]["weight_decay"])
         case _:
             raise ValueError(f"Invalid optimizer: {config['optimizer']['type']}")
 
@@ -113,7 +135,6 @@ def train_step(model: nn.Module, optimizer: optim.Optimizer, loader: DataLoader[
     """Single training epoch."""
     model.train()
     total_loss = 0.0
-    num_nodes: int = next(iter(loader))["x_0"].shape[1]
 
     for batch in loader:
         batch = tensordict.from_dict(batch).to(device)
@@ -164,6 +185,8 @@ def main(num_epochs: int, model: nn.Module, molecule_type: MoleculeType) -> tupl
     train_loader, val_loader, test_loader = create_dataloaders(molecule_type)
     reset_weights(model)
     optimizer = initialize_optimizer(model)
+    total_steps: int = len(train_loader.dataset) // config["training"]["batch_size"] * num_epochs
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=total_steps, eta_min=0.005)
 
     # Training loop
     best_val_loss = float("inf")
@@ -171,7 +194,7 @@ def main(num_epochs: int, model: nn.Module, molecule_type: MoleculeType) -> tupl
 
     progress_bar = tqdm(range(num_epochs), desc="Training", leave=False, unit="epoch", position=2)
     for epoch in progress_bar:
-        train_loss = train_step(model, optimizer, train_loader, None)
+        train_loss = train_step(model, optimizer, train_loader, scheduler)
         val_loss = evaluate(model, val_loader)
 
         # Save best model
@@ -181,7 +204,14 @@ def main(num_epochs: int, model: nn.Module, molecule_type: MoleculeType) -> tupl
             torch.save(model.state_dict(), "benchmark_runs/temp_best_model.pth")
 
         # Update progress bar with losses
-        progress_bar.set_postfix({"Train loss": f"{train_loss:.4f}", "Val loss": f"{val_loss:.4f}", "Best val loss": f"{best_val_loss:.4f}"})
+        progress_bar.set_postfix(
+            {
+                "Train loss": f"{train_loss:.4f}",
+                "Val loss": f"{val_loss:.4f}",
+                "Best val loss": f"{best_val_loss:.4f}",
+                "Current LR": f"{optimizer.param_groups[0]['lr']:.6f}",
+            }
+        )
 
     # Final evaluation
     _ = model.load_state_dict(torch.load("benchmark_runs/temp_best_model.pth", weights_only=True))
@@ -191,10 +221,22 @@ def main(num_epochs: int, model: nn.Module, molecule_type: MoleculeType) -> tupl
     return test_loss, total_time, best_val_loss_epoch
 
 
-def benchmark(runs: int, epochs_per_run: int, compile: bool) -> None:
-    """Benchmarking function with JSON results logging."""
+def benchmark(runs: int, epochs_per_run: int, compile: bool, molecule_type: MoleculeType | Literal["all_mols"]) -> None:
+    """
+    Benchmarking function with JSON results logging.
+
+    Args:
+        runs: Number of runs to perform
+        epochs_per_run: Number of epochs to run per run
+        compile: Whether to compile the model
+        molecule_type: Molecule type to run on
+            "all_mols": Run on all molecules
+
+    Returns:
+        None
+    """
     results = {"config_name": config["wandb"]["project_name"], "runs": {}, "summary": {}, "timestamp": datetime.now().isoformat()}
-    molecules = list(MoleculeType)
+    molecules = list(MoleculeType) if molecule_type == "all_mols" else [molecule_type]
 
     if compile:
         model = torch.compile(initialize_model(), dynamic=True)
@@ -216,16 +258,15 @@ def benchmark(runs: int, epochs_per_run: int, compile: bool) -> None:
                 "test_loss": float(test_loss),
                 "best_val_loss_epoch": float(best_val_loss_epoch),
                 "time_seconds": float(duration),
+                "time_per_epoch": float(duration / epochs_per_run),
                 "start_time": start_time.isoformat(),
                 "end_time": end_time.isoformat(),
             }
 
-            # tqdm.write(f"Run {run+1} - Test Loss: {test_loss:.4f}, Duration: {duration:.1f}s")
-
         # Calculate summary statistics
         losses = [res["test_loss"] for res in results["runs"].values()]
         times = [res["time_seconds"] for res in results["runs"].values()]
-
+        times_per_epoch = [res["time_per_epoch"] for res in results["runs"].values()]
         results["summary"] = {
             "mean_test_loss": float(sum(losses) / len(losses)),
             "std_dev_test_loss": float(torch.std(torch.tensor(losses)).item()),
@@ -233,6 +274,7 @@ def benchmark(runs: int, epochs_per_run: int, compile: bool) -> None:
             "total_secs": float(sum(times)),
             "min_test_loss": float(min(losses)),
             "max_test_loss": float(max(losses)),
+            "mean_secs_per_epoch": float(sum(times_per_epoch) / len(times_per_epoch)),
             "config": config,
         }
 
@@ -246,7 +288,13 @@ def benchmark(runs: int, epochs_per_run: int, compile: bool) -> None:
         tqdm.write(f"  Average Test Loss: {results['summary']['mean_test_loss']:.4f} ± {results['summary']['std_dev_test_loss']:.4f}")
         tqdm.write(f"  Average Time per Run: {results['summary']['mean_secs_per_run']:.1f}s")
         tqdm.write(f"  Total Benchmark Time: {results['summary']['total_secs']:.1f}s")
+        tqdm.write(f"  Average Time per Epoch: {results['summary']['mean_secs_per_epoch']:.1f}s")
 
 
 if __name__ == "__main__":
-    benchmark(config["benchmark"]["runs"], config["training"]["epochs"], config["benchmark"]["compile"])
+    benchmark(
+        int(config["benchmark"]["runs"]),
+        int(config["training"]["epochs"]),
+        bool(config["benchmark"]["compile"]),
+        MoleculeType(config["benchmark"]["molecule_type"]),
+    )
