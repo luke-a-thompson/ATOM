@@ -1,69 +1,6 @@
 import torch
 import torch.nn as nn
 from typing import final, override
-from e3nn import o3
-
-
-class E3NNLifting(nn.Module):
-    def __init__(self, in_irreps: str, out_irreps: str):
-        super().__init__()
-        self.irreps_in = o3.Irreps(in_irreps)
-        self.irreps_out = o3.Irreps(out_irreps)
-
-        self.scalar_irreps = o3.Irreps("0e")
-
-        self.lift = o3.Linear(self.irreps_in, self.irreps_out)
-
-    @override
-    def forward(self, x):
-        # x shape is [..., 4], returning [..., 128]
-        return self.lift(x)
-
-
-class E3NNLiftingTensorProduct(nn.Module):
-    """
-    A fully-connected tensor product block that takes in irreps_in,
-    multiplies by a dummy scalar (0e) so it behaves like a learnable linear map,
-    and produces irreps_out.
-
-    Example usage:
-      # (x,y,z, ||x||) => (1x1o + 1x0e) in -> (42x1o + 2x0e) out => 128 dims
-      equivariant_lifter = E3NNLiftingTensorProduct(
-          in_irreps="1x1o + 1x0e",
-          out_irreps="42x1o + 2x0e"
-      )
-    """
-
-    def __init__(self, in_irreps: str, out_irreps: str, shared_weights: bool = True, internal_weights: bool = True):
-        super().__init__()
-
-        # Convert string to Irreps objects
-        self.irreps_in = o3.Irreps(in_irreps)
-        self.irreps_out = o3.Irreps(out_irreps)
-
-        # We'll multiply x by a dummy scalar (0e)
-        scalar_irreps = o3.Irreps("0e")
-
-        # The FullyConnectedTensorProduct takes two inputs:
-        #   1) 'in_irreps'
-        #   2) 'scalar_irreps'
-        # and produces 'out_irreps'
-        self.tp = o3.FullyConnectedTensorProduct(self.irreps_in, scalar_irreps, self.irreps_out, shared_weights=shared_weights, internal_weights=internal_weights)
-
-    @override
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        x: a tensor whose trailing dimension matches irreps_in.dim
-           (e.g., 4D or 9D).
-        Returns a tensor with trailing dimension = irreps_out.dim
-        """
-        # Create dummy scalar (1.0) for each example in x
-        # shape [..., 1]
-        s = torch.ones_like(x[..., :1])
-
-        # out shape => [..., irreps_out.dim]
-        out: torch.Tensor = self.tp(x, s)
-        return out
 
 
 @final
