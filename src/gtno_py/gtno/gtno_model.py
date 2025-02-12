@@ -5,7 +5,7 @@ from enum import Enum
 from gtno_py.gtno.activations import FFNActivation, ReLU2, SwiGLU
 from tensordict import TensorDict
 from gtno_py.gtno.cross_attentions import QuadraticHeterogenousCrossAttention
-from gtno_py.gtno.mlps import MLP, E3NNLiftingTensorProduct, E3NNLifting
+from gtno_py.gtno.mlps import MLP
 
 
 class NormType(str, Enum):
@@ -150,14 +150,15 @@ class GTNO(nn.Module):
 
         assert num_timesteps > 1, f"num_timesteps must be greater than 1. Got {num_timesteps}"
         self.num_timesteps = num_timesteps
+        from e3nn import o3
 
         match use_equivariant_lifting:
             case True:
                 self.lifting_layers = nn.ModuleDict(
                     {
-                        "x_0": E3NNLifting(in_irreps="1x1o + 1x0e", out_irreps="42x1o + 2x0e"),  # Use e3nn lifting for equivariant embedding
-                        "v_0": E3NNLifting(in_irreps="1x1o + 1x0e", out_irreps="42x1o + 2x0e"),  # Same for velocity
-                        "concatenated_features": E3NNLiftingTensorProduct(in_irreps="2x1o + 3x0e", out_irreps="42x1o + 2x0e"),  # Keep standard MLP for other inputs
+                        "x_0": o3.Linear("1x1o + 1x0e", "42x1o + 2x0e"),  # Use e3nn lifting for equivariant embedding
+                        "v_0": o3.Linear("1x1o + 1x0e", "42x1o + 2x0e"),  # Same for velocity
+                        "concatenated_features": o3.FullyConnectedTensorProduct("1x1o + 1x0e", "1x1o + 1x0e + 1x0e", "42x1o + 2x0e"),  # Keep standard MLP for other inputs
                     }
                 )
             case False:
@@ -196,25 +197,25 @@ class GTNO(nn.Module):
     @override
     def forward(self, batch: TensorDict) -> torch.Tensor:
         # Batch: [Batch, Nodes, 4]
-        B, N, _ = batch["x_0"].shape
+        B, T, N, d = batch["x_0"].shape
 
-        batch = self._replicate_tensordict_BxT(batch, self.num_timesteps)  # [Batch * timesteps, Nodes, 4]
+        # batch = self._replicate_tensordict_BxT(batch, self.num_timesteps)  # [Batch * timesteps, Nodes, 4]
         # Project this batch feature from its original dimension to `lifting_dim`
         # Use the same "key" to pick the lifting layer from `self.lifting_layers` and the corresponding feature from the `batch` dict.
         # Apply lifting
         x_0: torch.Tensor = self.lifting_layers["x_0"](batch["x_0"])
         v_0: torch.Tensor = self.lifting_layers["v_0"](batch["v_0"])
-        concatenated_features: torch.Tensor = self.lifting_layers["concatenated_features"](batch["concatenated_features"])
+        concatenated_features: torch.Tensor = self.lifting_layers["concatenated_features"](batch["concatenated_features"][..., :4], batch["concatenated_features"][..., 4:])
 
         initial_v: torch.Tensor | None = None  # Starts as none, becomes x_0 the first layer
         for layer in self.transformer_blocks:
             x_0, initial_v = layer(x_0, v_0, concatenated_features, q_data=concatenated_features, initial_v=initial_v)
 
-        out: torch.Tensor = self.projection_layer(x_0)
+        pred_pos = batch["x_0"][..., :3] + self.projection_layer(x_0)
+        # out: torch.Tensor = self.projection_layer(x_0)
 
         # 6) Reshape to [B, N, T, 3]
-        out = out.view(self.num_timesteps, B, N, 3).permute(1, 2, 0, 3).contiguous()
-        return out  # Outputting the positions (x, y, z) for N nodes over T timesteps. Batched.
+        return pred_pos  # Outputting the positions (x, y, z) for N nodes over T timesteps. Batched.
 
     @staticmethod
     def _initialise_weights(model: nn.Module) -> None:
