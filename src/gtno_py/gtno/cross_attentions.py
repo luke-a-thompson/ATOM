@@ -184,6 +184,7 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         num_timesteps: int,
         use_rope: bool,
         use_spherical_harmonics: bool,
+        learned_attention_denom: bool = False,
         attention_dropout: float = 0.2,
     ) -> None:
         """
@@ -212,7 +213,6 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         self.use_rope = use_rope
         self.use_spherical_harmonics = use_spherical_harmonics
         self.d_head = self.lifting_dim // self.num_heads
-        self.attention_denom = torch.sqrt(torch.tensor(self.d_head, dtype=torch.float32))
 
         assert self.d_head % 2 == 0, "d_head must be even"
 
@@ -224,6 +224,10 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         self.out_proj = nn.Linear(lifting_dim, lifting_dim)
         self.attention_dropout = nn.Dropout(attention_dropout)
 
+        self.attention_denom: torch.Tensor | nn.Parameter = torch.tensor(self.d_head, dtype=torch.float32)
+        if learned_attention_denom:
+            self.attention_denom = nn.Parameter(self.attention_denom)
+
         self.feature_weights = nn.Parameter(torch.randn(self.num_hetero_feats) * 0.1)
 
         if use_rope:
@@ -233,7 +237,7 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
             self.spherical_harmonics = SphericalHarmonicsAttentionBias(num_timesteps=self.num_timesteps, max_degree=1, num_heads=self.num_heads, hidden_dim=16)
 
     @override
-    def forward(self, x_0: torch.Tensor, v_0: torch.Tensor, concatenated_features: torch.Tensor, q_data: torch.Tensor) -> dict[str, torch.Tensor]:
+    def forward(self, x_0: torch.Tensor, v_0: torch.Tensor, concatenated_features: torch.Tensor, q_data: torch.Tensor) -> torch.Tensor:
         """
         1. Flatten queries => [B, seq_q, d], then project to [B, heads, seq_q, d_head].
         2. For each heterogeneous feature, do:
@@ -248,11 +252,11 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         # batch["x_0"] might be [B*T, N, d]
 
         # Flatten Q data: [B*T, N, d] -> [B, N*T (seq_q), d]
-        q_data = flatten_spatiotemporal(q_data, self.num_timesteps)  # [B, N*T (seq_q), d]
-        B, seq_q, d_q = q_data.shape
+        B, T, N, d = q_data.shape
+        q_data = q_data.view(B, T * N, d)
 
         # Project Q => [B, heads, seq_q, d_head]
-        q_proj: torch.Tensor = self.query(q_data).view(B, seq_q, self.num_heads, self.d_head).permute(0, 2, 1, 3)  # [B, heads, seq_q, d_head]
+        q_proj: torch.Tensor = self.query(q_data).view(B, T * N, self.num_heads, self.d_head).permute(0, 2, 1, 3)  # [B, heads, seq_q, d_head]
 
         if self.use_rope:
             q_proj = self.rope(q_proj)
@@ -274,15 +278,15 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         gates = F.softmax(self.feature_weights, dim=0)  # Precompute gates; ∑ gates = 1
         for i, h_feat in enumerate(hetero_features):
             # Flatten => [B, N_or_E * T, d]
-            feat_flat = flatten_spatiotemporal(h_feat, self.num_timesteps)
-            _, seq_k, d_k = feat_flat.shape
-            assert d_k == self.lifting_dim, f"Expected {self.lifting_dim}, got {d_k}"
+            B, T, N, d = h_feat.shape
+            h_feat = h_feat.view(B, N * T, d)
+            assert d == self.lifting_dim, f"Expected {self.lifting_dim}, got {d}"
 
             # Project K and V => [B, heads, seq_k, d_head]
-            kv = self.kv_projs[i](feat_flat)
+            kv = self.kv_projs[i](h_feat)
             k_proj, v_proj = torch.chunk(kv, 2, dim=-1)
-            k_proj = k_proj.view(B, seq_k, self.num_heads, self.d_head).permute(0, 2, 1, 3)
-            v_proj = v_proj.view(B, seq_k, self.num_heads, self.d_head).permute(0, 2, 1, 3)
+            k_proj = k_proj.view(B, N * T, self.num_heads, self.d_head).permute(0, 2, 1, 3)
+            v_proj = v_proj.view(B, N * T, self.num_heads, self.d_head).permute(0, 2, 1, 3)
 
             if self.use_rope:
                 k_proj = self.rope(k_proj)
@@ -299,10 +303,10 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
             # Gate
             out_sum = out_sum + gates[i] * out_i
 
-        out_sum = out_sum.permute(0, 2, 1, 3).reshape(B, seq_q, self.lifting_dim)
-        out_sum = self.out_proj(out_sum)
+        out_sum = out_sum.permute(0, 2, 1, 3).reshape(B, T * N, self.lifting_dim)
+        out_sum: torch.Tensor = self.out_proj(out_sum)
+        # Unflatten => [B, T, N, d]
+        out = out_sum.view(B, T, N, self.lifting_dim)
 
         # Unflatten => [B*T, N, d]
-        out_sum = unflatten_spatiotemporal(out_sum, self.num_timesteps)
-
-        return out_sum
+        return out
