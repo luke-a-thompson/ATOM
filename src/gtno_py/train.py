@@ -13,10 +13,16 @@ import json
 from datetime import datetime
 from gtno_py.dataloaders.egno_dataloder import MoleculeType
 from typing import Literal
+import wandb
+from gtno_py.utils import log_feature_weights
 
 # Load configuration
 with open("config.toml", "rb") as file:
     config = tomllib.load(file)
+
+project_name = input("Enter project name: ")
+
+wandb.init(project="GTNO", name=project_name, config=config, mode="disabled" if not config["wandb"]["use_wandb"] else "online")
 
 # Set device and seeds
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -138,11 +144,12 @@ def train_step(model: nn.Module, optimizer: optim.Optimizer, loader: DataLoader[
 
     for batch in loader:
         batch = tensordict.from_dict(batch).to(device)
-        target_coords = batch.pop("x_t").reshape(-1, 3)
+        assert batch["x_0"].shape[1] == (config["model"]["num_timesteps"]), batch["x_0"].shape
+        target_coords = batch.pop("x_t")
         _ = batch.pop("v_t")
 
         optimizer.zero_grad()
-        pred_coords: torch.Tensor = model(batch).reshape(-1, 3)
+        pred_coords: torch.Tensor = model(batch)
 
         # Calculate MSE loss
         assert pred_coords.shape == target_coords.shape, f"{pred_coords.shape} != {target_coords.shape}"
@@ -156,7 +163,7 @@ def train_step(model: nn.Module, optimizer: optim.Optimizer, loader: DataLoader[
         if scheduler:
             scheduler.step()
 
-    return total_loss / len(loader.dataset)
+    return total_loss / float(len(loader.dataset))
 
 
 def evaluate(model: nn.Module, loader: DataLoader[dict[str, torch.Tensor]]) -> float:
@@ -186,7 +193,7 @@ def main(num_epochs: int, model: nn.Module, molecule_type: MoleculeType) -> tupl
     reset_weights(model)
     optimizer = initialize_optimizer(model)
     total_steps: int = len(train_loader.dataset) // config["training"]["batch_size"] * num_epochs
-    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=total_steps, eta_min=0.005)
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=total_steps, eta_min=1e-6)
 
     # Training loop
     best_val_loss = float("inf")
@@ -197,7 +204,11 @@ def main(num_epochs: int, model: nn.Module, molecule_type: MoleculeType) -> tupl
         train_loss = train_step(model, optimizer, train_loader, scheduler)
         val_loss = evaluate(model, val_loader)
 
-        # Save best model
+        # Log gate parameters
+        log_feature_weights(model.named_parameters(), epoch)
+
+        wandb.log({"train_loss": train_loss, "val_loss": val_loss})
+
         if val_loss < best_val_loss and epoch > 0.5 * num_epochs:
             best_val_loss = val_loss
             best_val_loss_epoch = epoch
@@ -235,7 +246,7 @@ def benchmark(runs: int, epochs_per_run: int, compile: bool, molecule_type: Mole
     Returns:
         None
     """
-    results = {"config_name": config["wandb"]["project_name"], "runs": {}, "summary": {}, "timestamp": datetime.now().isoformat()}
+    results = {"config_name": project_name, "runs": {}, "summary": {}, "timestamp": datetime.now().isoformat()}
     molecules = list(MoleculeType) if molecule_type == "all_mols" else [molecule_type]
 
     if compile:
@@ -264,22 +275,32 @@ def benchmark(runs: int, epochs_per_run: int, compile: bool, molecule_type: Mole
             }
 
         # Calculate summary statistics
-        losses = [res["test_loss"] for res in results["runs"].values()]
+        test_losses = [res["test_loss"] for res in results["runs"].values()]
         times = [res["time_seconds"] for res in results["runs"].values()]
         times_per_epoch = [res["time_per_epoch"] for res in results["runs"].values()]
+        best_val_loss_epochs = [res["best_val_loss_epoch"] for res in results["runs"].values()]
         results["summary"] = {
-            "mean_test_loss": float(sum(losses) / len(losses)),
-            "std_dev_test_loss": float(torch.std(torch.tensor(losses)).item()),
+            "mean_test_loss": float(sum(test_losses) / len(test_losses)),
+            "std_dev_test_loss": float(torch.std(torch.tensor(test_losses)).item()),
             "mean_secs_per_run": float(sum(times) / len(times)),
             "total_secs": float(sum(times)),
-            "min_test_loss": float(min(losses)),
-            "max_test_loss": float(max(losses)),
+            "min_test_loss": float(min(test_losses)),
+            "max_test_loss": float(max(test_losses)),
             "mean_secs_per_epoch": float(sum(times_per_epoch) / len(times_per_epoch)),
             "config": config,
+            "best_val_loss_epochs": float(sum(best_val_loss_epochs) / len(best_val_loss_epochs)),
         }
 
+        wandb.log(
+            {
+                "mean_test_loss": results["summary"]["mean_test_loss"],
+                "mean_secs_per_run": results["summary"]["mean_secs_per_run"],
+                "mean_secs_per_epoch": results["summary"]["mean_secs_per_epoch"],
+            }
+        )
+
         # Save to JSON
-        filename = f"benchmark_runs/benchmark_{config['wandb']['project_name']}_{molecule.value}_{datetime.now().strftime('%d-%b-%Y_%H-%M-%S')}.json"
+        filename = f"benchmark_runs/{project_name}_{molecule.value}_{results['summary']['mean_test_loss']:.2e}x10-2_{datetime.now().strftime('%d-%b-%Y_%H-%M-%S')}.json"
         with open(filename, "w") as f:
             json.dump(results, f, indent=2)
 
@@ -289,6 +310,7 @@ def benchmark(runs: int, epochs_per_run: int, compile: bool, molecule_type: Mole
         tqdm.write(f"  Average Time per Run: {results['summary']['mean_secs_per_run']:.1f}s")
         tqdm.write(f"  Total Benchmark Time: {results['summary']['total_secs']:.1f}s")
         tqdm.write(f"  Average Time per Epoch: {results['summary']['mean_secs_per_epoch']:.1f}s")
+        tqdm.write(f"  Average Best Val Loss Epoch: {results['summary']['best_val_loss_epochs']:.1f}")
 
 
 if __name__ == "__main__":

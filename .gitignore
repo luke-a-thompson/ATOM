@@ -12,3 +12,4 @@ __pycache__/
 *.pyc
 *.json
 *.pth
+/wandb
