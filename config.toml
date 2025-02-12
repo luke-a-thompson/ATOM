@@ -9,7 +9,7 @@ molecule_type = "salicylic"
 [training]
 seed = 42
 batch_size = 128
-epochs = 100  # 800
+epochs = 800
 max_grad_norm = 1.0
 
 [dataloader]
@@ -20,7 +20,7 @@ pin_memory = true
 [optimizer]
 type = "adamw"
 learning_rate = 1e-3
-weight_decay = 1e-7
+weight_decay = 1e-5
 adam_betas = [0.9, 0.999]
 adam_eps = 1e-10
 

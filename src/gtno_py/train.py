@@ -193,7 +193,7 @@ def main(num_epochs: int, model: nn.Module, molecule_type: MoleculeType) -> tupl
     reset_weights(model)
     optimizer = initialize_optimizer(model)
     total_steps: int = len(train_loader.dataset) // config["training"]["batch_size"] * num_epochs
-    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=total_steps, eta_min=1e-6)
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=total_steps)
 
     # Training loop
     best_val_loss = float("inf")
@@ -207,7 +207,7 @@ def main(num_epochs: int, model: nn.Module, molecule_type: MoleculeType) -> tupl
         # Log gate parameters
         log_feature_weights(model.named_parameters(), epoch)
 
-        wandb.log({"train_loss": train_loss, "val_loss": val_loss})
+        wandb.log({"train_loss": train_loss, "val_loss": val_loss, "lr": optimizer.param_groups[0]["lr"]})
 
         if val_loss < best_val_loss and epoch > 0.5 * num_epochs:
             best_val_loss = val_loss
@@ -300,7 +300,7 @@ def benchmark(runs: int, epochs_per_run: int, compile: bool, molecule_type: Mole
         )
 
         # Save to JSON
-        filename = f"benchmark_runs/{project_name}_{molecule.value}_{results['summary']['mean_test_loss']:.2e}x10-2_{datetime.now().strftime('%d-%b-%Y_%H-%M-%S')}.json"
+        filename = f"benchmark_runs/{project_name}_{molecule.value}_{datetime.now().strftime('%d-%b-%Y_%H-%M-%S')}.json"
         with open(filename, "w") as f:
             json.dump(results, f, indent=2)
 

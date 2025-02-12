@@ -373,7 +373,6 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
             "concatenated_features": self.replicated_concatenated_features[i * self.num_timesteps : (i + 1) * self.num_timesteps],
         }
 
-    @override
     def __len__(self):
         return len(self.split_times)
 

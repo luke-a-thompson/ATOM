@@ -184,7 +184,7 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         num_timesteps: int,
         use_rope: bool,
         use_spherical_harmonics: bool,
-        learned_attention_denom: bool = False,
+        learnable_attention_denom: bool = False,
         attention_dropout: float = 0.2,
     ) -> None:
         """
@@ -225,7 +225,7 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         self.attention_dropout = nn.Dropout(attention_dropout)
 
         self.attention_denom: torch.Tensor | nn.Parameter = torch.tensor(self.d_head, dtype=torch.float32)
-        if learned_attention_denom:
+        if learnable_attention_denom:
             self.attention_denom = nn.Parameter(self.attention_denom)
 
         self.feature_weights = nn.Parameter(torch.randn(self.num_hetero_feats) * 0.1)
