@@ -1,8 +1,8 @@
 [wandb]
-project_name = "confirm_before_commit"
+use_wandb = true
 
 [benchmark]
-runs = 3
+runs = 1
 compile = true
 molecule_type = "salicylic"
 
@@ -19,8 +19,8 @@ pin_memory = true
 
 [optimizer]
 type = "adamw"
-learning_rate = 1e-2
-weight_decay = 1e-5
+learning_rate = 1e-3
+weight_decay = 1e-7
 adam_betas = [0.9, 0.999]
 adam_eps = 1e-10
 
