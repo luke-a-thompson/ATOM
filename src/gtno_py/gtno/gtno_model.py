@@ -211,7 +211,7 @@ class GTNO(nn.Module):
         for layer in self.transformer_blocks:
             x_0, initial_v = layer(x_0, v_0, concatenated_features, q_data=concatenated_features, initial_v=initial_v)
 
-        pred_pos = batch["x_0"][..., :3] + self.projection_layer(x_0)
+        pred_pos: torch.Tensor = batch["x_0"][..., :3] + self.projection_layer(x_0)
         # out: torch.Tensor = self.projection_layer(x_0)
 
         # 6) Reshape to [B, N, T, 3]
