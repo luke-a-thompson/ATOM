@@ -5,6 +5,7 @@ import torch.nn.functional as F
 import wandb
 import matplotlib.pyplot as plt
 
+
 def get_context(instance: object) -> str:
     """
     Returns the class name and method name of the caller context.
@@ -46,7 +47,7 @@ def log_feature_weights(named_parameters: Iterable[tuple[str, torch.Tensor]], ep
     if weights_per_layer:
         averaged_param = torch.stack(weights_per_layer, dim=0).mean(dim=0)
         softmaxed_param = F.softmax(averaged_param, dim=0)
-        bin_labels = ['x_0', 'v_0', 'concat']
+        bin_labels = ["x_0", "v_0", "concat"]
         values = softmaxed_param.tolist()
 
         fig, ax = plt.subplots()
@@ -57,3 +58,46 @@ def log_feature_weights(named_parameters: Iterable[tuple[str, torch.Tensor]], ep
     if attention_denom_per_layer:
         averaged_param = torch.stack(attention_denom_per_layer, dim=0).mean(dim=0)
         wandb.log({"attention_denom/averaged": wandb.Histogram(averaged_param.tolist())}, step=epoch)
+
+
+def add_brownian_noise(
+    positions: torch.Tensor,
+    velocities: torch.Tensor,
+    concat: torch.Tensor,
+    noise_std_vel: float = 0.20,
+    noise_std_pos: float = 0.20,
+    noise_std_concat: float = 0.20,
+):
+    """
+    Add Langevin-type (Brownian) noise to velocities (and optionally positions)
+    for molecular dynamics data using PyTorch.
+
+    Args:
+        positions (torch.Tensor): Tensor of shape [Batch, Timesteps, Atoms, Dim].
+        velocities (torch.Tensor): Tensor of shape [Batch, Timesteps, Atoms, Dim].
+        noise_std_vel (float): Std dev of Gaussian noise for velocities.
+        noise_std_pos (float): Std dev of Gaussian noise for positions.
+
+    Returns:
+        Tuple[torch.Tensor, torch.Tensor]: Noised positions and velocities.
+    """
+    # Add noise to velocities
+    noise_vel = torch.randn_like(velocities) * noise_std_vel
+    noisy_velocities = velocities + noise_vel
+
+    noise_concat = torch.randn_like(concat) * noise_std_concat
+
+    # Zero out the last entry along the last dimension
+    noise_concat[..., -1] = 0
+
+    # Apply noise
+    noisy_concat = concat + noise_concat
+
+    # Optionally add noise to positions
+    if noise_std_pos > 0:
+        noise_pos = torch.randn_like(positions) * noise_std_pos
+        noisy_positions = positions + noise_pos
+    else:
+        noisy_positions = positions.clone()
+
+    return noisy_positions, noisy_velocities, noisy_concat
