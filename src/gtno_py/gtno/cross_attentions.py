@@ -136,7 +136,7 @@ class SphericalHarmonicsAttentionBias(nn.Module):
         # Total number of coefficients from l=0 to max_degree.
         self.num_coeff = sum(2 * l + 1 for l in range(max_degree + 1))
         self.num_timesteps = num_timesteps
-        self.mlp = MLP(in_features=self.num_coeff, out_features=num_heads, hidden_features=hidden_dim, hidden_layers=2, activation=nn.SiLU())
+        self.mlp = MLP(in_features=self.num_coeff, out_features=num_heads, hidden_features=hidden_dim, hidden_layers=2, activation=nn.SiLU(), dropout_p=0.1)
         self.eps = 1e-6
 
     @override
@@ -151,6 +151,7 @@ class SphericalHarmonicsAttentionBias(nn.Module):
         Returns:
             bias: shape [B, num_heads, seq_len, seq_len] tensor to be added to attention logits.
         """
+        coords = coords.clone()[..., :3]
         B, S, _ = coords.shape
         coords = flatten_spatiotemporal(coords, self.num_timesteps)  # now shape [B, N*T, 3]
         # Compute pairwise relative differences: r_ij = coords_i - coords_j.
@@ -277,10 +278,8 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
 
         gates = F.softmax(self.feature_weights, dim=0)  # Precompute gates; ∑ gates = 1
         for i, h_feat in enumerate(hetero_features):
-            # Flatten => [B, N_or_E * T, d]
-            B, T, N, d = h_feat.shape
-            h_feat = h_feat.view(B, N * T, d)
-            assert d == self.lifting_dim, f"Expected {self.lifting_dim}, got {d}"
+            # h_feat: [B, T * N, d]
+            assert h_feat.shape[-1] == self.lifting_dim, f"Expected {self.lifting_dim}, got {h_feat.shape[-1]}"
 
             # Project K and V => [B, heads, seq_k, d_head]
             kv = self.kv_projs[i](h_feat)
@@ -289,7 +288,7 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
             v_proj = v_proj.view(B, N * T, self.num_heads, self.d_head).permute(0, 2, 1, 3)
 
             if self.use_rope:
-                k_proj = self.rope(k_proj)
+                k_proj: torch.Tensor = self.rope(k_proj)
 
             # 1) scores = Q·K^T / sqrt(d_head)
             scores = q_proj @ k_proj.transpose(-2, -1) / self.attention_denom
