@@ -6,6 +6,7 @@ from gtno_py.gtno.activations import FFNActivation, ReLU2, SwiGLU
 from tensordict import TensorDict
 from gtno_py.gtno.cross_attentions import QuadraticHeterogenousCrossAttention
 from gtno_py.gtno.mlps import MLP
+from e3nn import o3
 
 
 class NormType(str, Enum):
@@ -68,7 +69,7 @@ class GTNOBlock(nn.Module):
             case _:
                 raise ValueError(f"Invalid activation function: {activation}, select from one of {FFNActivation.__members__.keys()}")
 
-        self.ffn = MLP(in_features=lifting_dim, out_features=lifting_dim, hidden_features=lifting_dim, hidden_layers=2, activation=activation_fn)
+        self.ffn = MLP(in_features=lifting_dim, out_features=lifting_dim, hidden_features=lifting_dim, hidden_layers=2, activation=activation_fn, dropout_p=0.0)
 
         self.heterogenous_attention: nn.Module
         match heterogenous_attention_type:
@@ -104,7 +105,7 @@ class GTNOBlock(nn.Module):
         v_0 = self.pre_norm(v_0)
 
         hetero_attended_nodes: torch.Tensor = x_0 + self.heterogenous_attention(x_0, v_0, concatenated_features, q_data=q_data)
-        x_0 = self.ffn(hetero_attended_nodes)
+        x_0 = hetero_attended_nodes + self.ffn(hetero_attended_nodes)
 
         if self.value_residual_type == ValueResidualType.LEARNABLE:
             # Set initial_v if not provided (first layer); otherwise apply value residual
@@ -150,7 +151,6 @@ class GTNO(nn.Module):
 
         assert num_timesteps > 1, f"num_timesteps must be greater than 1. Got {num_timesteps}"
         self.num_timesteps = num_timesteps
-        from e3nn import o3
 
         match use_equivariant_lifting:
             case True:
@@ -196,13 +196,7 @@ class GTNO(nn.Module):
 
     @override
     def forward(self, batch: TensorDict) -> torch.Tensor:
-        # Batch: [Batch, Nodes, 4]
-        B, T, N, d = batch["x_0"].shape
-
-        # batch = self._replicate_tensordict_BxT(batch, self.num_timesteps)  # [Batch * timesteps, Nodes, 4]
-        # Project this batch feature from its original dimension to `lifting_dim`
-        # Use the same "key" to pick the lifting layer from `self.lifting_layers` and the corresponding feature from the `batch` dict.
-        # Apply lifting
+        # Batch: [Batch, Timesteps,Nodes, d]
         x_0: torch.Tensor = self.lifting_layers["x_0"](batch["x_0"])
         v_0: torch.Tensor = self.lifting_layers["v_0"](batch["v_0"])
         concatenated_features: torch.Tensor = self.lifting_layers["concatenated_features"](batch["concatenated_features"][..., :4], batch["concatenated_features"][..., 4:])
@@ -212,7 +206,6 @@ class GTNO(nn.Module):
             x_0, initial_v = layer(x_0, v_0, concatenated_features, q_data=concatenated_features, initial_v=initial_v)
 
         pred_pos: torch.Tensor = batch["x_0"][..., :3] + self.projection_layer(x_0)
-        # out: torch.Tensor = self.projection_layer(x_0)
 
         # 6) Reshape to [B, N, T, 3]
         return pred_pos  # Outputting the positions (x, y, z) for N nodes over T timesteps. Batched.
@@ -224,42 +217,3 @@ class GTNO(nn.Module):
                 _ = nn.init.kaiming_normal_(module.weight, nonlinearity="leaky_relu")
                 if module.bias is not None:
                     _ = nn.init.zeros_(module.bias)
-
-    @staticmethod
-    def _replicate_tensordict_BxT(batch: TensorDict, num_timesteps: int) -> TensorDict:
-        """
-        Replicates the entire tensordict along the batch dimension T times.
-        Resulting TensorDict has batch_size = [T * B]. This is necessary to generate
-        a trajectory of T timesteps for each of the B entries in the original tensordict.
-
-        Specifically, if the original tensordict has batch_size = [B], then
-        we generate a new tensordict with batch_size = [B * T], where each
-        of the B entries is repeated T times.
-
-        Args:
-            batch (TensorDict): The input tensordict with batch_size = [B].
-            T (int): The number of times to replicate the batch dimension.
-
-        Returns:
-            TensorDict: A new tensordict whose batch_size = [B * T], with each
-            field in the original tensordict replicated T times.
-
-        Example:
-            >>> # Suppose 'batch' has batch_size [32].
-            >>> # We want 8 future timesteps -> T=8.
-            >>> # The returned tensordict will have batch_size [32 * 8].
-            >>> expanded = replicate_tensordict(batch, 8)
-            >>> print(expanded.batch_size)  # torch.Size([256])
-        """
-        new_shape = (num_timesteps, *batch.batch_size)  # We'll reshape to [T * B] eventually.
-
-        # 1) Insert a new dimension at index 0 -> shape = [1, B].
-        out: torch.Tensor = batch.unsqueeze(0)
-
-        # 2) Expand along that new dimension T times -> shape = [T, B].
-        out = out.expand(new_shape)
-
-        # 3) Make memory contiguous, then flatten the first two dims -> [T * B].
-        out = out.contiguous().view(-1, *batch.batch_size[1:])
-
-        return out
