@@ -38,11 +38,14 @@ def log_feature_weights(named_parameters: Iterable[tuple[str, torch.Tensor]], ep
     """
     weights_per_layer = []
     attention_denom_per_layer = []
+    lambda_v_residual_per_layer = []
     for name, param in named_parameters:
         if "feature_weights" in name and param.requires_grad:
             weights_per_layer.append(param.detach().cpu())
         if "attention_denom" in name and param.requires_grad:
             attention_denom_per_layer.append(param.detach().cpu())
+        if "lambda_v_residual" in name and param.requires_grad:
+            lambda_v_residual_per_layer.append(param.detach().cpu())
 
     if weights_per_layer:
         averaged_param = torch.stack(weights_per_layer, dim=0).mean(dim=0)
@@ -58,15 +61,16 @@ def log_feature_weights(named_parameters: Iterable[tuple[str, torch.Tensor]], ep
     if attention_denom_per_layer:
         averaged_param = torch.stack(attention_denom_per_layer, dim=0).mean(dim=0)
         wandb.log({"attention_denom/averaged": wandb.Histogram(averaged_param.tolist())}, step=epoch)
+    if lambda_v_residual_per_layer:
+        averaged_param = torch.stack(lambda_v_residual_per_layer, dim=0).mean(dim=0)
+        wandb.log({"lambda_v_residual/averaged": wandb.Histogram(averaged_param.tolist())}, step=epoch)
 
 
 def add_brownian_noise(
     positions: torch.Tensor,
     velocities: torch.Tensor,
     concat: torch.Tensor,
-    noise_std_vel: float = 0.20,
-    noise_std_pos: float = 0.20,
-    noise_std_concat: float = 0.20,
+    noise_std: float = 0.20,
 ):
     """
     Add Langevin-type (Brownian) noise to velocities (and optionally positions)
@@ -75,29 +79,25 @@ def add_brownian_noise(
     Args:
         positions (torch.Tensor): Tensor of shape [Batch, Timesteps, Atoms, Dim].
         velocities (torch.Tensor): Tensor of shape [Batch, Timesteps, Atoms, Dim].
-        noise_std_vel (float): Std dev of Gaussian noise for velocities.
-        noise_std_pos (float): Std dev of Gaussian noise for positions.
+        noise_std (float): Std dev of Gaussian noise for velocities and concatenated features.
 
     Returns:
         Tuple[torch.Tensor, torch.Tensor]: Noised positions and velocities.
     """
     # Add noise to velocities
-    noise_vel = torch.randn_like(velocities) * noise_std_vel
+    noise_vel = torch.randn_like(velocities) * noise_std
     noisy_velocities = velocities + noise_vel
 
-    noise_concat = torch.randn_like(concat) * noise_std_concat
+    noise_concat_feats = torch.randn_like(concat) * noise_std
 
     # Zero out the last entry along the last dimension
-    noise_concat[..., -1] = 0
+    noise_concat_feats[..., -1] = 0
 
     # Apply noise
-    noisy_concat = concat + noise_concat
+    noisy_concat_feats = concat + noise_concat_feats
 
     # Optionally add noise to positions
-    if noise_std_pos > 0:
-        noise_pos = torch.randn_like(positions) * noise_std_pos
-        noisy_positions = positions + noise_pos
-    else:
-        noisy_positions = positions.clone()
+    noise_pos = torch.randn_like(positions) * noise_std
+    noisy_positions = positions + noise_pos
 
-    return noisy_positions, noisy_velocities, noisy_concat
+    return noisy_positions, noisy_velocities, noisy_concat_feats

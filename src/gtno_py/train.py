@@ -12,9 +12,9 @@ import torch.nn.functional as F
 import json
 from datetime import datetime
 from gtno_py.dataloaders.egno_dataloder import MoleculeType
-from typing import Literal, Callable
+from typing import Literal
 import wandb
-from gtno_py.utils import log_feature_weights
+from gtno_py.utils import log_feature_weights, add_brownian_noise
 
 # Load configuration
 with open("config.toml", "rb") as file:
@@ -127,7 +127,7 @@ def initialize_optimizer(model: nn.Module) -> optim.Optimizer:
         case "kron":
             return pt_optim.Kron(model.parameters(), lr=config["optimizer"]["learning_rate"], weight_decay=config["optimizer"]["weight_decay"])
         case "mars":
-            return pt_optim.MARS(model.parameters(), lr=config["optimizer"]["learning_rate"], weight_decay=config["optimizer"]["weight_decay"])
+            return pt_optim.MARS(model.parameters(), lr=config["optimizer"]["learning_rate"], weight_decay=config["optimizer"]["weight_decay"], cautious=True)
         case _:
             raise ValueError(f"Invalid optimizer: {config['optimizer']['type']}")
 
@@ -150,9 +150,6 @@ def reset_weights(model: nn.Module):
     for layer in model.modules():
         if hasattr(layer, "reset_parameters"):  # Applies to layers like Linear, Conv, etc.
             layer.reset_parameters()
-
-
-from gtno_py.utils import add_brownian_noise
 
 
 def train_step(model: nn.Module, optimizer: optim.Optimizer, loader: DataLoader[dict[str, torch.Tensor]], scheduler: optim.lr_scheduler._LRScheduler | None) -> float:
