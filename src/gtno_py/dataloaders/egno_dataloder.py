@@ -1,12 +1,13 @@
 import numpy as np
+import numpy.typing as npt
 import torch
 import pickle as pkl
 from torch.utils.data import Dataset, DataLoader
 import os
 from enum import Enum
-from typing import final, override
-import numpy.typing as npt
+from typing import Any, final, override
 from tensordict import TensorDict
+from pathlib import Path
 
 
 @final
@@ -17,12 +18,31 @@ class DataPartition(str, Enum):
 
 
 @final
-class MoleculeType(str, Enum):
+class MD17Version(str, Enum):
+    md17 = "md17"
+    rmd17 = "rmd17"
+
+
+@final
+class MD17MoleculeType(str, Enum):
     aspirin = "aspirin"
     benzene = "benzene"
     ethanol = "ethanol"
     malonaldehyde = "malonaldehyde"
     naphthalene = "naphthalene"
+    salicylic = "salicylic"
+    toluene = "toluene"
+    uracil = "uracil"
+
+
+@final
+class RMD17MoleculeType(str, Enum):
+    azobenzene = "azobenzene"
+    benzene = "benzene"
+    ethanol = "ethanol"
+    malonaldehyde = "malonaldehyde"
+    naphthalene = "naphthalene"
+    paracetamol = "paracetamol"
     salicylic = "salicylic"
     toluene = "toluene"
     uracil = "uracil"
@@ -40,7 +60,8 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         delta_frame: int,
         data_dir: str,
         split_dir: str,
-        molecule_type: MoleculeType,
+        md17_version: MD17Version,
+        molecule_type: MD17MoleculeType,
         train_par: float = 0.1,
         val_par: float = 0.05,
         test_par: float = 0.05,
@@ -53,7 +74,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
             partition (str): The partition to load ('train', 'val', 'test').
             max_samples (int): The maximum number of samples to load into the initial frame.
             delta_frame (int): The number of frames to skip between the initial and target frames.
-            data_dir (str): The directory to load the data from.
+            data_dir (str): The directory which stores the MD17 and RMD17 data.
             split_dir (str): The directory to load or store splits.
             molecule_type (str): The type of molecule to load ('aspirin', 'benzene_old', 'ethanol', 'malonaldehyde', 'naphthalene', 'salicylic', 'toluene', 'uracil').
             train_par (float): The percentage of the data to use for training.
@@ -62,24 +83,38 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
             num_timesteps (int): Number of timesteps for replication.
         """
         self.partition: DataPartition = partition
-        self.molecule_type: MoleculeType = molecule_type
+        self.md17_version: MD17Version = md17_version
+        self.molecule_type: MD17MoleculeType = molecule_type
         self.delta_frame: int = delta_frame
         self.num_timesteps: int = num_timesteps
-        self.max_samples = max_samples
+        self.max_samples: int = max_samples
 
-        # Data loading and splitting (same as before)
-        train_par, val_par, test_par = train_par, val_par, test_par
-        full_dir = os.path.join(data_dir + "md17_" + molecule_type + ".npz")
-        split_dir = os.path.join(split_dir + molecule_type + "_split.pkl")
-        data = np.load(full_dir)
+        self.dft_imprecision_margin: int = 10_000
 
-        x = data["R"]
-        v = x[1:] - x[:-1]
-        x = x[:-1]
+        match md17_version:
+            case MD17Version.md17:
+                full_dir = os.path.join(data_dir + "md17_npz/" + "md17_" + molecule_type + ".npz")
+                split_dir = os.path.join(split_dir + "md17_splits/" + "md17_" + molecule_type + "_split.pkl")
+                positions_col = "R"
+                charges_col = "z"
+            case MD17Version.rmd17:
+                full_dir = os.path.join(data_dir + "rmd17_npz/" + "rmd17_" + molecule_type + ".npz")
+                split_dir = os.path.join(split_dir + "rmd17_splits/" + "rmd17_" + molecule_type + "_split.pkl")
+                positions_col = "coords"
+                charges_col = "nuclear_charges"
+            case _:
+                raise ValueError(f"Invalid MD17 version: {md17_version}")
+
+        data_file: np.lib.npyio.NpzFile = np.load(full_dir)
+        self.x: npt.NDArray[np.float64] = data_file[positions_col]
+        self.z: npt.NDArray[np.uint8] = data_file[charges_col]
+        self.v: npt.NDArray[np.float64] = self.x[1:] - self.x[:-1]  # Construct velocities from successive coords
+        self.x = self.x[:-1]  # Remove last coord to ensure len(x) == len(v)
+        assert self.x.shape == self.v.shape
 
         split = self._get_or_generate_split(
             split_dir=split_dir,
-            x=x,
+            x=self.x,
             train_par=train_par,
             val_par=val_par,
             test_par=test_par,
@@ -100,17 +135,12 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         split_times = split_times[:max_samples]
         self.split_times = split_times
 
-        z = data["z"]
-        heavy_atom_mask = z > 1
-        x = x[:, heavy_atom_mask, ...]
-        v = v[:, heavy_atom_mask, ...]
-        z = z[heavy_atom_mask]
+        heavy_atom_mask = self.z > 1
+        self.x = self.x[:, heavy_atom_mask, ...]
+        self.v = self.v[:, heavy_atom_mask, ...]
+        self.z = self.z[heavy_atom_mask]
 
-        self.x_all = x
-        self.v_all = v
-        self.z_all = z
-
-        self.process_data(split_times, x, v, z)
+        self.process_data(split_times, self.x, self.v, self.z)
 
         # --- Precompute Replication ---
         self._replicate_dataset()  # Call replication after processing data
@@ -137,7 +167,8 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         self.v_0 = torch.cat([torch.Tensor(v_0), torch.norm(torch.Tensor(v_0), dim=-1, keepdim=True)], dim=-1)
         self.mole_idx = torch.Tensor(mole_idx)
         self.Z = torch.Tensor(z)
-        self.cfg = self.sample_cfg()
+        if self.md17_version == MD17Version.md17:
+            self.cfg = self.sample_cfg()
 
         if x_t is not None:
             self.x_t = torch.Tensor(x_t)
@@ -177,7 +208,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
             torch.Tensor: The replicated tensor.
         """
         # Add new time dimension
-        assert tensor.shape[0] == self.max_samples
+        assert tensor.shape[0] == self.max_samples, f"Tensor shape: {tensor.shape}, max_samples: {self.max_samples}"
         tensor_with_time = tensor.unsqueeze(1)
 
         # Expand along time dimension to num_timesteps
@@ -209,7 +240,19 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         v_t = v[split_times + self.delta_frame]
         return x_t, v_t
 
-    def _get_or_generate_split(self, split_dir, x, train_par, val_par, test_par, force_regenerate=False, seed=100):
+    def _get_or_generate_split(
+        self,
+        split_dir: Path,
+        x: npt.NDArray[np.float64],
+        train_par: float,
+        val_par: float,
+        test_par: float,
+        seed: int,
+        force_regenerate: bool = False,
+    ) -> tuple[npt.NDArray[np.int_], npt.NDArray[np.int_], npt.NDArray[np.int_]]:
+        start = self.dft_imprecision_margin
+        end = x.shape[0] - self.dft_imprecision_margin - self.delta_frame + 1
+
         try:
             if force_regenerate:
                 raise FileNotFoundError("Force regeneration of dataset")
@@ -218,37 +261,40 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         except FileNotFoundError:
             print("Error loading split file, regenerating split")
             np.random.seed(seed)
-            _x = x[10000:-10000]
-            train_idx = np.random.choice(np.arange(_x.shape[0]), size=int(train_par * _x.shape[0]), replace=False)
-            flag = np.zeros(_x.shape[0])
+            x_middle = x[start:end]
+            num_timesteps = x_middle.shape[0]
+            train_idx = np.random.choice(np.arange(num_timesteps), size=int(train_par * num_timesteps), replace=False)
+            flag = np.zeros(num_timesteps)
             for _ in train_idx:
                 flag[_] = 1
-            rest = [_ for _ in range(_x.shape[0]) if not flag[_]]
-            val_idx = np.random.choice(rest, size=int(val_par * _x.shape[0]), replace=False)
+            rest = [_ for _ in range(num_timesteps) if not flag[_]]
+            val_idx = np.random.choice(rest, size=int(val_par * num_timesteps), replace=False)
             for _ in val_idx:
                 flag[_] = 1
-            rest = [_ for _ in range(_x.shape[0]) if not flag[_]]
-            test_idx = np.random.choice(rest, size=int(test_par * _x.shape[0]), replace=False)
+            rest = [_ for _ in range(num_timesteps) if not flag[_]]
+            test_idx = np.random.choice(rest, size=int(test_par * num_timesteps), replace=False)
 
-            train_idx += 10000
-            val_idx += 10000
-            test_idx += 10000
+            # Add back first frames to keep within original frame range
+            train_idx += start
+            val_idx += start
+            test_idx += start
             split = (train_idx, val_idx, test_idx)
             with open(split_dir, "wb") as f:
                 pkl.dump(split, f)
             print("Generate and save split!")
         return split
 
-    def _compute_adjacency_matrix(self, x, num_atoms, threshold=1.6):
-        def d(_i, _j, _t):
+    def _compute_adjacency_matrix(self, x: npt.NDArray[np.float64], num_atoms: int, threshold: float = 1.6) -> tuple[npt.NDArray[np.int_], npt.NDArray[np.int_]]:
+        def l2_dist(_i: int, _j: int, _t: int) -> float:
+            """Compute the distance between two atoms at a given time step."""
             return np.sqrt(np.sum((x[_t][_i] - x[_t][_j]) ** 2))
 
         one_hop_edges = torch.zeros(num_atoms, num_atoms).int()
         for i in range(num_atoms):
             for j in range(num_atoms):
                 if i != j:
-                    _d = d(i, j, 0)
-                    if _d < threshold:
+                    distance = l2_dist(i, j, 0)
+                    if distance < threshold:
                         one_hop_edges[i][j] = 1
 
         two_hop_edges = (one_hop_edges @ one_hop_edges).clamp(max=1)
@@ -309,21 +355,21 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
 
     def sample_cfg(self):
         cfg = {}
-        if self.molecule_type == MoleculeType.benzene:
+        if self.molecule_type == MD17MoleculeType.benzene:
             cfg["Stick"] = [(0, 1), (2, 3), (4, 5)]
-        elif self.molecule_type == MoleculeType.aspirin:
+        elif self.molecule_type == MD17MoleculeType.aspirin:
             cfg["Stick"] = [(0, 2), (1, 3), (5, 6), (7, 10), (11, 12)]
-        elif self.molecule_type == MoleculeType.ethanol:
+        elif self.molecule_type == MD17MoleculeType.ethanol:
             cfg["Stick"] = [(0, 1)]
-        elif self.molecule_type == MoleculeType.malonaldehyde:
+        elif self.molecule_type == MD17MoleculeType.malonaldehyde:
             cfg["Stick"] = [(1, 2)]
-        elif self.molecule_type == MoleculeType.naphthalene:
+        elif self.molecule_type == MD17MoleculeType.naphthalene:
             cfg["Stick"] = [(0, 1), (2, 3), (4, 9), (5, 6), (7, 8)]
-        elif self.molecule_type == MoleculeType.salicylic:
+        elif self.molecule_type == MD17MoleculeType.salicylic:
             cfg["Stick"] = [(0, 9), (1, 2), (4, 5), (6, 7)]
-        elif self.molecule_type == MoleculeType.toluene:
+        elif self.molecule_type == MD17MoleculeType.toluene:
             cfg["Stick"] = [(2, 3), (5, 6), (0, 1)]
-        elif self.molecule_type == MoleculeType.uracil:
+        elif self.molecule_type == MD17MoleculeType.uracil:
             cfg["Stick"] = [(0, 1), (3, 4)]
         else:
             raise NotImplementedError()
@@ -365,6 +411,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         assert len(self.replicated_x_0) == self.max_samples * self.num_timesteps
         # For sample index i, slice out the contiguous block of timesteps (of size num_timesteps)
         # from the pre-replicated tensors. This recovers the T timesteps associated with the i-th sample.
+        # i * self.num_timesteps : (i + 1) * self.num_timesteps - We want to be this many i * timesteps *frames* from the start, and capture the whole frame
         return {
             "x_0": self.replicated_x_0[i * self.num_timesteps : (i + 1) * self.num_timesteps],
             "v_0": self.replicated_v_0[i * self.num_timesteps : (i + 1) * self.num_timesteps],
@@ -413,7 +460,8 @@ class MD17DynamicsDataset(MD17Dataset):
         delta_frame: int,
         data_dir: str,
         split_dir: str,
-        molecule_type: MoleculeType,
+        md17_version: MD17Version,
+        molecule_type: MD17MoleculeType,
         train_par: float = 0.1,
         val_par: float = 0.05,
         test_par: float = 0.05,
@@ -427,6 +475,7 @@ class MD17DynamicsDataset(MD17Dataset):
             delta_frame=delta_frame,
             data_dir=data_dir,
             split_dir=split_dir,
+            md17_version=md17_version,
             molecule_type=molecule_type,
             train_par=train_par,
             val_par=val_par,
@@ -444,15 +493,13 @@ class MD17DynamicsDataset(MD17Dataset):
         self._replicate_dataset()
 
     def get_dynamic_target_frames(self):
-        x = self.x_all
-        v = self.v_all
         split_times = self.split_times
         delta_frame = self.delta_frame
         num_timesteps = self.num_timesteps
 
-        x_t_list = [x[split_times + delta_frame * i // num_timesteps] for i in range(1, num_timesteps + 1)]
+        x_t_list = [self.x[split_times + delta_frame * i // num_timesteps] for i in range(1, num_timesteps + 1)]
         x_t = np.stack(x_t_list, axis=2)
-        v_t_list = [v[split_times + delta_frame * i // num_timesteps] for i in range(1, num_timesteps + 1)]
+        v_t_list = [self.v[split_times + delta_frame * i // num_timesteps] for i in range(1, num_timesteps + 1)]
         v_t = np.stack(v_t_list, axis=2)
         return x_t, v_t
 
@@ -462,49 +509,76 @@ class MD17DynamicsDataset(MD17Dataset):
 
 
 if __name__ == "__main__":
+    import time
+    from tqdm import tqdm
+
     # Test MD17Dataset
     dataset_static = MD17Dataset(
         partition=DataPartition.train,
         max_samples=5000,
-        delta_frame=5000,
-        data_dir="data/md17_npz/",
-        split_dir="data/md17_egno_splits/",
-        molecule_type=MoleculeType.aspirin,
-        force_regenerate=True,
-        num_timesteps=8,  # Set num_timesteps for replication
+        delta_frame=30000,
+        data_dir="data/",
+        split_dir="data/",
+        md17_version=MD17Version.rmd17,
+        molecule_type=MD17MoleculeType.benzene,
+        force_regenerate=False,
+        num_timesteps=1,  # Set num_timesteps for replication
     )
-    dataloader_static = DataLoader(dataset_static, batch_size=1, shuffle=True)
-    print("MD17Dataset Output Shapes:")
-    for data in dataloader_static:
-        for key in data:
-            if key not in ["cfg", "edge_attr"]:
-                print(f"  {key}:", data[key].shape)
-        if "cfg" in data:
-            print("  cfg shapes:")
-            for key in data["cfg"]:
-                print(f"    {key}:", data["cfg"][key].shape)
-        break
+    dataloader_static = DataLoader(dataset_static, batch_size=100, shuffle=True)
+    # print("MD17Dataset Output Shapes:")
+    # for data in dataloader_static:
+    #     for key in data:
+    #         if key not in ["cfg", "edge_attr"]:
+    #             print(f"  {key}:", data[key].shape)
+    #     if "cfg" in data:
+    #         print("  cfg shapes:")
+    #         for key in data["cfg"]:
+    #             print(f"    {key}:", data["cfg"][key].shape)
+    #     break
 
     # Test MD17DynamicsDataset
     dataset_dynamic = MD17DynamicsDataset(
         partition=DataPartition.train,
-        max_samples=5000,
-        delta_frame=5000,
-        data_dir="data/md17_npz/",
-        split_dir="data/md17_egno_splits/",
-        molecule_type=MoleculeType.aspirin,
-        force_regenerate=True,
+        max_samples=500,
+        delta_frame=3000,
+        data_dir="data/",
+        split_dir="data/",
+        md17_version=MD17Version.md17,
+        molecule_type=MD17MoleculeType.toluene,
+        force_regenerate=False,
         num_timesteps=8,  # Set num_timesteps for replication
     )
 
-    dataloader_dynamic = DataLoader(dataset_dynamic, batch_size=1, shuffle=True)
-    print("\nMD17DynamicsDataset Output Shapes:")
-    for data in dataloader_dynamic:
-        for key in data:
-            if key not in ["cfg", "edge_attr"]:
-                print(f"  {key}:", data[key].shape)
-        if "cfg" in data:
-            print("  cfg shapes:")
-            for key in data["cfg"]:
-                print(f"    {key}:", data["cfg"][key].shape)
-        break
+    dataloader_dynamic = DataLoader(dataset_dynamic, batch_size=100, shuffle=True)
+
+    # Warm-up iterations
+    for _ in range(500):
+        next(iter(dataloader_dynamic))
+
+    # Benchmarking with statistics
+    times: list[float] = []
+    num_batches: int = 10_000
+
+    for rep in tqdm(range(100)):
+        start_time = time.time()
+        for i, batch in enumerate(dataloader_dynamic):
+            if i == num_batches:
+                break
+        elapsed = time.time() - start_time
+        times.append(elapsed)
+
+    mean_time = np.mean(times)
+    std_time = np.std(times)
+    print(f"Batch overhead - Mean: {mean_time:.4f} s, Std: {std_time:.4f} s")
+    print(f"Latex: \\({mean_time:.3f}{{\\scriptstyle \\pm{std_time:.3f}}}\\)")
+
+    # print("\nMD17DynamicsDataset Output Shapes:")
+    # for data in dataloader_dynamic:
+    #     for key in data:
+    #         if key not in ["cfg", "edge_attr"]:
+    #             print(f"  {key}:", data[key].shape)
+    #     if "cfg" in data:
+    #         print("  cfg shapes:")
+    #         for key in data["cfg"]:
+    #             print(f"    {key}:", data["cfg"][key].shape)
+    #     break

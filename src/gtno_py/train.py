@@ -11,7 +11,7 @@ from gtno_py.gtno.gtno_model import GTNO
 import torch.nn.functional as F
 import json
 from datetime import datetime
-from gtno_py.dataloaders.egno_dataloder import MoleculeType
+from gtno_py.dataloaders.egno_dataloder import MD17MoleculeType, MD17Version, RMD17MoleculeType
 from typing import Literal
 import wandb
 from gtno_py.utils import log_feature_weights, add_brownian_noise
@@ -30,36 +30,41 @@ torch.manual_seed(config["training"]["seed"])
 torch.cuda.manual_seed(config["training"]["seed"])
 
 
-def create_dataloaders(molecule_type: MoleculeType) -> tuple[DataLoader[dict[str, torch.Tensor]], DataLoader[dict[str, torch.Tensor]], DataLoader[dict[str, torch.Tensor]]]:
+def create_dataloaders(
+    molecule_type: MD17MoleculeType, md17_version: MD17Version
+) -> tuple[DataLoader[dict[str, torch.Tensor]], DataLoader[dict[str, torch.Tensor]], DataLoader[dict[str, torch.Tensor]]]:
     """Create train/val/test dataloaders."""
     train_dataset = MD17DynamicsDataset(
         partition=DataPartition.train,
         max_samples=500,
-        delta_frame=3000,
+        delta_frame=config["benchmark"]["delta_T"],
         num_timesteps=config["model"]["num_timesteps"],
-        data_dir="data/md17_npz/",
-        split_dir="data/md17_egno_splits/",
+        data_dir="data/",
+        split_dir="data/",
         molecule_type=molecule_type,
+        md17_version=md17_version,
     )
 
     val_dataset = MD17DynamicsDataset(
         partition=DataPartition.val,
         max_samples=2000,
-        delta_frame=3000,
+        delta_frame=config["benchmark"]["delta_T"],
         num_timesteps=config["model"]["num_timesteps"],
-        data_dir="data/md17_npz/",
-        split_dir="data/md17_egno_splits/",
+        data_dir="data/",
+        split_dir="data/",
         molecule_type=molecule_type,
+        md17_version=md17_version,
     )
 
     test_dataset = MD17DynamicsDataset(
         partition=DataPartition.test,
         max_samples=2000,
-        delta_frame=3000,
+        delta_frame=config["benchmark"]["delta_T"],
         num_timesteps=config["model"]["num_timesteps"],
-        data_dir="data/md17_npz/",
-        split_dir="data/md17_egno_splits/",
+        data_dir="data/",
+        split_dir="data/",
         molecule_type=molecule_type,
+        md17_version=md17_version,
     )
 
     train_loader = DataLoader(
@@ -114,7 +119,7 @@ def initialize_optimizer(model: nn.Module) -> optim.Optimizer:
             return optim.SGD(model.parameters(), lr=config["optimizer"]["learning_rate"], weight_decay=config["optimizer"]["weight_decay"])
         case "adamw":
             return optim.AdamW(
-                model.parameters(),
+                list(model.parameters()) + [noise_scale],
                 lr=config["optimizer"]["learning_rate"],
                 weight_decay=config["optimizer"]["weight_decay"],
                 betas=tuple(config["optimizer"]["adam_betas"]),
@@ -130,6 +135,13 @@ def initialize_optimizer(model: nn.Module) -> optim.Optimizer:
             return pt_optim.MARS(model.parameters(), lr=config["optimizer"]["learning_rate"], weight_decay=config["optimizer"]["weight_decay"], cautious=True)
         case _:
             raise ValueError(f"Invalid optimizer: {config['optimizer']['type']}")
+
+
+noise_scale: float | torch.nn.Parameter
+if config["training"]["learnable_noise_std"]:
+    noise_scale = torch.nn.Parameter(torch.tensor(config["training"]["brownian_noise_std"], device=device))
+else:
+    noise_scale = config["training"]["brownian_noise_std"]
 
 
 def initialize_scheduler(optimizer: optim.Optimizer, total_steps: int) -> optim.lr_scheduler._LRScheduler | None:
@@ -163,7 +175,12 @@ def train_step(model: nn.Module, optimizer: optim.Optimizer, loader: DataLoader[
         target_coords = batch.pop("x_t")
         _ = batch.pop("v_t")
 
-        batch["x_0"], batch["v_0"], batch["concatenated_features"] = add_brownian_noise(batch["x_0"], batch["v_0"], batch["concatenated_features"])
+        batch["x_0"], batch["v_0"], batch["concatenated_features"] = add_brownian_noise(
+            batch["x_0"],
+            batch["v_0"],
+            batch["concatenated_features"],
+            config["training"]["brownian_noise_std"],
+        )
 
         optimizer.zero_grad()
         pred_coords: torch.Tensor = model(batch)
@@ -204,12 +221,12 @@ def evaluate(model: nn.Module, loader: DataLoader[dict[str, torch.Tensor]]) -> t
     return total_s2t_loss / len(loader.dataset), total_s2s_loss / len(loader.dataset)
 
 
-def main(num_epochs: int, model: nn.Module, molecule_type: MoleculeType) -> tuple[float, float, float, int]:
+def main(num_epochs: int, model: nn.Module, molecule_type: MD17MoleculeType | RMD17MoleculeType, md17_version: MD17Version) -> tuple[float, float, float, int]:
     """Full training pipeline."""
     start_time = datetime.now()
 
     # Initialize components
-    train_loader, val_loader, test_loader = create_dataloaders(molecule_type)
+    train_loader, val_loader, test_loader = create_dataloaders(molecule_type, md17_version)
     reset_weights(model)
     optimizer = initialize_optimizer(model)
     total_steps: int = len(train_loader.dataset) // config["training"]["batch_size"] * num_epochs
@@ -256,7 +273,7 @@ def main(num_epochs: int, model: nn.Module, molecule_type: MoleculeType) -> tupl
     return s2t_test_loss, s2s_test_loss, total_time, best_val_loss_epoch
 
 
-def benchmark(runs: int, epochs_per_run: int, compile: bool, molecule_type: MoleculeType | Literal["all_mols"]) -> None:
+def benchmark(runs: int, epochs_per_run: int, compile: bool, molecule_type: MD17MoleculeType | RMD17MoleculeType | Literal["all_mols"], md17_version: MD17Version) -> None:
     """
     Benchmarking function with JSON results logging.
 
@@ -270,8 +287,18 @@ def benchmark(runs: int, epochs_per_run: int, compile: bool, molecule_type: Mole
     Returns:
         None
     """
-    results = {"config_name": project_name, "runs": {}, "summary": {}, "timestamp": datetime.now().isoformat()}
-    molecules = list(MoleculeType) if molecule_type == "all_mols" else [molecule_type]
+
+    results = {
+        "config_name": project_name,
+        "runs": {},
+        "summary": {},
+        "timestamp": datetime.now().isoformat(),
+    }
+
+    if molecule_type == "all_mols":
+        molecules = list(MD17MoleculeType if md17_version == MD17Version.md17 else RMD17MoleculeType)
+    else:
+        molecules = [molecule_type]
 
     if compile:
         model = torch.compile(initialize_model(), dynamic=True)
@@ -285,7 +312,7 @@ def benchmark(runs: int, epochs_per_run: int, compile: bool, molecule_type: Mole
         for run in runs_progress_bar:
             runs_progress_bar.set_description(f"Run {run+1}/{runs}")
             start_time = datetime.now()
-            s2t_test_loss, s2s_test_loss, duration, best_val_loss_epoch = main(epochs_per_run, model, molecule)
+            s2t_test_loss, s2s_test_loss, duration, best_val_loss_epoch = main(epochs_per_run, model, molecule, md17_version)
             end_time = datetime.now()
 
             # Store run results
@@ -318,6 +345,10 @@ def benchmark(runs: int, epochs_per_run: int, compile: bool, molecule_type: Mole
             "config": config,
             "best_val_loss_epochs": float(sum(best_val_loss_epochs) / len(best_val_loss_epochs)),
         }
+        results["latex_format"] = {
+            "S2S": f"\\({results['summary']['mean_test_loss_final']*100:.2f}{{\\scriptstyle \\pm{results['summary']['std_dev_test_loss_final']*100:.2f}}}\\)",
+            "S2T": f"\\({results['summary']['mean_test_loss']*100:.2f}{{\\scriptstyle \\pm{results['summary']['std_dev_test_loss']*100:.2f}}}\\)",
+        }
 
         wandb.log(
             {
@@ -348,5 +379,6 @@ if __name__ == "__main__":
         int(config["benchmark"]["runs"]),
         int(config["training"]["epochs"]),
         bool(config["benchmark"]["compile"]),
-        MoleculeType(config["benchmark"]["molecule_type"]) if not config["benchmark"]["molecule_type"] == "all_mols" else "all_mols",
+        MD17MoleculeType(config["benchmark"]["molecule_type"]) if not config["benchmark"]["molecule_type"] == "all_mols" else "all_mols",
+        MD17Version(config["benchmark"]["md17_version"]),
     )
