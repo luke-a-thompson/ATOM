@@ -1,12 +1,12 @@
 import torch
-from gtno_py.dataloaders.egno_dataloder import MD17DynamicsDataset, DataPartition, MoleculeType
+from gtno_py.dataloaders.egno_dataloder import MD17DynamicsDataset, DataPartition, MD17MoleculeType, MD17Version
 from torch.utils.data import DataLoader
 
 device = "cuda"
 
 
 class TestMD17DynamicsDataset:
-    def test_assert_replicated_dataset_all_identical(self):
+    def test_assert_replicated_dataset_all_identical_md17(self):
         """
         Test that for each sample in the dataset, the replicated tensors are identical along the time dimension.
 
@@ -27,17 +27,73 @@ class TestMD17DynamicsDataset:
                 "pin_memory": False,
             },
         }
-        molecule_type = MoleculeType.aspirin
 
         # Instantiate the dynamics dataset using the actual dataset
         train_dataset = MD17DynamicsDataset(
             partition=DataPartition.train,
             max_samples=500,
             delta_frame=3000,
+            md17_version=MD17Version.md17,
             num_timesteps=config["model"]["num_timesteps"],
-            data_dir="data/md17_npz/",
+            data_dir="data/",
             split_dir="data/md17_egno_splits/",
-            molecule_type=molecule_type,
+            molecule_type=MD17MoleculeType.aspirin,
+        )
+
+        train_loader = DataLoader(
+            train_dataset,
+            batch_size=config["training"]["batch_size"],
+            shuffle=True,
+            persistent_workers=config["dataloader"]["persistent_workers"],
+            num_workers=config["dataloader"]["num_workers"],
+            pin_memory=config["dataloader"]["pin_memory"],
+        )
+
+        # Get one batch from the loader
+        batch = next(iter(train_loader))
+
+        # Check replicated keys for consistency along the time (T) dimension.
+        # Expected shape for these keys: (B, T, N, d)
+        for key in ["x_0", "v_0", "concatenated_features"]:
+            tensor = batch[key]
+            B, T = tensor.shape[0], tensor.shape[1]
+            for t in range(1, T):
+                assert torch.allclose(tensor[:, 0, ...], tensor[:, t, ...]), f"Replication error for key '{key}': time slice 0 and {t} differ."
+
+        print("Test passed: All replicated tensors are identical along the time dimension.")
+
+    def test_assert_replicated_dataset_all_identical_rmd17(self):
+        """
+        Test that for each sample in the dataset, the replicated tensors are identical along the time dimension.
+
+        MD17DynamicsDataset precomputes replicated versions of x_0, v_0, and concatenated_features by
+        expanding them along a time dimension and flattening into a shape of (max_samples * num_timesteps, N, d).
+        In __getitem__, a contiguous block of num_timesteps is sliced, resulting in tensors of shape (T, N, d)
+        for each sample. For the static features, these T time steps should be identical.
+
+        This function loads one batch from the DataLoader and asserts that, for each key in
+        ["x_0", "v_0", "concatenated_features"], all time slices (along the T dimension) are equal.
+        """
+        config = {
+            "model": {"num_timesteps": 8},
+            "training": {"batch_size": 2},
+            "dataloader": {
+                "persistent_workers": False,
+                "num_workers": 0,
+                "pin_memory": False,
+            },
+        }
+
+        # Instantiate the dynamics dataset using the actual dataset
+        train_dataset = MD17DynamicsDataset(
+            partition=DataPartition.train,
+            max_samples=500,
+            delta_frame=3000,
+            md17_version=MD17Version.rmd17,
+            num_timesteps=config["model"]["num_timesteps"],
+            data_dir="data/",
+            split_dir="data/md17_egno_splits/",
+            molecule_type=MD17MoleculeType.benzene,
         )
 
         train_loader = DataLoader(
@@ -73,9 +129,10 @@ class TestMD17DynamicsDataset:
             max_samples=max_samples,
             delta_frame=3000,
             num_timesteps=num_timesteps,
-            data_dir="data/md17_npz/",
+            data_dir="data/",
             split_dir="data/md17_egno_splits/",
-            molecule_type=MoleculeType.aspirin,
+            md17_version=MD17Version.md17,
+            molecule_type=MD17MoleculeType.aspirin,
             force_regenerate=True,
         )
 
