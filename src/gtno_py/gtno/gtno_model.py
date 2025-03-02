@@ -37,6 +37,7 @@ class GTNOBlock(nn.Module):
         use_rope: bool,
         use_spherical_harmonics: bool,
         value_residual_type: ValueResidualType,
+        learnable_attention_denom: bool,
     ) -> None:
         super().__init__()
 
@@ -81,6 +82,7 @@ class GTNOBlock(nn.Module):
                     num_timesteps=self.num_timesteps,
                     use_rope=use_rope,
                     use_spherical_harmonics=use_spherical_harmonics,
+                    learnable_attention_denom=learnable_attention_denom,
                 )
             case _:
                 raise ValueError(f"Invalid heterogenous attention type: {heterogenous_attention_type}, select from one of {GraphHeterogenousAttentionType.__members__.keys()}")  # type: ignore
@@ -133,6 +135,7 @@ class GTNO(nn.Module):
         use_spherical_harmonics: bool,
         use_equivariant_lifting: bool,
         value_residual_type: ValueResidualType,
+        learnable_attention_denom: bool,
     ) -> None:
         """
         A GTNO model that always does T>1 predictions. GTNO is a graph transformer neural operator for predicting molecular dynamics trajectories.
@@ -184,13 +187,14 @@ class GTNO(nn.Module):
                     use_rope,
                     use_spherical_harmonics,
                     value_residual_type,
+                    learnable_attention_denom,
                 )
                 for _ in range(num_layers)
             ]
         )
 
         # Final projection to (x, y, z)
-        self.projection_layer = nn.Linear(in_features=lifting_dim, out_features=3)
+        self.projection_layer = o3.Linear("42x1o + 2x0e", "1x1o")
 
         self._initialise_weights(self)
 
