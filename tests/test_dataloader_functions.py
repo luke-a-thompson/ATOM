@@ -36,7 +36,7 @@ class TestMD17DynamicsDataset:
             md17_version=MD17Version.md17,
             num_timesteps=config["model"]["num_timesteps"],
             data_dir="data/",
-            split_dir="data/md17_egno_splits/",
+            split_dir="data/",
             molecule_type=MD17MoleculeType.aspirin,
         )
 
@@ -92,7 +92,7 @@ class TestMD17DynamicsDataset:
             md17_version=MD17Version.rmd17,
             num_timesteps=config["model"]["num_timesteps"],
             data_dir="data/",
-            split_dir="data/md17_egno_splits/",
+            split_dir="data/",
             molecule_type=MD17MoleculeType.benzene,
         )
 
@@ -130,7 +130,7 @@ class TestMD17DynamicsDataset:
             delta_frame=3000,
             num_timesteps=num_timesteps,
             data_dir="data/",
-            split_dir="data/md17_egno_splits/",
+            split_dir="data/",
             md17_version=MD17Version.md17,
             molecule_type=MD17MoleculeType.aspirin,
             force_regenerate=True,
