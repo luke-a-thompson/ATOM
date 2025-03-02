@@ -3,15 +3,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from gtno_py.gtno.mlps import MLP
-from gtno_py.gtno.shape_utils import flatten_spatiotemporal, unflatten_spatiotemporal
+from gtno_py.gtno.shape_utils import flatten_spatiotemporal
 from e3nn import o3
-from enum import Enum
-
-
-class RoPEType(str, Enum):
-    NONE = "none"
-    TEMPORAL = "temporal"
-    EQUIVARIANT = "equivariant_temporal"
 
 
 @final
@@ -283,7 +276,7 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
 
             # Project K and V => [B, heads, seq_k, d_head]
             kv = self.kv_projs[i](h_feat)
-            k_proj, v_proj = torch.chunk(kv, 2, dim=-1) 
+            k_proj, v_proj = torch.chunk(kv, 2, dim=-1)
             k_proj = k_proj.view(B, N * T, self.num_heads, self.d_head).permute(0, 2, 1, 3)
             v_proj = v_proj.view(B, N * T, self.num_heads, self.d_head).permute(0, 2, 1, 3)
 
