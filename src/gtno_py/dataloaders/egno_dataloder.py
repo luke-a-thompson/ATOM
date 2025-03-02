@@ -5,7 +5,7 @@ import pickle as pkl
 from torch.utils.data import Dataset, DataLoader
 import os
 from enum import Enum
-from typing import Any, final, override
+from typing import final, override
 from tensordict import TensorDict
 from pathlib import Path
 
@@ -143,9 +143,11 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         self.process_data(split_times, self.x, self.v, self.z)
 
         # --- Precompute Replication ---
-        self._replicate_dataset()  # Call replication after processing data
+        self.replicated_x_0: torch.Tensor = self._replicate_tensor(self.x_0)
+        self.replicated_v_0: torch.Tensor = self._replicate_tensor(self.v_0)
+        self.replicated_concatenated_features: torch.Tensor = self._replicate_tensor(self.concatenated_features)
 
-    def process_data(self, split_times, x, v, z):
+    def process_data(self, split_times: npt.NDArray[np.int_], x: npt.NDArray[np.float64], v: npt.NDArray[np.float64], z: npt.NDArray[np.uint8]):
         """Processes loaded data, common to both MD17Dataset and MD17DynamicsDataset"""
         x_0, v_0 = self.get_initial_frames(split_times, x, v)
         x_t, v_t = self.get_target_frames(split_times, x, v)
@@ -156,24 +158,24 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
 
         one_hop_adjacency, two_hop_adjacency = self._compute_adjacency_matrix(x, n_node)
         edge_attr, edges = self._build_edge_attributes(one_hop_adjacency, two_hop_adjacency, mole_idx, x_0, v_0)
-        self.edge_attr = edge_attr
+        self.edge_attr: torch.Tensor = edge_attr
         self.edges = edges
 
         all_edges = self._compute_all_edges(x=x, z=z)
         conf_edges = self._compute_conf_edges(all_edges=all_edges)
         self.conf_edges = conf_edges
 
-        self.x_0 = torch.cat([torch.Tensor(x_0), torch.norm(torch.Tensor(x_0), dim=-1, keepdim=True)], dim=-1)
-        self.v_0 = torch.cat([torch.Tensor(v_0), torch.norm(torch.Tensor(v_0), dim=-1, keepdim=True)], dim=-1)
-        self.mole_idx = torch.Tensor(mole_idx)
-        self.Z = torch.Tensor(z)
+        self.x_0: torch.Tensor = torch.cat([torch.Tensor(x_0), torch.norm(torch.Tensor(x_0), dim=-1, keepdim=True)], dim=-1)
+        self.v_0: torch.Tensor = torch.cat([torch.Tensor(v_0), torch.norm(torch.Tensor(v_0), dim=-1, keepdim=True)], dim=-1)
+        self.mole_idx: torch.Tensor = torch.Tensor(mole_idx)
+        self.Z: torch.Tensor = torch.Tensor(z)
         if self.md17_version == MD17Version.md17:
             self.cfg = self.sample_cfg()
 
         if x_t is not None:
-            self.x_t = torch.Tensor(x_t)
+            self.x_t: torch.Tensor = torch.Tensor(x_t)
         if v_t is not None:
-            self.v_t = torch.Tensor(v_t)
+            self.v_t: torch.Tensor = torch.Tensor(v_t)
 
         self.concatenated_features: torch.Tensor = self._compute_concatenated_features()
 
@@ -219,12 +221,6 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         assert tensor_reshaped.shape == (self.max_samples * self.num_timesteps, *tensor.shape[1:])
 
         return tensor_reshaped
-
-    def _replicate_dataset(self):
-        """Pre-computes the replicated dataset."""
-        self.replicated_x_0 = self._replicate_tensor(self.x_0)
-        self.replicated_v_0 = self._replicate_tensor(self.v_0)
-        self.replicated_concatenated_features = self._replicate_tensor(self.concatenated_features)
 
     def get_initial_frames(
         self, split_times: npt.NDArray[np.int_], x: npt.NDArray[np.float64], v: npt.NDArray[np.float64]
@@ -490,7 +486,9 @@ class MD17DynamicsDataset(MD17Dataset):
         self.v_t = torch.Tensor(self.v_t)
 
         # Re-replicate dataset after defining x_t, v_t for dynamics dataset
-        self._replicate_dataset()
+        self.replicated_x_0: torch.Tensor = self._replicate_tensor(self.x_0)
+        self.replicated_v_0: torch.Tensor = self._replicate_tensor(self.v_0)
+        self.replicated_concatenated_features: torch.Tensor = self._replicate_tensor(self.concatenated_features)
 
     def get_dynamic_target_frames(self):
         split_times = self.split_times
