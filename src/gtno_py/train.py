@@ -31,7 +31,7 @@ torch.cuda.manual_seed(config["training"]["seed"])
 
 
 def create_dataloaders(
-    molecule_type: MD17MoleculeType, md17_version: MD17Version
+    molecule_type: MD17MoleculeType | RMD17MoleculeType, md17_version: MD17Version
 ) -> tuple[DataLoader[dict[str, torch.Tensor]], DataLoader[dict[str, torch.Tensor]], DataLoader[dict[str, torch.Tensor]]]:
     """Create train/val/test dataloaders."""
     train_dataset = MD17DynamicsDataset(
@@ -43,6 +43,7 @@ def create_dataloaders(
         split_dir="data/",
         molecule_type=molecule_type,
         md17_version=md17_version,
+        force_regenerate=True,
     )
 
     val_dataset = MD17DynamicsDataset(
@@ -54,6 +55,7 @@ def create_dataloaders(
         split_dir="data/",
         molecule_type=molecule_type,
         md17_version=md17_version,
+        force_regenerate=True,
     )
 
     test_dataset = MD17DynamicsDataset(
@@ -65,6 +67,7 @@ def create_dataloaders(
         split_dir="data/",
         molecule_type=molecule_type,
         md17_version=md17_version,
+        force_regenerate=True,
     )
 
     train_loader = DataLoader(
@@ -109,6 +112,7 @@ def initialize_model() -> nn.Module:
         use_spherical_harmonics=config["model"]["use_spherical_harmonics"],
         use_equivariant_lifting=config["model"]["use_equivariant_lifting"],
         value_residual_type=config["model"]["value_residual_type"],
+        learnable_attention_denom=config["model"]["learnable_attention_denom"],
     ).to(device)
 
 
@@ -212,6 +216,7 @@ def evaluate(model: nn.Module, loader: DataLoader[dict[str, torch.Tensor]]) -> t
             _ = batch.pop("v_t")
 
             pred_coords: torch.Tensor = model(batch)
+
             s2t_loss = F.mse_loss(pred_coords, target_coords)
             s2s_loss = F.mse_loss(pred_coords[:, -1, :, :], target_coords[:, -1, :, :])
             total_s2t_loss += s2t_loss.item() * batch.batch_size[0]
@@ -272,7 +277,13 @@ def main(num_epochs: int, model: nn.Module, molecule_type: MD17MoleculeType | RM
     return s2t_test_loss, s2s_test_loss, total_time, best_val_loss_epoch
 
 
-def benchmark(runs: int, epochs_per_run: int, compile: bool, molecule_type: MD17MoleculeType | RMD17MoleculeType | Literal["all_mols"], md17_version: MD17Version) -> None:
+def benchmark(
+    runs: int,
+    epochs_per_run: int,
+    compile: bool,
+    molecule_type: MD17MoleculeType | RMD17MoleculeType | Literal["all_mols"],
+    md17_version: MD17Version,
+) -> None:
     """
     Benchmarking function with JSON results logging.
 
@@ -296,6 +307,8 @@ def benchmark(runs: int, epochs_per_run: int, compile: bool, molecule_type: MD17
 
     if molecule_type == "all_mols":
         molecules = list(MD17MoleculeType if md17_version == MD17Version.md17 else RMD17MoleculeType)
+    elif isinstance(molecule_type, list):
+        molecules = molecule_type
     else:
         molecules = [molecule_type]
 
@@ -306,7 +319,7 @@ def benchmark(runs: int, epochs_per_run: int, compile: bool, molecule_type: MD17
 
     molecule_progress_bar = tqdm(molecules, leave=False, unit="molecule", position=0)
     for molecule in molecule_progress_bar:
-        molecule_progress_bar.set_description(f"Running {molecule.value}")
+        molecule_progress_bar.set_description(f"Running {str(molecule)}")
         runs_progress_bar = tqdm(range(runs), leave=False, unit="run", position=1)
         for run in runs_progress_bar:
             runs_progress_bar.set_description(f"Run {run+1}/{runs}")
@@ -359,7 +372,7 @@ def benchmark(runs: int, epochs_per_run: int, compile: bool, molecule_type: MD17
         )
 
         # Save to JSON
-        filename = f"benchmark_runs/{project_name}_{molecule.value}_{datetime.now().strftime('%d-%b-%Y_%H-%M-%S')}.json"
+        filename = f"benchmark_runs/{project_name}_{str(molecule)}_{datetime.now().strftime('%d-%b-%Y_%H-%M-%S')}.json"
         with open(filename, "w") as f:
             json.dump(results, f, indent=2)
 
@@ -378,6 +391,6 @@ if __name__ == "__main__":
         int(config["benchmark"]["runs"]),
         int(config["training"]["epochs"]),
         bool(config["benchmark"]["compile"]),
-        MD17MoleculeType(config["benchmark"]["molecule_type"]) if not config["benchmark"]["molecule_type"] == "all_mols" else "all_mols",
+        config["benchmark"]["molecule_type"],
         MD17Version(config["benchmark"]["md17_version"]),
     )
