@@ -1,16 +1,21 @@
 [wandb]
-use_wandb = true
+use_wandb = false
 
 [benchmark]
 runs = 1
 compile = true
-molecule_type = "salicylic"
+molecule_type = "toluene"
+md17_version = "rmd17"
+delta_T = 3000
+# delta_T = 30000
 
 [training]
 seed = 42
-batch_size = 128
-epochs = 800
+batch_size = 100
+epochs = 1000
 max_grad_norm = 1.0
+learnable_noise_std = false
+brownian_noise_std = 0.1
 
 [dataloader]
 persistent_workers = true
@@ -25,7 +30,7 @@ adam_betas = [0.9, 0.999]
 adam_eps = 1e-10
 
 [scheduler]
-type = "cosine_annealing"
+type = "none"
 
 [model]
 model_type = "gtno"

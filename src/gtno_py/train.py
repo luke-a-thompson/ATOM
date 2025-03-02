@@ -119,7 +119,7 @@ def initialize_optimizer(model: nn.Module) -> optim.Optimizer:
             return optim.SGD(model.parameters(), lr=config["optimizer"]["learning_rate"], weight_decay=config["optimizer"]["weight_decay"])
         case "adamw":
             return optim.AdamW(
-                list(model.parameters()) + [noise_scale],
+                list(model.parameters()) + [noise_scale] if config["training"]["learnable_noise_std"] else model.parameters(),
                 lr=config["optimizer"]["learning_rate"],
                 weight_decay=config["optimizer"]["weight_decay"],
                 betas=tuple(config["optimizer"]["adam_betas"]),
@@ -129,10 +129,8 @@ def initialize_optimizer(model: nn.Module) -> optim.Optimizer:
             )
         case "muon":
             return pt_optim.Muon(model.parameters(), lr=config["optimizer"]["learning_rate"], weight_decay=config["optimizer"]["weight_decay"])
-        case "kron":
-            return pt_optim.Kron(model.parameters(), lr=config["optimizer"]["learning_rate"], weight_decay=config["optimizer"]["weight_decay"])
-        case "mars":
-            return pt_optim.MARS(model.parameters(), lr=config["optimizer"]["learning_rate"], weight_decay=config["optimizer"]["weight_decay"], cautious=True)
+        case "adam-mini":
+            return pt_optim.AdamMini(model.parameters(), lr=config["optimizer"]["learning_rate"], weight_decay=config["optimizer"]["weight_decay"])
         case _:
             raise ValueError(f"Invalid optimizer: {config['optimizer']['type']}")
 
@@ -175,12 +173,13 @@ def train_step(model: nn.Module, optimizer: optim.Optimizer, loader: DataLoader[
         target_coords = batch.pop("x_t")
         _ = batch.pop("v_t")
 
-        batch["x_0"], batch["v_0"], batch["concatenated_features"] = add_brownian_noise(
-            batch["x_0"],
-            batch["v_0"],
-            batch["concatenated_features"],
-            config["training"]["brownian_noise_std"],
-        )
+        if config["training"]["learnable_noise_std"]:
+            batch["x_0"], batch["v_0"], batch["concatenated_features"] = add_brownian_noise(
+                batch["x_0"],
+                batch["v_0"],
+                batch["concatenated_features"],
+                config["training"]["brownian_noise_std"],
+            )
 
         optimizer.zero_grad()
         pred_coords: torch.Tensor = model(batch)

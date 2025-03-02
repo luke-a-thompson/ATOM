@@ -83,7 +83,7 @@ class TemporalRoPEWithOffset(nn.Module):
 
         # 3) Construct angles per head: shape => [H, seq_len, half_dim].
         #    For each head i, angle_i = (positions + offset[i]) * freqs
-        #    We'll broadcast offset[i] across all positions.
+        #    Broadcast offset[i] across all positions.
         #    offset: [H], positions: [seq_len]
         #    => positions + offset[i] => shape [H, seq_len], then multiply by freqs => shape [H, seq_len, half_dim].
         offset_broadcast = self.offset.unsqueeze(-1)  # [H, 1], this adds the head dim
@@ -283,7 +283,7 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
 
             # Project K and V => [B, heads, seq_k, d_head]
             kv = self.kv_projs[i](h_feat)
-            k_proj, v_proj = torch.chunk(kv, 2, dim=-1)
+            k_proj, v_proj = torch.chunk(kv, 2, dim=-1) 
             k_proj = k_proj.view(B, N * T, self.num_heads, self.d_head).permute(0, 2, 1, 3)
             v_proj = v_proj.view(B, N * T, self.num_heads, self.d_head).permute(0, 2, 1, 3)
 
