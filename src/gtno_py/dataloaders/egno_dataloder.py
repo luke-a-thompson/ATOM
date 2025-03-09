@@ -4,27 +4,27 @@ import torch
 import pickle as pkl
 from torch.utils.data import Dataset, DataLoader
 import os
-from enum import Enum
+from enum import StrEnum
 from typing import final, override
 from tensordict import TensorDict
 from pathlib import Path
 
 
 @final
-class DataPartition(str, Enum):
+class DataPartition(StrEnum):
     train = "train"
     val = "val"
     test = "test"
 
 
 @final
-class MD17Version(str, Enum):
+class MD17Version(StrEnum):
     md17 = "md17"
     rmd17 = "rmd17"
 
 
 @final
-class MD17MoleculeType(str, Enum):
+class MD17MoleculeType(StrEnum):
     aspirin = "aspirin"
     benzene = "benzene"
     ethanol = "ethanol"
@@ -36,7 +36,7 @@ class MD17MoleculeType(str, Enum):
 
 
 @final
-class RMD17MoleculeType(str, Enum):
+class RMD17MoleculeType(StrEnum):
     azobenzene = "azobenzene"
     benzene = "benzene"
     ethanol = "ethanol"
@@ -62,6 +62,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         split_dir: str,
         md17_version: MD17Version,
         molecule_type: MD17MoleculeType,
+        explicit_hydrogen: bool = False,
         train_par: float = 0.1,
         val_par: float = 0.05,
         test_par: float = 0.05,
@@ -113,7 +114,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         assert self.x.shape == self.v.shape
 
         split = self._get_or_generate_split(
-            split_dir=split_dir,
+            split_dir=Path(split_dir),
             x=self.x,
             train_par=train_par,
             val_par=val_par,
@@ -132,15 +133,15 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
             case _:
                 raise ValueError(f"Invalid partition: {partition}")
 
-        split_times = split_times[:max_samples]
-        self.split_times = split_times
+        self.split_times = split_times[:max_samples]
 
-        heavy_atom_mask = self.z > 1
-        self.x = self.x[:, heavy_atom_mask, ...]
-        self.v = self.v[:, heavy_atom_mask, ...]
-        self.z = self.z[heavy_atom_mask]
+        if not explicit_hydrogen:
+            heavy_atom_mask = self.z > 1
+            self.x = self.x[:, heavy_atom_mask, ...]
+            self.v = self.v[:, heavy_atom_mask, ...]
+            self.z = self.z[heavy_atom_mask]
 
-        self.process_data(split_times, self.x, self.v, self.z)
+        self.process_data(self.split_times, self.x, self.v, self.z)
 
         # --- Precompute Replication ---
         self.replicated_x_0: torch.Tensor = self._replicate_tensor(self.x_0)
@@ -156,21 +157,13 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         n_node = mole_idx.shape[0]
         self.n_node: int = n_node
 
-        one_hop_adjacency, two_hop_adjacency = self._compute_adjacency_matrix(x, n_node)
-        edge_attr, edges = self._build_edge_attributes(one_hop_adjacency, two_hop_adjacency, mole_idx, x_0, v_0)
-        self.edge_attr: torch.Tensor = edge_attr
-        self.edges = edges
-
-        all_edges = self._compute_all_edges(x=x, z=z)
-        conf_edges = self._compute_conf_edges(all_edges=all_edges)
-        self.conf_edges = conf_edges
+        one_hop_adjacency, two_hop_adjacency = self._compute_adjacency_matrix(x, n_node, 1.6)
+        self.edge_attr, self.edges = self._build_edge_attributes(one_hop_adjacency, two_hop_adjacency, mole_idx, x_0, v_0)
 
         self.x_0: torch.Tensor = torch.cat([torch.Tensor(x_0), torch.norm(torch.Tensor(x_0), dim=-1, keepdim=True)], dim=-1)
         self.v_0: torch.Tensor = torch.cat([torch.Tensor(v_0), torch.norm(torch.Tensor(v_0), dim=-1, keepdim=True)], dim=-1)
         self.mole_idx: torch.Tensor = torch.Tensor(mole_idx)
         self.Z: torch.Tensor = torch.Tensor(z)
-        if self.md17_version == MD17Version.md17:
-            self.cfg = self.sample_cfg()
 
         if x_t is not None:
             self.x_t: torch.Tensor = torch.Tensor(x_t)
@@ -246,58 +239,156 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         seed: int,
         force_regenerate: bool = False,
     ) -> tuple[npt.NDArray[np.int_], npt.NDArray[np.int_], npt.NDArray[np.int_]]:
+        """
+        Get or generate train/val/test split indices.
+
+        Args:
+            split_dir: Path to save/load the split file
+            x: Input data array
+            train_par: Proportion of data for training
+            val_par: Proportion of data for validation
+            test_par: Proportion of data for testing
+            seed: Random seed for reproducibility
+            force_regenerate: Whether to force regeneration of the split
+
+        Returns:
+            Tuple of (train_indices, val_indices, test_indices)
+        """
+        # Calculate valid frame range considering margins
         start = self.dft_imprecision_margin
         end = x.shape[0] - self.dft_imprecision_margin - self.delta_frame + 1
 
-        try:
-            if force_regenerate:
-                raise FileNotFoundError("Force regeneration of dataset")
-            with open(split_dir, "rb") as f:
-                split = pkl.load(f)
-        except FileNotFoundError:
-            print("Error loading split file, regenerating split")
-            np.random.seed(seed)
-            x_middle = x[start:end]
-            num_timesteps = x_middle.shape[0]
-            train_idx = np.random.choice(np.arange(num_timesteps), size=int(train_par * num_timesteps), replace=False)
-            flag = np.zeros(num_timesteps)
-            for _ in train_idx:
-                flag[_] = 1
-            rest = [_ for _ in range(num_timesteps) if not flag[_]]
-            val_idx = np.random.choice(rest, size=int(val_par * num_timesteps), replace=False)
-            for _ in val_idx:
-                flag[_] = 1
-            rest = [_ for _ in range(num_timesteps) if not flag[_]]
-            test_idx = np.random.choice(rest, size=int(test_par * num_timesteps), replace=False)
+        # Try to load existing split file
+        if not force_regenerate:
+            try:
+                with open(split_dir, "rb") as f:
+                    return pkl.load(f)
+            except FileNotFoundError:
+                print("Split file not found, generating new split")
+        else:
+            print("Forcing regeneration of dataset split")
 
-            # Add back first frames to keep within original frame range
-            train_idx += start
-            val_idx += start
-            test_idx += start
-            split = (train_idx, val_idx, test_idx)
-            with open(split_dir, "wb") as f:
-                pkl.dump(split, f)
-            print("Generate and save split!")
+        # Generate new split
+        return self._generate_new_split(start=start, end=end, x=x, train_par=train_par, val_par=val_par, test_par=test_par, seed=seed, split_dir=split_dir)
+
+    def _generate_new_split(
+        self,
+        start: int,
+        end: int,
+        x: npt.NDArray[np.float64],
+        train_par: float,
+        val_par: float,
+        test_par: float,
+        seed: int,
+        split_dir: Path,
+    ) -> tuple[npt.NDArray[np.int_], npt.NDArray[np.int_], npt.NDArray[np.int_]]:
+        """
+        Generate a new train/val/test split.
+
+        Args:
+            start: Start index for valid frames
+            end: End index for valid frames
+            x: Input data array
+            train_par: Proportion of data for training
+            val_par: Proportion of data for validation
+            test_par: Proportion of data for testing
+            seed: Random seed for reproducibility
+            split_dir: Path to save the split file
+
+        Returns:
+            Tuple of (train_indices, val_indices, test_indices)
+        """
+        np.random.seed(seed)
+
+        # Extract valid frame range
+        x_middle = x[start:end]
+        num_timesteps = x_middle.shape[0]
+
+        # Create mask to track assigned indices
+        assigned_mask = np.zeros(num_timesteps, dtype=bool)
+
+        # Select training indices
+        train_size = int(train_par * num_timesteps)
+        train_idx = np.random.choice(np.arange(num_timesteps), size=train_size, replace=False)
+        assigned_mask[train_idx] = True
+
+        # Select validation indices from remaining frames
+        unassigned_indices = np.where(~assigned_mask)[0]
+        val_size = int(val_par * num_timesteps)
+        val_idx = np.random.choice(unassigned_indices, size=val_size, replace=False)
+        assigned_mask[val_idx] = True
+
+        # Select test indices from remaining frames
+        unassigned_indices = np.where(~assigned_mask)[0]
+        test_size = int(test_par * num_timesteps)
+        test_idx = np.random.choice(unassigned_indices, size=test_size, replace=False)
+
+        # Adjust indices to original frame range
+        train_idx = train_idx + start
+        val_idx = val_idx + start
+        test_idx = test_idx + start
+
+        # Create and save split
+        split = (train_idx, val_idx, test_idx)
+        with open(split_dir, "wb") as f:
+            pkl.dump(split, f)
+
+        # Print information about the generated split
+        print(f"Generated and saved split with {len(train_idx)} train, {len(val_idx)} val, and {len(test_idx)} test samples")
+        print(f"Note: Max samples will be limited to {self.max_samples if hasattr(self, 'max_samples') else 'unlimited'} during dataset usage")
+
         return split
 
-    def _compute_adjacency_matrix(self, x: npt.NDArray[np.float64], num_atoms: int, threshold: float = 1.6) -> tuple[npt.NDArray[np.int_], npt.NDArray[np.int_]]:
-        def l2_dist(_i: int, _j: int, _t: int) -> float:
-            """Compute the distance between two atoms at a given time step."""
-            return np.sqrt(np.sum((x[_t][_i] - x[_t][_j]) ** 2))
+    def _compute_adjacency_matrix(self, x: npt.NDArray[np.float64], num_atoms: int, threshold: float) -> tuple[torch.Tensor, torch.Tensor]:
+        """Compute one-hop and two-hop adjacency matrices based on distance threshold.
 
-        one_hop_edges = torch.zeros(num_atoms, num_atoms).int()
-        for i in range(num_atoms):
-            for j in range(num_atoms):
-                if i != j:
-                    distance = l2_dist(i, j, 0)
-                    if distance < threshold:
-                        one_hop_edges[i][j] = 1
+        Args:
+            x: Atom positions of shape (time_steps, num_atoms, 3)
+            num_atoms: Number of atoms
+            threshold: Distance threshold for considering atoms as connected
 
-        two_hop_edges = (one_hop_edges @ one_hop_edges).clamp(max=1)
+        Returns:
+            tuple[torch.Tensor, torch.Tensor]: (one_hop_adjacency_matrix, two_hop_adjacency_matrix)
+        """
+        # Extract positions at time 0
+        positions: torch.Tensor = torch.tensor(x[0], dtype=torch.float32)  # Shape: (num_atoms, 3)
+
+        # Compute pairwise distances using vectorized operations
+        # Expand dimensions for broadcasting
+        pos_i: torch.Tensor = positions.unsqueeze(1)  # Shape: (num_atoms, 1, 3)
+        pos_j: torch.Tensor = positions.unsqueeze(0)  # Shape: (1, num_atoms, 3)
+
+        # Compute distances between all pairs of atoms
+        distances: torch.Tensor = torch.norm(pos_i - pos_j, dim=2)  # Shape: (num_atoms, num_atoms)
+
+        # Create adjacency matrix based on threshold
+        one_hop_edges: torch.Tensor = (distances < threshold).int()
+
+        # Set diagonal to zero (no self-loops)
+        one_hop_edges.fill_diagonal_(0)
+
+        # Compute two-hop connections
+        two_hop_edges: torch.Tensor = (one_hop_edges @ one_hop_edges).clamp(max=1)
+
         assert one_hop_edges.shape == two_hop_edges.shape == (num_atoms, num_atoms)
         return one_hop_edges, two_hop_edges
 
     def _build_edge_attributes(self, one_hop_adjacency, two_hop_adjacency, mole_idx, x_0, v_0):
+        """
+        Legacy EGNO function for computing edge attributes.
+
+        Args:
+            one_hop_adjacency: One-hop adjacency matrix
+            two_hop_adjacency: Two-hop adjacency matrix
+            mole_idx: Molecule index
+            x_0: Initial positions
+            v_0: Initial velocities
+
+        Returns:
+            edge_attr: Edge attributes containing source, target, type, and distance
+            edges: Edges containing source and target indices
+        """
+
         n_node = mole_idx.shape[0]
         edge_attr = []
         rows = []
@@ -326,58 +417,6 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         edge_attr_tensor = torch.Tensor(np.array(edge_attr))
         return edge_attr_tensor, edges
 
-    def _compute_all_edges(self, x, z, threshold=1.6):
-        from collections import defaultdict
-
-        n = z.shape[0]
-        positions = x[0]
-        i_indices, j_indices = np.triu_indices(n, k=1)
-        deltas = positions[i_indices] - positions[j_indices]
-        distances = np.sqrt(np.einsum("ij,ij->i", deltas, deltas))
-        mask = distances < threshold
-        valid_i = i_indices[mask]
-        valid_j = j_indices[mask]
-        type_pairs = np.sort(np.column_stack([z[valid_i], z[valid_j]]), axis=1)
-        all_edges = defaultdict(list)
-        for (a, b), i, j in zip(type_pairs, valid_i, valid_j):
-            all_edges[(a, b)].append([int(i), int(j)])
-        return dict(all_edges)
-
-    def _compute_conf_edges(self, all_edges):
-        conf_edges = []
-        for key in all_edges:
-            conf_edges.extend(all_edges[key])
-        return conf_edges
-
-    def sample_cfg(self):
-        cfg = {}
-        if self.molecule_type == MD17MoleculeType.benzene:
-            cfg["Stick"] = [(0, 1), (2, 3), (4, 5)]
-        elif self.molecule_type == MD17MoleculeType.aspirin:
-            cfg["Stick"] = [(0, 2), (1, 3), (5, 6), (7, 10), (11, 12)]
-        elif self.molecule_type == MD17MoleculeType.ethanol:
-            cfg["Stick"] = [(0, 1)]
-        elif self.molecule_type == MD17MoleculeType.malonaldehyde:
-            cfg["Stick"] = [(1, 2)]
-        elif self.molecule_type == MD17MoleculeType.naphthalene:
-            cfg["Stick"] = [(0, 1), (2, 3), (4, 9), (5, 6), (7, 8)]
-        elif self.molecule_type == MD17MoleculeType.salicylic:
-            cfg["Stick"] = [(0, 9), (1, 2), (4, 5), (6, 7)]
-        elif self.molecule_type == MD17MoleculeType.toluene:
-            cfg["Stick"] = [(2, 3), (5, 6), (0, 1)]
-        elif self.molecule_type == MD17MoleculeType.uracil:
-            cfg["Stick"] = [(0, 1), (3, 4)]
-        else:
-            raise NotImplementedError()
-        cur_selected = []
-        for _ in cfg["Stick"]:
-            cur_selected.append(_[0])
-            cur_selected.append(_[1])
-        cfg["Isolated"] = [[_] for _ in range(self.n_node) if _ not in cur_selected]
-        if len(cfg["Isolated"]) == 0:
-            cfg.pop("Isolated")
-        return cfg
-
     @override
     def __getitem__(self, i: int) -> dict[str, torch.Tensor]:
         """
@@ -389,7 +428,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         (max_samples, num_timesteps, N, d)) and then reshaping it to merge the sample and time dimensions.
 
         For a given sample index i, slicing from index (i * num_timesteps) to ((i + 1) * num_timesteps)
-        retrieves the contiguous block corresponding to that sample’s time steps. This operation recovers
+        retrieves the contiguous block corresponding to that sample's time steps. This operation recovers
         the time dimension, yielding a tensor of shape (num_timesteps, N, d).
 
         In addition, target tensors (x_t and v_t), which are originally of shape
@@ -411,36 +450,13 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         return {
             "x_0": self.replicated_x_0[i * self.num_timesteps : (i + 1) * self.num_timesteps],
             "v_0": self.replicated_v_0[i * self.num_timesteps : (i + 1) * self.num_timesteps],
+            "concatenated_features": self.replicated_concatenated_features[i * self.num_timesteps : (i + 1) * self.num_timesteps],
             "x_t": self.x_t[i].transpose(0, 1),
             "v_t": self.v_t[i].transpose(0, 1),
-            "concatenated_features": self.replicated_concatenated_features[i * self.num_timesteps : (i + 1) * self.num_timesteps],
         }
 
     def __len__(self):
         return len(self.split_times)
-
-    def get_edges(self, batch_size: int, n_nodes: int) -> tuple[torch.LongTensor, torch.LongTensor]:
-        edges = (torch.LongTensor(self.edges[0]), torch.LongTensor(self.edges[1]))
-        if batch_size == 1:
-            return edges
-
-        rows, cols = [], []
-        for i in range(batch_size):
-            rows.append(edges[0] + n_nodes * i)
-            cols.append(edges[1] + n_nodes * i)
-        edges = (torch.cat(rows).long(), torch.cat(cols).long())
-        return edges
-
-    @staticmethod
-    def get_cfg(batch_size: int, n_nodes: int, cfg: TensorDict) -> TensorDict:
-        offset = torch.arange(batch_size, device=cfg.device) * n_nodes
-        for bond_type in cfg.keys():
-            index = cfg.get(bond_type)
-            index = index + offset.unsqueeze(-1).unsqueeze(-1).expand_as(index)
-            if bond_type == "Isolated":
-                index = index.squeeze(-1)
-            cfg.set(bond_type, index)
-        return cfg
 
 
 @final
@@ -458,6 +474,7 @@ class MD17DynamicsDataset(MD17Dataset):
         split_dir: str,
         md17_version: MD17Version,
         molecule_type: MD17MoleculeType,
+        explicit_hydrogen: bool = False,
         train_par: float = 0.1,
         val_par: float = 0.05,
         test_par: float = 0.05,
@@ -473,6 +490,7 @@ class MD17DynamicsDataset(MD17Dataset):
             split_dir=split_dir,
             md17_version=md17_version,
             molecule_type=molecule_type,
+            explicit_hydrogen=explicit_hydrogen,
             train_par=train_par,
             val_par=val_par,
             test_par=test_par,
