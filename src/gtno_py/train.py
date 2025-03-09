@@ -14,7 +14,8 @@ from datetime import datetime
 from gtno_py.dataloaders.egno_dataloder import MD17MoleculeType, MD17Version, RMD17MoleculeType
 from typing import Literal
 import wandb
-from gtno_py.utils import log_feature_weights, add_brownian_noise
+from gtno_py.utils import log_weights, add_brownian_noise
+import os
 
 # Load configuration
 with open("config.toml", "rb") as file:
@@ -43,7 +44,8 @@ def create_dataloaders(
         split_dir="data/",
         molecule_type=molecule_type,
         md17_version=md17_version,
-        force_regenerate=True,
+        force_regenerate=config["dataloader"]["force_regenerate"],
+        explicit_hydrogen=config["dataloader"]["explicit_hydrogen"],
     )
 
     val_dataset = MD17DynamicsDataset(
@@ -55,7 +57,8 @@ def create_dataloaders(
         split_dir="data/",
         molecule_type=molecule_type,
         md17_version=md17_version,
-        force_regenerate=True,
+        force_regenerate=config["dataloader"]["force_regenerate"],
+        explicit_hydrogen=config["dataloader"]["explicit_hydrogen"],
     )
 
     test_dataset = MD17DynamicsDataset(
@@ -67,7 +70,8 @@ def create_dataloaders(
         split_dir="data/",
         molecule_type=molecule_type,
         md17_version=md17_version,
-        force_regenerate=True,
+        force_regenerate=config["dataloader"]["force_regenerate"],
+        explicit_hydrogen=config["dataloader"]["explicit_hydrogen"],
     )
 
     train_loader = DataLoader(
@@ -174,7 +178,7 @@ def train_step(model: nn.Module, optimizer: optim.Optimizer, loader: DataLoader[
     for batch in loader:
         batch = tensordict.from_dict(batch).to(device)
         assert batch["x_0"].shape[1] == (config["model"]["num_timesteps"]), batch["x_0"].shape
-        target_coords = batch.pop("x_t")
+        target_coords: torch.Tensor = batch.pop("x_t")
         _ = batch.pop("v_t")
 
         if config["training"]["learnable_noise_std"]:
@@ -190,7 +194,20 @@ def train_step(model: nn.Module, optimizer: optim.Optimizer, loader: DataLoader[
 
         # Calculate MSE loss
         assert pred_coords.shape == target_coords.shape, f"{pred_coords.shape} != {target_coords.shape}"
-        loss = F.mse_loss(pred_coords, target_coords)
+
+        # Do not compute gradients for heavy atoms if explicit_hydrogen is True and explicit_hydrogen_gradients is False
+        if config["dataloader"]["explicit_hydrogen"] and config["dataloader"]["explicit_hydrogen_gradients"] is False:
+            heavy_atom_mask: torch.Tensor = batch["concatenated_features"][0, 0, :, -1] > 1
+            # Apply mask to predictions and targets
+            # Shape: [batch_size, num_timesteps, num_atoms, 3]
+            pred_heavy: torch.Tensor = pred_coords[:, :, heavy_atom_mask, :]
+            target_heavy: torch.Tensor = target_coords[:, :, heavy_atom_mask, :]
+
+            loss = F.mse_loss(pred_heavy, target_heavy)
+        # Compute gradients for all atoms (heavy and hydrogen)
+        else:
+            loss = F.mse_loss(pred_coords, target_coords)
+
         total_loss += loss.item() * batch.batch_size[0]
 
         _ = loss.backward()
@@ -217,15 +234,25 @@ def evaluate(model: nn.Module, loader: DataLoader[dict[str, torch.Tensor]]) -> t
 
             pred_coords: torch.Tensor = model(batch)
 
-            s2t_loss = F.mse_loss(pred_coords, target_coords)
-            s2s_loss = F.mse_loss(pred_coords[:, -1, :, :], target_coords[:, -1, :, :])
+            # Get atomic numbers Z from batch and create mask for heavy atoms (Z > 1)
+            heavy_atom_mask: torch.Tensor = batch["concatenated_features"][0, 0, :, -1] > 1
+
+            # Apply mask to predictions and targets
+            # Shape: [batch_size, num_timesteps, num_atoms, 3]
+            pred_heavy: torch.Tensor = pred_coords[:, :, heavy_atom_mask, :]
+            target_heavy: torch.Tensor = target_coords[:, :, heavy_atom_mask, :]
+
+            s2t_loss = F.mse_loss(pred_heavy, target_heavy)
+            s2s_loss = F.mse_loss(pred_heavy[:, -1, :, :], target_heavy[:, -1, :, :])
             total_s2t_loss += s2t_loss.item() * batch.batch_size[0]
             total_s2s_loss += s2s_loss.item() * batch.batch_size[0]
 
     return total_s2t_loss / len(loader.dataset), total_s2s_loss / len(loader.dataset)
 
 
-def main(num_epochs: int, model: nn.Module, molecule_type: MD17MoleculeType | RMD17MoleculeType, md17_version: MD17Version) -> tuple[float, float, float, int]:
+def main(
+    num_epochs: int, model: nn.Module, molecule_type: MD17MoleculeType | RMD17MoleculeType, md17_version: MD17Version, weights_dir: str | None = None
+) -> tuple[float, float, float, int, str]:
     """Full training pipeline."""
     start_time = datetime.now()
 
@@ -236,6 +263,10 @@ def main(num_epochs: int, model: nn.Module, molecule_type: MD17MoleculeType | RM
     total_steps: int = len(train_loader.dataset) // config["training"]["batch_size"] * num_epochs
     scheduler = initialize_scheduler(optimizer, total_steps)
 
+    # Create a temporary directory for this run
+    timestamp = datetime.now().strftime("%d-%b-%Y_%H-%M-%S")
+    temp_model_path = f"benchmark_runs/temp_model_{timestamp}.pth"
+
     # Training loop
     best_val_loss = float("inf")
     best_val_loss_epoch = 0
@@ -245,8 +276,9 @@ def main(num_epochs: int, model: nn.Module, molecule_type: MD17MoleculeType | RM
         train_loss = train_step(model, optimizer, train_loader, scheduler)
         val_loss, _ = evaluate(model, val_loader)
 
-        # Log gate parameters
-        log_feature_weights(model.named_parameters(), epoch)
+        # Log gate parameters and save to weights_dir if provided
+        if config["benchmark"]["log_weights"]:
+            log_weights(model.named_parameters(), epoch, save_dir=weights_dir)
 
         wandb.log({"train_loss": train_loss, "val_loss": val_loss, "lr": optimizer.param_groups[0]["lr"]})
 
@@ -254,7 +286,7 @@ def main(num_epochs: int, model: nn.Module, molecule_type: MD17MoleculeType | RM
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             best_val_loss_epoch = epoch
-            torch.save(model.state_dict(), "benchmark_runs/temp_best_model.pth")
+            torch.save(model.state_dict(), temp_model_path)
 
         if scheduler and isinstance(scheduler, optim.lr_scheduler.ReduceLROnPlateau):
             scheduler.step(val_loss)
@@ -270,11 +302,11 @@ def main(num_epochs: int, model: nn.Module, molecule_type: MD17MoleculeType | RM
         )
 
     # Final evaluation
-    _ = model.load_state_dict(torch.load("benchmark_runs/temp_best_model.pth", weights_only=True))
+    _ = model.load_state_dict(torch.load(temp_model_path, weights_only=True))
     s2t_test_loss, s2s_test_loss = evaluate(model, test_loader)
 
     total_time = (datetime.now() - start_time).total_seconds()
-    return s2t_test_loss, s2s_test_loss, total_time, best_val_loss_epoch
+    return s2t_test_loss, s2s_test_loss, total_time, best_val_loss_epoch, temp_model_path
 
 
 def benchmark(
@@ -320,12 +352,28 @@ def benchmark(
     molecule_progress_bar = tqdm(molecules, leave=False, unit="molecule", position=0)
     for molecule in molecule_progress_bar:
         molecule_progress_bar.set_description(f"Running {str(molecule)}")
+
+        # Create a directory for this molecule's benchmark
+        timestamp = datetime.now().strftime("%d-%b-%Y_%H-%M-%S")
+        benchmark_dir = f"benchmark_runs/{project_name}_{str(molecule)}_{timestamp}"
+        os.makedirs(benchmark_dir, exist_ok=True)
+
         runs_progress_bar = tqdm(range(runs), leave=False, unit="run", position=1)
         for run in runs_progress_bar:
             runs_progress_bar.set_description(f"Run {run+1}/{runs}")
             start_time = datetime.now()
-            s2t_test_loss, s2s_test_loss, duration, best_val_loss_epoch = main(epochs_per_run, model, molecule, md17_version)
+
+            # Create a run-specific weights directory before starting the run
+            run_weights_dir = f"{benchmark_dir}/weights_run{run+1}"
+            os.makedirs(run_weights_dir, exist_ok=True)
+
+            # Pass the weights directory to main function
+            s2t_test_loss, s2s_test_loss, duration, best_val_loss_epoch, temp_model_path = main(epochs_per_run, model, molecule, md17_version, weights_dir=run_weights_dir)
             end_time = datetime.now()
+
+            # Create a run-specific model file
+            run_model_path = f"{benchmark_dir}/model_run{run+1}.pth"
+            os.rename(temp_model_path, run_model_path)
 
             # Store run results
             results["runs"][f"run{run+1}"] = {
@@ -336,6 +384,7 @@ def benchmark(
                 "time_per_epoch": float(duration / epochs_per_run),
                 "start_time": start_time.isoformat(),
                 "end_time": end_time.isoformat(),
+                "model_path": run_model_path,
             }
 
         # Calculate summary statistics
@@ -372,11 +421,11 @@ def benchmark(
         )
 
         # Save to JSON
-        filename = f"benchmark_runs/{project_name}_{str(molecule)}_{datetime.now().strftime('%d-%b-%Y_%H-%M-%S')}.json"
-        with open(filename, "w") as f:
+        results_filename = f"{benchmark_dir}/results.json"
+        with open(results_filename, "w") as f:
             json.dump(results, f, indent=2)
 
-        tqdm.write(f"\nSaved benchmark results to {filename}")
+        tqdm.write(f"\nSaved benchmark results to {results_filename}")
         tqdm.write(f"Benchmark Results ({runs} runs, {epochs_per_run} epochs/run):")
         tqdm.write(f"  Average Test Loss: {results['summary']['mean_test_loss']:.4f} ± {results['summary']['std_dev_test_loss']:.4f}")
         tqdm.write(f"  Average Test Loss Final Timestep: {results['summary']['mean_test_loss_final']:.4f} ± {results['summary']['std_dev_test_loss_final']:.4f}")
