@@ -313,7 +313,7 @@ def benchmark(
     runs: int,
     epochs_per_run: int,
     compile: bool,
-    molecule_type: MD17MoleculeType | RMD17MoleculeType | Literal["all_mols"],
+    molecule_type: MD17MoleculeType | RMD17MoleculeType | list[MD17MoleculeType | RMD17MoleculeType] | Literal["all_mols"],
     md17_version: MD17Version,
 ) -> None:
     """
