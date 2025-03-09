@@ -4,7 +4,7 @@ version = "0.1.0"
 description = ""
 authors = ["Luke Thompson <luke-a-thompson@outlook.com>"]
 readme = "README.md"
-keywords = ["graph transformer", "quantum chemistry", "molecular property prediction", "neural operator"]
+keywords = ["graph transformer", "quantum chemistry", "molecular dynamics", "neural operator"]
 
 [[tool.poetry.packages]]
 include = "gtno_py"
@@ -20,6 +20,8 @@ tensordict = "^0.6.2"
 pytorch_optimizer = "^3.3.4"
 wandb = "0.18.3"
 tqdm = "^4.67.1"
+matplotlib = "^3.8.0"
+usyd-colors = "^0.1.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^8.3.4"
