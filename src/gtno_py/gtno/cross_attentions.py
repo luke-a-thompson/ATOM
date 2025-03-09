@@ -218,9 +218,11 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         self.out_proj = nn.Linear(lifting_dim, lifting_dim)
         self.attention_dropout = nn.Dropout(attention_dropout)
 
-        self.attention_denom: torch.Tensor | nn.Parameter = torch.tensor(self.d_head, dtype=torch.float32)
+        denom_init = torch.full((num_heads,), float(self.d_head))
         if learnable_attention_denom:
-            self.attention_denom = nn.Parameter(self.attention_denom)
+            self.attention_denom = nn.Parameter(denom_init)
+        else:
+            self.register_buffer("attention_denom", denom_init, persistent=False)
 
         self.feature_weights = nn.Parameter(torch.randn(self.num_hetero_feats) * 0.1)
 
@@ -275,7 +277,7 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
             assert h_feat.shape[-1] == self.lifting_dim, f"Expected {self.lifting_dim}, got {h_feat.shape[-1]}"
 
             # Project K and V => [B, heads, seq_k, d_head]
-            kv = self.kv_projs[i](h_feat)
+            kv: torch.Tensor = self.kv_projs[i](h_feat)
             k_proj, v_proj = torch.chunk(kv, 2, dim=-1)
             k_proj = k_proj.view(B, N * T, self.num_heads, self.d_head).permute(0, 2, 1, 3)
             v_proj = v_proj.view(B, N * T, self.num_heads, self.d_head).permute(0, 2, 1, 3)
@@ -284,7 +286,7 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
                 k_proj: torch.Tensor = self.rope(k_proj)
 
             # 1) scores = Q·K^T / sqrt(d_head)
-            scores = q_proj @ k_proj.transpose(-2, -1) / self.attention_denom
+            scores = q_proj @ k_proj.transpose(-2, -1) / self.attention_denom.view(1, -1, 1, 1)  # Broadcasts over heads
             # 2) softmax over seq_k dimension (dim=-1)
             if self.use_spherical_harmonics:
                 scores = scores + bias
