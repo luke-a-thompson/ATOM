@@ -13,3 +13,6 @@ __pycache__/
 *.json
 *.pth
 /wandb
+*.npz
+*.pdf
+*.drawio*
