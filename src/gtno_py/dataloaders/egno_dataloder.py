@@ -135,6 +135,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
 
         self.split_times = split_times[:max_samples]
 
+        # Remove hydrogens if specified
         if not explicit_hydrogen:
             heavy_atom_mask = self.z > 1
             self.x = self.x[:, heavy_atom_mask, ...]
@@ -166,14 +167,19 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         self.Z: torch.Tensor = torch.Tensor(z)
 
         if x_t is not None:
-            self.x_t: torch.Tensor = torch.Tensor(x_t)
+            self.x_t: torch.Tensor = torch.Tensor(x_t).transpose(0, 1)
         if v_t is not None:
-            self.v_t: torch.Tensor = torch.Tensor(v_t)
+            self.v_t: torch.Tensor = torch.Tensor(v_t).transpose(0, 1)
 
         self.concatenated_features: torch.Tensor = self._compute_concatenated_features()
 
     def _compute_concatenated_features(self) -> torch.Tensor:
-        """Pre-compute concatenated features for all samples."""
+        """Pre-compute concatenated features for all samples.
+
+        Returns:
+            torch.Tensor: Concatenated features with shape (max_samples * num_timesteps, N, d)
+            Contents = [x_0_xyz, x_0_norm, v_0_xyz, v_0_norm, Z_unsqueeze]
+        """
         x_0_xyz = self.x_0[..., :3]
         v_0_xyz = self.v_0[..., :3]
         x_0_norm = self.x_0[..., 3:]
@@ -346,6 +352,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
             x: Atom positions of shape (time_steps, num_atoms, 3)
             num_atoms: Number of atoms
             threshold: Distance threshold for considering atoms as connected
+                Recommended 1.6 due to atomic distances
 
         Returns:
             tuple[torch.Tensor, torch.Tensor]: (one_hop_adjacency_matrix, two_hop_adjacency_matrix)
@@ -395,7 +402,6 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         cols = []
 
         x_0_frame_one = x_0[0]  # use frame 0 to compute edges
-
         for i in range(n_node):
             for j in range(n_node):
                 if i == j:
@@ -431,10 +437,6 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         retrieves the contiguous block corresponding to that sample's time steps. This operation recovers
         the time dimension, yielding a tensor of shape (num_timesteps, N, d).
 
-        In addition, target tensors (x_t and v_t), which are originally of shape
-        (max_samples, N, num_timesteps, d), are transposed so that the time dimension is first,
-        resulting in shape (num_timesteps, N, d).
-
         Returns:
             dict[str, torch.Tensor]: A dictionary containing:
                 - "x_0": Tensor of initial positions with shape (num_timesteps, N, d)
@@ -451,8 +453,8 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
             "x_0": self.replicated_x_0[i * self.num_timesteps : (i + 1) * self.num_timesteps],
             "v_0": self.replicated_v_0[i * self.num_timesteps : (i + 1) * self.num_timesteps],
             "concatenated_features": self.replicated_concatenated_features[i * self.num_timesteps : (i + 1) * self.num_timesteps],
-            "x_t": self.x_t[i].transpose(0, 1),
-            "v_t": self.v_t[i].transpose(0, 1),
+            "x_t": self.x_t[i],
+            "v_t": self.v_t[i],
         }
 
     def __len__(self):
@@ -503,12 +505,18 @@ class MD17DynamicsDataset(MD17Dataset):
         self.x_t = torch.Tensor(self.x_t)
         self.v_t = torch.Tensor(self.v_t)
 
+        # Transpose x_t and v_t once during initialization
+        # Original shape: (max_samples, N, num_timesteps, d)
+        # After transpose: (max_samples, num_timesteps, N, d)
+        self.x_t = self.x_t.transpose(1, 2)
+        self.v_t = self.v_t.transpose(1, 2)
+
         # Re-replicate dataset after defining x_t, v_t for dynamics dataset
         self.replicated_x_0: torch.Tensor = self._replicate_tensor(self.x_0)
         self.replicated_v_0: torch.Tensor = self._replicate_tensor(self.v_0)
         self.replicated_concatenated_features: torch.Tensor = self._replicate_tensor(self.concatenated_features)
 
-    def get_dynamic_target_frames(self):
+    def get_dynamic_target_frames(self) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         split_times = self.split_times
         delta_frame = self.delta_frame
         num_timesteps = self.num_timesteps
@@ -519,15 +527,8 @@ class MD17DynamicsDataset(MD17Dataset):
         v_t = np.stack(v_t_list, axis=2)
         return x_t, v_t
 
-    @override
-    def get_target_frames(self, split_times, x, v):
-        return None, None  # No single frame target for dynamics, handled by get_dynamic_target_frames
-
 
 if __name__ == "__main__":
-    import time
-    from tqdm import tqdm
-
     # Test MD17Dataset
     dataset_static = MD17Dataset(
         partition=DataPartition.train,
@@ -561,40 +562,36 @@ if __name__ == "__main__":
         split_dir="data/",
         md17_version=MD17Version.md17,
         molecule_type=MD17MoleculeType.toluene,
-        force_regenerate=False,
+        force_regenerate=True,
         num_timesteps=8,  # Set num_timesteps for replication
     )
 
-    dataloader_dynamic = DataLoader(dataset_dynamic, batch_size=100, shuffle=True)
+    datasets = []
+    molecule_list = [MD17MoleculeType.benzene, MD17MoleculeType.toluene, MD17MoleculeType.ethanol, MD17MoleculeType.salicylic]
+    for molecule in molecule_list:
+        dataset_dynamic = MD17DynamicsDataset(
+            partition=DataPartition.train,
+            max_samples=500,
+            delta_frame=3000,
+            data_dir="data/",
+            split_dir="data/",
+            md17_version=MD17Version.md17,
+            molecule_type=molecule,
+            force_regenerate=True,
+            num_timesteps=8,  # Set num_timesteps for replication
+        )
+        datasets.append(dataset_dynamic)
 
-    # Warm-up iterations
-    for _ in range(500):
-        next(iter(dataloader_dynamic))
+    combined_dataset = torch.utils.data.ConcatDataset(datasets)
 
-    # Benchmarking with statistics
-    times: list[float] = []
-    num_batches: int = 10_000
+    dataloader_dynamic = DataLoader(combined_dataset, batch_size=100, shuffle=True)
 
-    for rep in tqdm(range(100)):
-        start_time = time.time()
-        for i, batch in enumerate(dataloader_dynamic):
-            if i == num_batches:
-                break
-        elapsed = time.time() - start_time
-        times.append(elapsed)
-
-    mean_time = np.mean(times)
-    std_time = np.std(times)
-    print(f"Batch overhead - Mean: {mean_time:.4f} s, Std: {std_time:.4f} s")
-    print(f"Latex: \\({mean_time:.3f}{{\\scriptstyle \\pm{std_time:.3f}}}\\)")
-
-    # print("\nMD17DynamicsDataset Output Shapes:")
-    # for data in dataloader_dynamic:
-    #     for key in data:
-    #         if key not in ["cfg", "edge_attr"]:
-    #             print(f"  {key}:", data[key].shape)
-    #     if "cfg" in data:
-    #         print("  cfg shapes:")
-    #         for key in data["cfg"]:
-    #             print(f"    {key}:", data["cfg"][key].shape)
-    #     break
+    print("\nMD17DynamicsDataset Output Shapes:")
+    print("Shape: Batch size, Time steps, Nodes, Features")
+    for data in dataloader_dynamic:
+        for key in data:
+            if key != "Molecule_type":
+                print(f"  {key}:", data[key].shape)
+            else:
+                print(f"  Molecule_type: {data['Molecule_type'][0]}")
+        break
