@@ -8,6 +8,7 @@ from enum import StrEnum
 from typing import final, override
 from tensordict import TensorDict
 from pathlib import Path
+import torch.nn.functional as F
 
 
 @final
@@ -61,7 +62,8 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         data_dir: str,
         split_dir: str,
         md17_version: MD17Version,
-        molecule_type: MD17MoleculeType,
+        molecule_type: MD17MoleculeType | RMD17MoleculeType,
+        max_nodes: int,
         explicit_hydrogen: bool = False,
         train_par: float = 0.1,
         val_par: float = 0.05,
@@ -85,7 +87,8 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         """
         self.partition: DataPartition = partition
         self.md17_version: MD17Version = md17_version
-        self.molecule_type: MD17MoleculeType = molecule_type
+        self.molecule_type: MD17MoleculeType | RMD17MoleculeType = molecule_type
+        self.max_nodes: int = max_nodes
         self.delta_frame: int = delta_frame
         self.num_timesteps: int = num_timesteps
         self.max_samples: int = max_samples
@@ -154,24 +157,56 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         x_0, v_0 = self.get_initial_frames(split_times, x, v)
         x_t, v_t = self.get_target_frames(split_times, x, v)
 
-        mole_idx = z
-        n_node = mole_idx.shape[0]
-        self.n_node: int = n_node
+        self.n_node: int = z.shape[0]
 
-        one_hop_adjacency, two_hop_adjacency = self._compute_adjacency_matrix(x, n_node, 1.6)
-        self.edge_attr, self.edges = self._build_edge_attributes(one_hop_adjacency, two_hop_adjacency, mole_idx, x_0, v_0)
+        one_hop_adjacency, two_hop_adjacency = self._compute_adjacency_matrix(x, self.n_node, 1.6)
+        self.edge_attr, self.edges = self._build_edge_attributes(one_hop_adjacency, two_hop_adjacency, z, x_0, v_0)
 
         self.x_0: torch.Tensor = torch.cat([torch.Tensor(x_0), torch.norm(torch.Tensor(x_0), dim=-1, keepdim=True)], dim=-1)
         self.v_0: torch.Tensor = torch.cat([torch.Tensor(v_0), torch.norm(torch.Tensor(v_0), dim=-1, keepdim=True)], dim=-1)
-        self.mole_idx: torch.Tensor = torch.Tensor(mole_idx)
-        self.Z: torch.Tensor = torch.Tensor(z)
+        # Expand atomic numbers to match batch dimension of x_0 and v_0
+        self.z_0: torch.Tensor = torch.Tensor(z).unsqueeze(-1).unsqueeze(0).expand(self.x_0.shape[0], -1, -1)
+        self.concatenated_features: torch.Tensor = self._compute_concatenated_features()
+        self.mole_idx: torch.Tensor = torch.Tensor(torch.arange(z.shape[0])).unsqueeze(-1).expand(self.x_0.shape[0], -1, -1)
+
+        self.x_0 = self._pad_tensor(self.x_0)
+        self.v_0 = self._pad_tensor(self.v_0)
+        self.z_0 = self._pad_tensor(self.z_0)
+        self.concatenated_features = self._pad_tensor(self.concatenated_features)
+        self.mole_idx = self._pad_tensor(self.mole_idx)
+
+        self.mask: torch.Tensor = torch.cat(
+            [
+                torch.ones(self.n_node, dtype=torch.bool),
+                torch.zeros(self.max_nodes - self.n_node, dtype=torch.bool),
+            ]
+        )
 
         if x_t is not None:
-            self.x_t: torch.Tensor = torch.Tensor(x_t).transpose(0, 1)
+            self.x_t: torch.Tensor = torch.Tensor(x_t)
+            self.x_t = self._pad_tensor(self.x_t)
         if v_t is not None:
-            self.v_t: torch.Tensor = torch.Tensor(v_t).transpose(0, 1)
+            self.v_t: torch.Tensor = torch.Tensor(v_t)
+            self.v_t = self._pad_tensor(self.v_t)
 
-        self.concatenated_features: torch.Tensor = self._compute_concatenated_features()
+        assert (
+            self.x_t.shape[:2]
+            == self.v_t.shape[:2]
+            == self.x_0.shape[:2]
+            == self.v_0.shape[:2]
+            == self.z_0.shape[:2]
+            == self.concatenated_features.shape[:2]
+            == self.mole_idx.shape[:2]
+        ), (
+            f"Shape mismatch:\n"
+            f"x_t.shape: {self.x_t.shape}\n"
+            f"v_t.shape: {self.v_t.shape}\n"
+            f"x_0.shape: {self.x_0.shape}\n"
+            f"v_0.shape: {self.v_0.shape}\n"
+            f"z_0.shape: {self.z_0.shape}\n"
+            f"concatenated_features.shape: {self.concatenated_features.shape}\n"
+            f"mole_idx.shape: {self.mole_idx.shape}"
+        )
 
     def _compute_concatenated_features(self) -> torch.Tensor:
         """Pre-compute concatenated features for all samples.
@@ -184,7 +219,6 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         v_0_xyz = self.v_0[..., :3]
         x_0_norm = self.x_0[..., 3:]
         v_0_norm = self.v_0[..., 3:]
-        Z_unsqueeze = self.Z.unsqueeze(-1)
 
         concatenated_features = torch.cat(
             [
@@ -192,7 +226,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
                 x_0_norm,
                 v_0_xyz,
                 v_0_norm,
-                Z_unsqueeze.expand(self.x_0.shape[0], -1, -1),
+                self.z_0,
             ],
             dim=-1,
         )
@@ -215,11 +249,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         # Expand along time dimension to num_timesteps
         tensor_expanded = tensor_with_time.expand(-1, self.num_timesteps, *tensor.shape[1:])
 
-        # Reshape to flatten batch and time dimensions
-        tensor_reshaped = tensor_expanded.reshape(-1, *tensor.shape[1:])
-        assert tensor_reshaped.shape == (self.max_samples * self.num_timesteps, *tensor.shape[1:])
-
-        return tensor_reshaped
+        return tensor_expanded
 
     def get_initial_frames(
         self, split_times: npt.NDArray[np.int_], x: npt.NDArray[np.float64], v: npt.NDArray[np.float64]
@@ -380,7 +410,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         assert one_hop_edges.shape == two_hop_edges.shape == (num_atoms, num_atoms)
         return one_hop_edges, two_hop_edges
 
-    def _build_edge_attributes(self, one_hop_adjacency, two_hop_adjacency, mole_idx, x_0, v_0):
+    def _build_edge_attributes(self, one_hop_adjacency, two_hop_adjacency, z, x_0, v_0):
         """
         Legacy EGNO function for computing edge attributes.
 
@@ -396,7 +426,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
             edges: Edges containing source and target indices
         """
 
-        n_node = mole_idx.shape[0]
+        n_node = z.shape[0]
         edge_attr = []
         rows = []
         cols = []
@@ -411,17 +441,26 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
                     if one_hop_adjacency[i][j]:
                         rows.append(i)
                         cols.append(j)
-                        edge_attr.append([mole_idx[i], mole_idx[j], 1, first_frame_distance])
+                        edge_attr.append([z[i], z[j], 1, first_frame_distance])
                         assert not two_hop_adjacency[i][j]
                     if two_hop_adjacency[i][j]:
                         rows.append(i)
                         cols.append(j)
-                        edge_attr.append([mole_idx[i], mole_idx[j], 2, first_frame_distance])
+                        edge_attr.append([z[i], z[j], 2, first_frame_distance])
                         assert not one_hop_adjacency[i][j]
 
         edges = [rows, cols]
         edge_attr_tensor = torch.Tensor(np.array(edge_attr))
         return edge_attr_tensor, edges
+
+    def _pad_tensor(self, tensor: torch.Tensor) -> torch.Tensor:
+        # tensor shape assumed to be (num_samples, N, d)
+        assert tensor.shape[-2] <= self.max_nodes, f"Tensor shape: {tensor.shape}, max_nodes: {self.max_nodes}"
+        pad_amt = self.max_nodes - tensor.shape[-2]
+        if pad_amt > 0:
+            # pad (last_dim_left, last_dim_right, node_dim_left, node_dim_right)
+            return F.pad(tensor, (0, 0, 0, pad_amt))
+        return tensor
 
     @override
     def __getitem__(self, i: int) -> dict[str, torch.Tensor]:
@@ -445,14 +484,14 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
                 - "v_t": Tensor of target velocities with shape (num_timesteps, N, d)
                 - "concatenated_features": Tensor of concatenated features with shape (num_timesteps, N, d)
         """
-        assert len(self.replicated_x_0) == self.max_samples * self.num_timesteps
         # For sample index i, slice out the contiguous block of timesteps (of size num_timesteps)
         # from the pre-replicated tensors. This recovers the T timesteps associated with the i-th sample.
         # i * self.num_timesteps : (i + 1) * self.num_timesteps - We want to be this many i * timesteps *frames* from the start, and capture the whole frame
         return {
-            "x_0": self.replicated_x_0[i * self.num_timesteps : (i + 1) * self.num_timesteps],
-            "v_0": self.replicated_v_0[i * self.num_timesteps : (i + 1) * self.num_timesteps],
-            "concatenated_features": self.replicated_concatenated_features[i * self.num_timesteps : (i + 1) * self.num_timesteps],
+            "x_0": self.replicated_x_0[i],
+            "v_0": self.replicated_v_0[i],
+            "concatenated_features": self.replicated_concatenated_features[i],
+            "padded_nodes_mask": self.mask,
             "x_t": self.x_t[i],
             "v_t": self.v_t[i],
         }
@@ -475,7 +514,8 @@ class MD17DynamicsDataset(MD17Dataset):
         data_dir: str,
         split_dir: str,
         md17_version: MD17Version,
-        molecule_type: MD17MoleculeType,
+        molecule_type: MD17MoleculeType | RMD17MoleculeType,
+        max_nodes: int,
         explicit_hydrogen: bool = False,
         train_par: float = 0.1,
         val_par: float = 0.05,
@@ -492,6 +532,7 @@ class MD17DynamicsDataset(MD17Dataset):
             split_dir=split_dir,
             md17_version=md17_version,
             molecule_type=molecule_type,
+            max_nodes=max_nodes,
             explicit_hydrogen=explicit_hydrogen,
             train_par=train_par,
             val_par=val_par,
@@ -502,19 +543,38 @@ class MD17DynamicsDataset(MD17Dataset):
         )
         self.x_t, self.v_t = self.get_dynamic_target_frames()
 
-        self.x_t = torch.Tensor(self.x_t)
-        self.v_t = torch.Tensor(self.v_t)
-
-        # Transpose x_t and v_t once during initialization
-        # Original shape: (max_samples, N, num_timesteps, d)
-        # After transpose: (max_samples, num_timesteps, N, d)
-        self.x_t = self.x_t.transpose(1, 2)
-        self.v_t = self.v_t.transpose(1, 2)
-
         # Re-replicate dataset after defining x_t, v_t for dynamics dataset
         self.replicated_x_0: torch.Tensor = self._replicate_tensor(self.x_0)
         self.replicated_v_0: torch.Tensor = self._replicate_tensor(self.v_0)
         self.replicated_concatenated_features: torch.Tensor = self._replicate_tensor(self.concatenated_features)
+        self.replicated_z_0: torch.Tensor = self._replicate_tensor(self.z_0)
+        self.replicated_mole_idx: torch.Tensor = self._replicate_tensor(self.mole_idx)
+
+        if self.x_t is not None:
+            self.x_t = torch.Tensor(self.x_t).transpose(1, 2)
+            self.x_t = self._pad_tensor(self.x_t)
+        if self.v_t is not None:
+            self.v_t = torch.Tensor(self.v_t).transpose(1, 2)
+            self.v_t = self._pad_tensor(self.v_t)
+
+        assert (
+            self.x_t.shape[:3]
+            == self.v_t.shape[:3]
+            == self.replicated_x_0.shape[:3]
+            == self.replicated_v_0.shape[:3]
+            == self.replicated_z_0.shape[:3]
+            == self.replicated_concatenated_features.shape[:3]
+            == self.replicated_mole_idx.shape[:3]
+        ), (
+            f"Shape mismatch in first 3 dims:\n"
+            f"x_t.shape: {self.x_t.shape}\n"
+            f"v_t.shape: {self.v_t.shape}\n"
+            f"replicated_x_0.shape: {self.replicated_x_0.shape}\n"
+            f"replicated_v_0.shape: {self.replicated_v_0.shape}\n"
+            f"replicated_concatenated_features.shape: {self.replicated_concatenated_features.shape}\n"
+            f"replicated_z_0.shape: {self.replicated_z_0.shape}\n"
+            f"replicated_mole_idx.shape: {self.replicated_mole_idx.shape}"
+        )
 
     def get_dynamic_target_frames(self) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         split_times = self.split_times
@@ -538,6 +598,7 @@ if __name__ == "__main__":
         split_dir="data/",
         md17_version=MD17Version.rmd17,
         molecule_type=MD17MoleculeType.benzene,
+        max_nodes=20,
         force_regenerate=False,
         num_timesteps=1,  # Set num_timesteps for replication
     )
@@ -554,7 +615,7 @@ if __name__ == "__main__":
     #     break
 
     # Test MD17DynamicsDataset
-    dataset_dynamic = MD17DynamicsDataset(
+    dataset_to_concat = MD17DynamicsDataset(
         partition=DataPartition.train,
         max_samples=500,
         delta_frame=3000,
@@ -562,14 +623,15 @@ if __name__ == "__main__":
         split_dir="data/",
         md17_version=MD17Version.md17,
         molecule_type=MD17MoleculeType.toluene,
+        max_nodes=20,
         force_regenerate=True,
         num_timesteps=8,  # Set num_timesteps for replication
     )
 
     datasets = []
-    molecule_list = [MD17MoleculeType.benzene, MD17MoleculeType.toluene, MD17MoleculeType.ethanol, MD17MoleculeType.salicylic]
+    molecule_list = [MD17MoleculeType.benzene, MD17MoleculeType.ethanol]
     for molecule in molecule_list:
-        dataset_dynamic = MD17DynamicsDataset(
+        dataset_to_concat = MD17DynamicsDataset(
             partition=DataPartition.train,
             max_samples=500,
             delta_frame=3000,
@@ -577,21 +639,34 @@ if __name__ == "__main__":
             split_dir="data/",
             md17_version=MD17Version.md17,
             molecule_type=molecule,
+            max_nodes=20,
             force_regenerate=True,
             num_timesteps=8,  # Set num_timesteps for replication
         )
-        datasets.append(dataset_dynamic)
+        datasets.append(dataset_to_concat)
 
+    dataset_dynamic = MD17DynamicsDataset(
+        partition=DataPartition.train,
+        max_samples=500,
+        delta_frame=3000,
+        data_dir="data/",
+        split_dir="data/",
+        md17_version=MD17Version.md17,
+        molecule_type=MD17MoleculeType.benzene,
+        max_nodes=20,
+        force_regenerate=True,
+        num_timesteps=8,  # Set num_timesteps for replication
+    )
+
+    # dataloader_dynamic = DataLoader(dataset_dynamic, batch_size=100, shuffle=True)
     combined_dataset = torch.utils.data.ConcatDataset(datasets)
+    dataloader_concat = DataLoader(combined_dataset, batch_size=100, shuffle=True)
 
-    dataloader_dynamic = DataLoader(combined_dataset, batch_size=100, shuffle=True)
-
-    print("\nMD17DynamicsDataset Output Shapes:")
+    print("\nMD17DynamicsMultitaskDataset Output Shapes:")
     print("Shape: Batch size, Time steps, Nodes, Features")
-    for data in dataloader_dynamic:
-        for key in data:
-            if key != "Molecule_type":
-                print(f"  {key}:", data[key].shape)
-            else:
-                print(f"  Molecule_type: {data['Molecule_type'][0]}")
-        break
+    data = next(iter(dataloader_concat))
+    for key in data:
+        if key != "Molecule_type":
+            print(f"  {key}:", data[key].shape)
+        else:
+            print(f"  Molecule_type: {data['Molecule_type'][0]}")

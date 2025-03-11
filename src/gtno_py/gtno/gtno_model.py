@@ -7,20 +7,25 @@ from tensordict import TensorDict
 from gtno_py.gtno.cross_attentions import QuadraticHeterogenousCrossAttention
 from gtno_py.gtno.mlps import MLP
 from e3nn import o3
+from enum import StrEnum
 
 
-class NormType(str, Enum):
+class ModelType(StrEnum):
+    GTNO = "GTNO"
+
+
+class NormType(StrEnum):
     LAYER = "layer"
     RMS = "rms"
 
 
-class ValueResidualType(str, Enum):
+class ValueResidualType(StrEnum):
     NONE = "none"
     LEARNABLE = "learnable"
     FIXED = "fixed"
 
 
-class GraphHeterogenousAttentionType(str, Enum):
+class GraphHeterogenousAttentionType(StrEnum):
     GHCA = "GHCA"
 
 

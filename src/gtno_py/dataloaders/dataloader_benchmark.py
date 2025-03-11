@@ -10,13 +10,14 @@ if __name__ == "__main__":
     dataset_static = MD17Dataset(
         partition=DataPartition.train,
         max_samples=5000,
-        delta_frame=30000,
+        delta_frame=3000,
         data_dir="data/",
         split_dir="data/",
-        md17_version=MD17Version.rmd17,
+        md17_version=MD17Version.md17,
         molecule_type=MD17MoleculeType.benzene,
-        force_regenerate=False,
+        force_regenerate=True,
         num_timesteps=1,  # Set num_timesteps for replication
+        max_nodes=6,
     )
     dataloader_static = DataLoader(dataset_static, batch_size=100, shuffle=True)
     # print("MD17Dataset Output Shapes:")
@@ -39,8 +40,9 @@ if __name__ == "__main__":
         split_dir="data/",
         md17_version=MD17Version.md17,
         molecule_type=MD17MoleculeType.toluene,
-        force_regenerate=False,
+        force_regenerate=True,
         num_timesteps=8,  # Set num_timesteps for replication
+        max_nodes=7,
     )
 
     dataloader_dynamic = DataLoader(dataset_dynamic, batch_size=100, shuffle=True)
