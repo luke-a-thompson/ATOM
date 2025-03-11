@@ -71,6 +71,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         seed: int = 100,
         force_regenerate: bool = False,
         num_timesteps: int = 1,  # Number of timesteps to replicate
+        verbose: bool = False,
     ):
         """
         Args:
@@ -92,6 +93,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         self.delta_frame: int = delta_frame
         self.num_timesteps: int = num_timesteps
         self.max_samples: int = max_samples
+        self.verbose: bool = verbose
 
         self.dft_imprecision_margin: int = 10_000
 
@@ -162,8 +164,8 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         one_hop_adjacency, two_hop_adjacency = self._compute_adjacency_matrix(x, self.n_node, 1.6)
         self.edge_attr, self.edges = self._build_edge_attributes(one_hop_adjacency, two_hop_adjacency, z, x_0, v_0)
 
-        self.x_0: torch.Tensor = torch.cat([torch.Tensor(x_0), torch.norm(torch.Tensor(x_0), dim=-1, keepdim=True)], dim=-1)
-        self.v_0: torch.Tensor = torch.cat([torch.Tensor(v_0), torch.norm(torch.Tensor(v_0), dim=-1, keepdim=True)], dim=-1)
+        self.x_0: torch.Tensor = torch.cat([x_0, torch.norm(x_0, dim=-1, keepdim=True)], dim=-1)
+        self.v_0: torch.Tensor = torch.cat([v_0, torch.norm(v_0, dim=-1, keepdim=True)], dim=-1)
         # Expand atomic numbers to match batch dimension of x_0 and v_0
         self.z_0: torch.Tensor = torch.Tensor(z).unsqueeze(-1).unsqueeze(0).expand(self.x_0.shape[0], -1, -1)
         self.concatenated_features: torch.Tensor = self._compute_concatenated_features()
@@ -253,16 +255,16 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
 
     def get_initial_frames(
         self, split_times: npt.NDArray[np.int_], x: npt.NDArray[np.float64], v: npt.NDArray[np.float64]
-    ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
-        x_0 = x[split_times]
-        v_0 = v[split_times]
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        x_0 = torch.Tensor(x[split_times])
+        v_0 = torch.Tensor(v[split_times])
         return x_0, v_0
 
     def get_target_frames(
         self, split_times: npt.NDArray[np.int_], x: npt.NDArray[np.float64], v: npt.NDArray[np.float64]
-    ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
-        x_t = x[split_times + self.delta_frame]
-        v_t = v[split_times + self.delta_frame]
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        x_t = torch.Tensor(x[split_times + self.delta_frame])
+        v_t = torch.Tensor(v[split_times + self.delta_frame])
         return x_t, v_t
 
     def _get_or_generate_split(
@@ -300,9 +302,9 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
                 with open(split_dir, "rb") as f:
                     return pkl.load(f)
             except FileNotFoundError:
-                print("Split file not found, generating new split")
+                print("Split file not found, generating new split") if self.verbose else None
         else:
-            print("Forcing regeneration of dataset split")
+            print("Forcing regeneration of dataset split") if self.verbose else None
 
         # Generate new split
         return self._generate_new_split(start=start, end=end, x=x, train_par=train_par, val_par=val_par, test_par=test_par, seed=seed, split_dir=split_dir)
@@ -370,8 +372,9 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
             pkl.dump(split, f)
 
         # Print information about the generated split
-        print(f"Generated and saved split with {len(train_idx)} train, {len(val_idx)} val, and {len(test_idx)} test samples")
-        print(f"Note: Max samples will be limited to {self.max_samples if hasattr(self, 'max_samples') else 'unlimited'} during dataset usage")
+        if self.verbose:
+            print(f"Generated and saved split with {len(train_idx)} train, {len(val_idx)} val, and {len(test_idx)} test samples")
+            print(f"Note: Max samples will be limited to {self.max_samples if hasattr(self, 'max_samples') else 'unlimited'} during dataset usage")
 
         return split
 
