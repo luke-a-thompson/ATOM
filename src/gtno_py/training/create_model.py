@@ -4,6 +4,14 @@ import torch.nn as nn
 
 
 def initialize_model(config: Config) -> nn.Module:
+    """Initialize a model based on the configuration file.
+
+    Args:
+        config (Config): The configuration file.
+
+    Returns:
+        nn.Module: The initialized model.
+    """
     match config.model.model_type:
         case ModelType.GTNO:
             return GTNO(

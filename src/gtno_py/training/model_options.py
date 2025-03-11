@@ -7,6 +7,7 @@ class DeviceType(StrEnum):
 
 
 class OptimizerType(StrEnum):
+    
     SGD = "sgd"
     ADAMW = "adamw"
     MUON = "muon"

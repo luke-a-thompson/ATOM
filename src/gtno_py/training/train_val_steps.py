@@ -12,14 +12,25 @@ def train_epoch(
     config: Config,
     model: nn.Module,
     optimizer: optim.Optimizer,
-    loader: DataLoader[dict[str, torch.Tensor]],
+    dataloader: DataLoader[dict[str, torch.Tensor]],
     scheduler: optim.lr_scheduler._LRScheduler | None,
 ) -> float:
-    """Single training epoch."""
+    """Single training epoch.
+
+    Args:
+        config (Config): The configuration file.
+        model (nn.Module): The model to train.
+        optimizer (optim.Optimizer): The optimizer to use.
+        dataloader (DataLoader[dict[str, torch.Tensor]]): The dataloader to use.
+        scheduler (optim.lr_scheduler._LRScheduler | None): The scheduler to use.
+
+    Returns:
+        float: The loss of the epoch.
+    """
     _ = model.train()
     total_loss = 0.0
 
-    for batch in loader:
+    for batch in dataloader:
         batch = tensordict.from_dict(batch).to(config.training.device)
         assert batch["x_0"].shape[1] == (config.model.num_timesteps), batch["x_0"].shape
         target_coords: torch.Tensor = batch.pop("x_t")
@@ -61,7 +72,7 @@ def train_epoch(
         if scheduler and not isinstance(scheduler, optim.lr_scheduler.ReduceLROnPlateau):
             scheduler.step()
 
-    return total_loss / float(len(loader.dataset))
+    return total_loss / float(len(dataloader.dataset))
 
 
 def eval_epoch(
@@ -69,7 +80,16 @@ def eval_epoch(
     model: nn.Module,
     loader: DataLoader[dict[str, torch.Tensor]],
 ) -> tuple[float, float]:
-    """Evaluation loop."""
+    """Evaluation loop.
+
+    Args:
+        config (Config): The configuration file.
+        model (nn.Module): The model to evaluate.
+        loader (DataLoader[dict[str, torch.Tensor]]): The dataloader to use.
+
+    Returns:
+        tuple[float, float]: The S2T and S2S loss of the epoch.
+    """
     model.eval()
     total_s2t_loss = 0.0
     total_s2s_loss = 0.0

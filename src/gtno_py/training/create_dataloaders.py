@@ -8,7 +8,15 @@ def create_datasets(
     config: Config,
     molecule_type: MD17MoleculeType | RMD17MoleculeType,
 ) -> tuple[MD17DynamicsDataset, MD17DynamicsDataset, MD17DynamicsDataset]:
-    """Create train/val/test datasets."""
+    """Create train, test and validation Torch datasets.
+
+    Args:
+        config (Config): The configuration file.
+        molecule_type (MD17MoleculeType | RMD17MoleculeType): The molecule type to use.
+
+    Returns:
+        tuple[MD17DynamicsDataset, MD17DynamicsDataset, MD17DynamicsDataset]: The train/val/test Torch datasets.
+    """
     train_dataset = MD17DynamicsDataset(
         partition=DataPartition.train,
         max_samples=500,
@@ -58,7 +66,15 @@ def create_dataloaders_single(
     config: Config,
     molecule_type: MD17MoleculeType | RMD17MoleculeType,
 ) -> tuple[DataLoader[dict[str, torch.Tensor]], DataLoader[dict[str, torch.Tensor]], DataLoader[dict[str, torch.Tensor]]]:
-    """Create train/val/test dataloaders."""
+    """Create train, test and validation Torch dataloaders.
+
+    Args:
+        config (Config): The configuration file.
+        molecule_type (MD17MoleculeType | RMD17MoleculeType): The molecule type to use.
+
+    Returns:
+        tuple[DataLoader[dict[str, torch.Tensor]], DataLoader[dict[str, torch.Tensor]], DataLoader[dict[str, torch.Tensor]]]: The train/val/test Torch dataloaders.
+    """
     train_dataset, val_dataset, test_dataset = create_datasets(config, molecule_type)
 
     train_loader = DataLoader(
@@ -92,7 +108,14 @@ def create_dataloaders_single(
 def create_dataloaders_multitask(
     config: Config,
 ) -> tuple[DataLoader[dict[str, torch.Tensor]], DataLoader[dict[str, torch.Tensor]], DataLoader[dict[str, torch.Tensor]]]:
-    """Create train/val/test dataloaders for multiple molecule types."""
+    """Create train, test and validation Torch dataloaders for multiple molecule types and concatenate them into a single dataloader.
+
+    Args:
+        config (Config): The configuration file.
+
+    Returns:
+        tuple[DataLoader[dict[str, torch.Tensor]], DataLoader[dict[str, torch.Tensor]], DataLoader[dict[str, torch.Tensor]]]: The train/val/test Torch dataloaders.
+    """
     train_loaders = []
     val_loaders = []
     test_loaders = []
