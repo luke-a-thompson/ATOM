@@ -97,11 +97,7 @@ def main(num_epochs: int, model: nn.Module, molecule_type: MD17MoleculeType | RM
 
 
 def benchmark(
-    runs: int,
-    epochs_per_run: int,
-    compile: bool,
-    molecule_type: MD17MoleculeType | RMD17MoleculeType | list[MD17MoleculeType | RMD17MoleculeType] | Literal["all_mols"],
-    md17_version: MD17Version,
+    config: Config,
 ) -> None:
     """
     Benchmarking function with JSON results logging.
@@ -109,9 +105,7 @@ def benchmark(
     Args:
         runs: Number of runs to perform
         epochs_per_run: Number of epochs to run per run
-        compile: Whether to compile the model
         molecule_type: Molecule type to run on
-            "all_mols": Run on all molecules
 
     Returns:
         None
@@ -124,14 +118,12 @@ def benchmark(
         "timestamp": datetime.now().isoformat(),
     }
 
-    if molecule_type == "all_mols":
-        molecules = list(MD17MoleculeType if md17_version == MD17Version.md17 else RMD17MoleculeType)
-    elif isinstance(molecule_type, list):
-        molecules = molecule_type
+    if isinstance(config.benchmark.molecule_type, list):
+        molecules = config.benchmark.molecule_type
     else:
-        molecules = [molecule_type]
+        molecules = [config.benchmark.molecule_type]
 
-    if compile:
+    if config.benchmark.compile:
         model = torch.compile(initialize_model(config).to(device), dynamic=True)
     else:
         model = initialize_model(config).to(device)
@@ -145,9 +137,9 @@ def benchmark(
         benchmark_dir = f"benchmark_runs/{project_name}_{str(molecule)}_{timestamp}"
         os.makedirs(benchmark_dir, exist_ok=True)
 
-        runs_progress_bar = tqdm(range(runs), leave=False, unit="run", position=1)
+        runs_progress_bar = tqdm(range(config.benchmark.runs), leave=False, unit="run", position=1)
         for run in runs_progress_bar:
-            runs_progress_bar.set_description(f"Run {run+1}/{runs}")
+            runs_progress_bar.set_description(f"Run {run+1}/{config.benchmark.runs}")
             start_time = datetime.now()
 
             # Create a run-specific weights directory before starting the run
@@ -155,7 +147,7 @@ def benchmark(
             os.makedirs(run_weights_dir, exist_ok=True)
 
             # Pass the weights directory to main function
-            s2t_test_loss, s2s_test_loss, duration, best_val_loss_epoch, temp_model_path = main(epochs_per_run, model, molecule, weights_dir=run_weights_dir)
+            s2t_test_loss, s2s_test_loss, duration, best_val_loss_epoch, temp_model_path = main(config.training.epochs, model, molecule, weights_dir=run_weights_dir)
             end_time = datetime.now()
 
             # Create a run-specific model file
@@ -224,9 +216,5 @@ def benchmark(
 
 if __name__ == "__main__":
     benchmark(
-        config.benchmark.runs,
-        config.training.epochs,
-        config.benchmark.compile,
-        config.benchmark.molecule_type,
-        config.benchmark.md17_version,
+        config,
     )
