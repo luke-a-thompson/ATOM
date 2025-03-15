@@ -65,6 +65,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         molecule_type: MD17MoleculeType | RMD17MoleculeType,
         max_nodes: int,
         explicit_hydrogen: bool = False,
+        rrwp_length: int = 8,
         train_par: float = 0.1,
         val_par: float = 0.05,
         test_par: float = 0.05,
@@ -94,7 +95,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         self.num_timesteps: int = num_timesteps
         self.max_samples: int = max_samples
         self.verbose: bool = verbose
-
+        self.rrwp_length: int = rrwp_length
         self.dft_imprecision_margin: int = 10_000
 
         match md17_version:
@@ -153,16 +154,21 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         self.replicated_x_0: torch.Tensor = self._replicate_tensor(self.x_0)
         self.replicated_v_0: torch.Tensor = self._replicate_tensor(self.v_0)
         self.replicated_concatenated_features: torch.Tensor = self._replicate_tensor(self.concatenated_features)
+        self.replicated_z_0: torch.Tensor = self._replicate_tensor(self.z_0)
 
     def process_data(self, split_times: npt.NDArray[np.int_], x: npt.NDArray[np.float64], v: npt.NDArray[np.float64], z: npt.NDArray[np.uint8]):
         """Processes loaded data, common to both MD17Dataset and MD17DynamicsDataset"""
         x_0, v_0 = self.get_initial_frames(split_times, x, v)
         x_t, v_t = self.get_target_frames(split_times, x, v)
 
-        self.n_node: int = z.shape[0]
+        self.num_nodes: int = z.shape[0]
 
-        one_hop_adjacency, two_hop_adjacency = self._compute_adjacency_matrix(x, self.n_node, 1.6)
+        one_hop_adjacency, two_hop_adjacency = self._compute_adjacency_matrix(x, self.num_nodes, 1.6)
         self.edge_attr, self.edges = self._build_edge_attributes(one_hop_adjacency, two_hop_adjacency, z, x_0, v_0)
+        if self.rrwp_length > 0:
+            self.rrwp: torch.Tensor = self.calculate_rrwp(one_hop_adjacency, self.rrwp_length)
+        else:
+            self.rrwp: torch.Tensor = torch.zeros(self.max_samples, self.num_nodes, 0)
 
         self.x_0: torch.Tensor = torch.cat([x_0, torch.norm(x_0, dim=-1, keepdim=True)], dim=-1)
         self.v_0: torch.Tensor = torch.cat([v_0, torch.norm(v_0, dim=-1, keepdim=True)], dim=-1)
@@ -179,10 +185,10 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
 
         self.mask: torch.Tensor = torch.cat(
             [
-                torch.ones(self.n_node, dtype=torch.bool),
-                torch.zeros(self.max_nodes - self.n_node, dtype=torch.bool),
+                torch.ones(self.num_nodes, dtype=torch.bool),
+                torch.zeros(self.max_nodes - self.num_nodes, dtype=torch.bool),
             ]
-        )
+        ).unsqueeze(0).unsqueeze(-1)
 
         if x_t is not None:
             self.x_t: torch.Tensor = torch.Tensor(x_t)
@@ -221,6 +227,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         v_0_xyz = self.v_0[..., :3]
         x_0_norm = self.x_0[..., 3:]
         v_0_norm = self.v_0[..., 3:]
+        rrwp = self.rrwp.unsqueeze(0).expand(self.max_samples, -1, -1)  # Expand from [1, 6, 8] to [max_samples, 6, 8]
 
         concatenated_features = torch.cat(
             [
@@ -229,6 +236,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
                 v_0_xyz,
                 v_0_norm,
                 self.z_0,
+                rrwp,
             ],
             dim=-1,
         )
@@ -253,16 +261,12 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
 
         return tensor_expanded
 
-    def get_initial_frames(
-        self, split_times: npt.NDArray[np.int_], x: npt.NDArray[np.float64], v: npt.NDArray[np.float64]
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    def get_initial_frames(self, split_times: npt.NDArray[np.int_], x: npt.NDArray[np.float64], v: npt.NDArray[np.float64]) -> tuple[torch.Tensor, torch.Tensor]:
         x_0 = torch.Tensor(x[split_times])
         v_0 = torch.Tensor(v[split_times])
         return x_0, v_0
 
-    def get_target_frames(
-        self, split_times: npt.NDArray[np.int_], x: npt.NDArray[np.float64], v: npt.NDArray[np.float64]
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    def get_target_frames(self, split_times: npt.NDArray[np.int_], x: npt.NDArray[np.float64], v: npt.NDArray[np.float64]) -> tuple[torch.Tensor, torch.Tensor]:
         x_t = torch.Tensor(x[split_times + self.delta_frame])
         v_t = torch.Tensor(v[split_times + self.delta_frame])
         return x_t, v_t
@@ -456,6 +460,40 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         edge_attr_tensor = torch.Tensor(np.array(edge_attr))
         return edge_attr_tensor, edges
 
+    def calculate_rrwp(self, adj: torch.Tensor, walk_length: int = 8) -> torch.Tensor:
+        """
+        Calculate random walk return probabilities (RRWP) for each node given an adjacency matrix.
+
+        Parameters:
+            adj (torch.Tensor): An (n x n) adjacency matrix.
+            walk_length (int): K, the total number of walk steps.
+
+        Returns:
+            torch.Tensor: A tensor of shape (n, k) where each row holds the self-return probability at each walk length.
+        """
+        # Ensure adjacency matrix is in float format
+        adj = adj.float()
+
+        # Row-normalise the adjacency matrix: D^{-1}A
+        deg = adj.sum(dim=1)
+        deg_inv = torch.where(deg > 0, 1.0 / deg, torch.zeros_like(deg))
+        A_norm = torch.diag(deg_inv) @ adj
+
+        rrwp_list = []
+        # The first nontrivial step is the row-normalised A itself.
+        current = A_norm.clone()
+        rrwp_list.append(current)
+
+        # Compute subsequent steps by repeated multiplication with A_norm
+        for _ in range(len(rrwp_list), walk_length):
+            current = current @ A_norm
+            rrwp_list.append(current)
+
+        # Extract the diagonal from each matrix to get the self-return probabilities
+        rrwp = torch.stack([mat.diag() for mat in rrwp_list], dim=1)  # Shape: (n, k)
+        assert rrwp.shape == (self.num_nodes, walk_length), f"RRWP shape: {rrwp.shape}, num_nodes: {self.num_nodes}, walk_length: {walk_length}"
+        return rrwp
+
     def _pad_tensor(self, tensor: torch.Tensor) -> torch.Tensor:
         # tensor shape assumed to be (num_samples, N, d)
         assert tensor.shape[-2] <= self.max_nodes, f"Tensor shape: {tensor.shape}, max_nodes: {self.max_nodes}"
@@ -494,6 +532,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
             "x_0": self.replicated_x_0[i],
             "v_0": self.replicated_v_0[i],
             "concatenated_features": self.replicated_concatenated_features[i],
+            "Z": self.replicated_z_0[i],
             "padded_nodes_mask": self.mask,
             "x_t": self.x_t[i],
             "v_t": self.v_t[i],
@@ -606,16 +645,16 @@ if __name__ == "__main__":
         num_timesteps=1,  # Set num_timesteps for replication
     )
     dataloader_static = DataLoader(dataset_static, batch_size=100, shuffle=True)
-    # print("MD17Dataset Output Shapes:")
-    # for data in dataloader_static:
-    #     for key in data:
-    #         if key not in ["cfg", "edge_attr"]:
-    #             print(f"  {key}:", data[key].shape)
-    #     if "cfg" in data:
-    #         print("  cfg shapes:")
-    #         for key in data["cfg"]:
-    #             print(f"    {key}:", data["cfg"][key].shape)
-    #     break
+    print("MD17Dataset Output Shapes:")
+    for data in dataloader_static:
+        for key in data:
+            if key not in ["cfg", "edge_attr"]:
+                print(f"  {key}:", data[key].shape)
+        if "cfg" in data:
+            print("  cfg shapes:")
+            for key in data["cfg"]:
+                print(f"    {key}:", data["cfg"][key].shape)
+        break
 
     # Test MD17DynamicsDataset
     dataset_to_concat = MD17DynamicsDataset(

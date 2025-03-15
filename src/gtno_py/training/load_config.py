@@ -6,7 +6,6 @@ from gtno_py.gtno.activations import FFNActivation
 import tomllib
 
 
-
 class WandbConfig(BaseModel):
     use_wandb: bool
 
@@ -22,8 +21,10 @@ class BenchmarkConfig(BaseModel):
 
 
 class DataloaderConfig(BaseModel):
+    multitask: bool
     explicit_hydrogen: bool
     explicit_hydrogen_gradients: bool
+    rrwp_length: int
     persistent_workers: bool
     num_workers: int
     pin_memory: bool

@@ -51,7 +51,7 @@ class TemporalRoPEWithOffset(nn.Module):
         self.freqs = (1.0 / (self.base ** (2 * torch.arange(0, self.half_dim, device=self.offset.device).float() / d_head))).unsqueeze(0).unsqueeze(0)  # [1, 1, half_dim]
 
     @override
-    def forward(self, tensor: torch.Tensor) -> torch.Tensor:
+    def forward(self, tensor: torch.Tensor, mask: torch.Tensor | None = None) -> torch.Tensor:
         """
         Args:
             tensor: shape [B, n_heads, seq_len, d_head].
@@ -64,10 +64,10 @@ class TemporalRoPEWithOffset(nn.Module):
             rotated: shape [B, n_heads, seq_len, d_head] tensor with RoPE applied to each group of `num_nodes`.
         """
         B, H, seq_len, d_head = tensor.shape
+        num_nodes = seq_len // self.num_timesteps
         assert H == self.n_heads, f"Expected n_heads={self.n_heads}, got {H}"
         assert d_head == self.d_head, f"Expected d_head={self.d_head}, got {d_head}"
         assert seq_len % self.num_timesteps == 0, f"seq_len={seq_len} must be divisible by num_timesteps={self.num_timesteps}."
-        num_nodes = seq_len // self.num_timesteps
 
         # 1) Create integer time indices for each chunk of num_nodes => shape [seq_len]
         #    e.g., times = [0,0,...,0,1,1,...,1,..., T-1, T-1,..., T-1], each repeated num_nodes times.
@@ -94,6 +94,11 @@ class TemporalRoPEWithOffset(nn.Module):
         cos_t = cos_t.expand(B, -1, seq_len, self.half_dim)
         sin_t = sin_t.expand(B, -1, seq_len, self.half_dim)
 
+        # Avoid rotating padded nodes
+        mask_seq = mask.expand(B, self.num_timesteps, num_nodes, 1).reshape(B, 1, seq_len, 1)
+        cos_t = torch.where(mask_seq.bool(), cos_t, torch.ones_like(cos_t))
+        sin_t = torch.where(mask_seq.bool(), sin_t, torch.zeros_like(sin_t))
+
         # 6) Apply the rotation to the last dimension of 'tensor'
         #    Even indices => [0::2], odd => [1::2]
         t1 = tensor[..., 0::2]  # [B, H, seq_len, half_dim]
@@ -103,6 +108,7 @@ class TemporalRoPEWithOffset(nn.Module):
         rotated_1 = t1 * sin_t + t2 * cos_t
 
         # Re-interleave - view_as does the interleaving
+        # [B, H, seq_len, d_head]
         rotated = torch.stack([rotated_0, rotated_1], dim=-1).view_as(tensor)
 
         return rotated
@@ -233,7 +239,7 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
             self.spherical_harmonics = SphericalHarmonicsAttentionBias(num_timesteps=self.num_timesteps, max_degree=1, num_heads=self.num_heads, hidden_dim=16)
 
     @override
-    def forward(self, x_0: torch.Tensor, v_0: torch.Tensor, concatenated_features: torch.Tensor, q_data: torch.Tensor) -> torch.Tensor:
+    def forward(self, x_0: torch.Tensor, v_0: torch.Tensor, concatenated_features: torch.Tensor, q_data: torch.Tensor, mask: torch.Tensor | None = None) -> torch.Tensor:
         """
         1. Flatten queries => [B, seq_q, d], then project to [B, heads, seq_q, d_head].
         2. For each heterogeneous feature, do:
@@ -245,17 +251,21 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         3. Reshape the final heads => [B, seq_q, d], project, unflatten => [B*T, N, d].
         4. Store result in batch["x_0"] and return.
         """
-        # batch["x_0"] might be [B*T, N, d]
-
-        # Flatten Q data: [B*T, N, d] -> [B, N*T (seq_q), d]
+        # Flatten Q data: [B, T, N, d] -> [B, N * T (seq_q), d]
         B, T, N, d = q_data.shape
         q_data = q_data.view(B, T * N, d)
+
+        if mask is not None:
+            # Expand to [B, 1, T*N, T*N] to mask attention matrix properly
+            mask_expanded = mask.expand(B, T, N, 1).reshape(B, T * N, 1)
+            key_mask = mask_expanded.transpose(1, 2)
+            key_mask = key_mask.unsqueeze(1)
 
         # Project Q => [B, heads, seq_q, d_head]
         q_proj: torch.Tensor = self.query(q_data).view(B, T * N, self.num_heads, self.d_head).permute(0, 2, 1, 3)  # [B, heads, seq_q, d_head]
 
         if self.use_rope:
-            q_proj = self.rope(q_proj)
+            q_proj = self.rope(q_proj, mask)
 
         if self.use_spherical_harmonics:
             bias: torch.Tensor = self.spherical_harmonics(x_0[..., :3])
@@ -283,10 +293,15 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
             v_proj = v_proj.view(B, N * T, self.num_heads, self.d_head).permute(0, 2, 1, 3)
 
             if self.use_rope:
-                k_proj: torch.Tensor = self.rope(k_proj)
+                k_proj: torch.Tensor = self.rope(k_proj, mask)
 
             # 1) scores = Q·K^T / sqrt(d_head)
             scores = q_proj @ k_proj.transpose(-2, -1) / self.attention_denom.view(1, -1, 1, 1)  # Broadcasts over heads
+            if mask is not None:
+                # scores shape is [B, heads, seq_q, seq_k] = [B, heads, T*N, T*N]
+                assert key_mask.shape == (B, 1, 1, T * N), f"Expected mask shape (B,1,1,T*N) but got {key_mask.shape}"
+                scores = scores.masked_fill(key_mask == 0, float("-inf"))
+
             # 2) softmax over seq_k dimension (dim=-1)
             if self.use_spherical_harmonics:
                 scores = scores + bias

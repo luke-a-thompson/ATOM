@@ -52,16 +52,20 @@ def train_epoch(
 
         # Do not compute gradients for heavy atoms if explicit_hydrogen is True and explicit_hydrogen_gradients is False
         if config.dataloader.explicit_hydrogen and config.dataloader.explicit_hydrogen_gradients is False:
-            heavy_atom_mask: torch.Tensor = batch["concatenated_features"][0, 0, :, -1] > 1
-            # Apply mask to predictions and targets
-            # Shape: [batch_size, num_timesteps, num_atoms, 3]
-            pred_heavy: torch.Tensor = pred_coords[:, :, heavy_atom_mask, :]
-            target_heavy: torch.Tensor = target_coords[:, :, heavy_atom_mask, :]
+            heavy_atom_mask: torch.Tensor = batch["Z"][..., 0] > 1  # shape: [Batch, Time, Nodes]
+
+            # Apply mask along the nodes dimension
+            pred_heavy: torch.Tensor = pred_coords[heavy_atom_mask]  # shape: [Total_selected_nodes, 3]
+            target_heavy: torch.Tensor = target_coords[heavy_atom_mask]  # shape: [Total_selected_nodes, 3]
 
             loss = F.mse_loss(pred_heavy, target_heavy)
         # Compute gradients for all atoms (heavy and hydrogen)
         else:
-            loss = F.mse_loss(pred_coords, target_coords)
+            # Compute element‐wise MSE loss without reduction.
+            loss_raw = F.mse_loss(pred_coords, target_coords, reduction="none")
+            # Mask is [B,T,N,H]
+            # Apply mask and compute average loss over valid nodes.
+            loss = (loss_raw * batch["padded_nodes_mask"]).sum() / batch["padded_nodes_mask"].sum()
 
         total_loss += loss.item() * batch.batch_size[0]
 
@@ -102,17 +106,28 @@ def eval_epoch(
 
             pred_coords: torch.Tensor = model(batch)
 
-            # Get atomic numbers Z from batch and create mask for heavy atoms (Z > 1)
-            heavy_atom_mask: torch.Tensor = batch["concatenated_features"][0, 0, :, -1] > 1
+            if config.dataloader.explicit_hydrogen and config.dataloader.explicit_hydrogen_gradients is False:
+                # Get atomic numbers Z from batch and create mask for heavy atoms (Z > 1)
+                heavy_atom_mask: torch.Tensor = batch["Z"][..., 0] > 1  # shape: [Batch, Time, Nodes]
 
-            # Apply mask to predictions and targets
-            # Shape: [batch_size, num_timesteps, num_atoms, 3]
-            pred_heavy: torch.Tensor = pred_coords[:, :, heavy_atom_mask, :]
-            target_heavy: torch.Tensor = target_coords[:, :, heavy_atom_mask, :]
+                # Apply mask along the nodes dimension
+                pred_heavy: torch.Tensor = pred_coords[heavy_atom_mask]  # shape: [Total_selected_nodes, 3]
+                target_heavy: torch.Tensor = target_coords[heavy_atom_mask]  # shape: [Total_selected_nodes, 3]
 
-            s2t_loss = F.mse_loss(pred_heavy, target_heavy)
-            s2s_loss = F.mse_loss(pred_heavy[:, -1, :, :], target_heavy[:, -1, :, :])
-            total_s2t_loss += s2t_loss.item() * batch.batch_size[0]
-            total_s2s_loss += s2s_loss.item() * batch.batch_size[0]
+                s2t_loss = F.mse_loss(pred_heavy, target_heavy)
+                s2s_loss = F.mse_loss(pred_heavy[:, -1, :, :], target_heavy[:, -1, :, :])
+                total_s2t_loss += s2t_loss.item() * batch.batch_size[0]
+                total_s2s_loss += s2s_loss.item() * batch.batch_size[0]
+            else:
+                # For the full coordinates loss (shape: [batch, 8, 20, 4])
+                loss_raw_s2t = F.mse_loss(pred_coords, target_coords, reduction="none")
+                masked_s2t_loss = (loss_raw_s2t * batch["padded_nodes_mask"]).sum() / batch["padded_nodes_mask"].sum()
+
+                # For the last slice loss (shape: [batch, 20, 4])
+                loss_raw_s2s = F.mse_loss(pred_coords[:, -1, :, :], target_coords[:, -1, :, :], reduction="none")
+                masked_s2s_loss = (loss_raw_s2s * batch["padded_nodes_mask"]).sum() / batch["padded_nodes_mask"].sum()
+
+                total_s2t_loss += masked_s2t_loss.item() * batch.batch_size[0]
+                total_s2s_loss += masked_s2s_loss.item() * batch.batch_size[0]
 
     return total_s2t_loss / len(loader.dataset), total_s2s_loss / len(loader.dataset)

@@ -30,7 +30,11 @@ class MLP(nn.Module):
         self.layers = nn.ModuleList(layers)
 
     @override
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, mask: torch.Tensor | None = None) -> torch.Tensor:
         for layer in self.layers:
             x = layer(x)
+
+        if mask is not None:
+            # Expand mask to match the last dimension of x
+            x = x * mask.unsqueeze(-1)  # Ensures fake nodes output zeros
         return x
