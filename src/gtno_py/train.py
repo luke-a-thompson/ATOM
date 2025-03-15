@@ -4,8 +4,7 @@ import torch.optim as optim
 from tqdm import tqdm
 import json
 from datetime import datetime
-from gtno_py.dataloaders.egno_dataloder import MD17MoleculeType, MD17Version, RMD17MoleculeType
-from typing import Literal
+from gtno_py.dataloaders.egno_dataloder import MD17MoleculeType, RMD17MoleculeType
 import wandb
 from gtno_py.utils import log_weights
 import os
@@ -18,6 +17,7 @@ from gtno_py.training import (
     initialize_optimizer,
     initialize_scheduler,
     create_dataloaders_single,
+    create_dataloaders_multitask,
     set_seeds,
     reset_weights,
 )
@@ -45,7 +45,10 @@ def main(num_epochs: int, model: nn.Module, molecule_type: MD17MoleculeType | RM
     start_time = datetime.now()
 
     # Initialize components
-    train_loader, val_loader, test_loader = create_dataloaders_single(config, molecule_type)
+    if config.dataloader.multitask:
+        train_loader, val_loader, test_loader = create_dataloaders_multitask(config)
+    else:
+        train_loader, val_loader, test_loader = create_dataloaders_single(config, molecule_type)
     optimizer = initialize_optimizer(config, model)
     scheduler = initialize_scheduler(config, optimizer)
 
@@ -160,7 +163,7 @@ def benchmark(
                 "s2s_test_loss_final": float(s2s_test_loss),
                 "best_val_loss_epoch": float(best_val_loss_epoch),
                 "time_seconds": float(duration),
-                "time_per_epoch": float(duration / epochs_per_run),
+                "time_per_epoch": float(duration / config.training.epochs),
                 "start_time": start_time.isoformat(),
                 "end_time": end_time.isoformat(),
                 "model_path": run_model_path,
@@ -182,7 +185,7 @@ def benchmark(
             "min_test_loss": float(min(test_losses)),
             "max_test_loss": float(max(test_losses)),
             "mean_secs_per_epoch": float(sum(times_per_epoch) / len(times_per_epoch)),
-            "config": config,
+            "config": config.model_dump_json(),
             "best_val_loss_epochs": float(sum(best_val_loss_epochs) / len(best_val_loss_epochs)),
         }
         results["latex_format"] = {
@@ -205,7 +208,7 @@ def benchmark(
             json.dump(results, f, indent=2)
 
         tqdm.write(f"\nSaved benchmark results to {results_filename}")
-        tqdm.write(f"Benchmark Results ({runs} runs, {epochs_per_run} epochs/run):")
+        tqdm.write(f"Benchmark Results ({config.benchmark.runs} runs, {config.training.epochs} epochs/run):")
         tqdm.write(f"  Average Test Loss: {results['summary']['mean_test_loss']:.4f} ± {results['summary']['std_dev_test_loss']:.4f}")
         tqdm.write(f"  Average Test Loss Final Timestep: {results['summary']['mean_test_loss_final']:.4f} ± {results['summary']['std_dev_test_loss_final']:.4f}")
         tqdm.write(f"  Average Time per Run: {results['summary']['mean_secs_per_run']:.1f}s")
