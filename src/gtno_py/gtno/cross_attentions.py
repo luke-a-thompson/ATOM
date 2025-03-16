@@ -94,10 +94,10 @@ class TemporalRoPEWithOffset(nn.Module):
         cos_t = cos_t.expand(B, -1, seq_len, self.half_dim)
         sin_t = sin_t.expand(B, -1, seq_len, self.half_dim)
 
-        # Avoid rotating padded nodes
-        mask_seq = mask.expand(B, self.num_timesteps, num_nodes, 1).reshape(B, 1, seq_len, 1)
-        cos_t = torch.where(mask_seq.bool(), cos_t, torch.ones_like(cos_t))
-        sin_t = torch.where(mask_seq.bool(), sin_t, torch.zeros_like(sin_t))
+        # Avoid rotating padded nodes. Mask.shape = [B, T*N, 1]
+        if mask is not None:
+            cos_t = torch.where(mask, cos_t, torch.ones_like(cos_t))
+            sin_t = torch.where(mask, sin_t, torch.zeros_like(sin_t))
 
         # 6) Apply the rotation to the last dimension of 'tensor'
         #    Even indices => [0::2], odd => [1::2]
@@ -256,16 +256,20 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         q_data = q_data.view(B, T * N, d)
 
         if mask is not None:
-            # Expand to [B, 1, T*N, T*N] to mask attention matrix properly
-            mask_expanded = mask.expand(B, T, N, 1).reshape(B, T * N, 1)
-            key_mask = mask_expanded.transpose(1, 2)
-            key_mask = key_mask.unsqueeze(1)
+            # Mask in shape: [B, T, N, 1]; need to mask attention of shape [B, heads, T*N, T*N]
+            assert mask.shape == (B, T, N, 1), f"Expected mask shape (B,T,N,1) but got {mask.shape}"
+            mask = mask.reshape(B, T * N)
+            key_mask = mask.unsqueeze(1).unsqueeze(1)  # [B, 1, 1, T*N] for attention scores
+            rope_mask = mask.unsqueeze(1).unsqueeze(-1)  # [B, 1, T*N, 1] for RoPE
+        else:
+            key_mask = None
+            rope_mask = None
 
         # Project Q => [B, heads, seq_q, d_head]
         q_proj: torch.Tensor = self.query(q_data).view(B, T * N, self.num_heads, self.d_head).permute(0, 2, 1, 3)  # [B, heads, seq_q, d_head]
 
         if self.use_rope:
-            q_proj = self.rope(q_proj, mask)
+            q_proj = self.rope(q_proj, rope_mask)
 
         if self.use_spherical_harmonics:
             bias: torch.Tensor = self.spherical_harmonics(x_0[..., :3])
@@ -293,18 +297,18 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
             v_proj = v_proj.view(B, N * T, self.num_heads, self.d_head).permute(0, 2, 1, 3)
 
             if self.use_rope:
-                k_proj: torch.Tensor = self.rope(k_proj, mask)
+                k_proj: torch.Tensor = self.rope(k_proj, rope_mask)
 
             # 1) scores = Q·K^T / sqrt(d_head)
             scores = q_proj @ k_proj.transpose(-2, -1) / self.attention_denom.view(1, -1, 1, 1)  # Broadcasts over heads
             if mask is not None:
                 # scores shape is [B, heads, seq_q, seq_k] = [B, heads, T*N, T*N]
-                assert key_mask.shape == (B, 1, 1, T * N), f"Expected mask shape (B,1,1,T*N) but got {key_mask.shape}"
                 scores = scores.masked_fill(key_mask == 0, float("-inf"))
 
-            # 2) softmax over seq_k dimension (dim=-1)
             if self.use_spherical_harmonics:
                 scores = scores + bias
+
+            # 2) softmax over seq_k dimension (dim=-1)
             attn_weights: torch.Tensor = self.attention_dropout(F.softmax(scores, dim=-1))
             # 3) multiply by V
             out_i = attn_weights @ v_proj
