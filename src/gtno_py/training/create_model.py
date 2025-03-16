@@ -1,4 +1,5 @@
-from gtno_py.gtno.gtno_model import GTNO, ModelType
+from gtno_py.gtno.gtno_model import GTNO
+from gtno_py.training.config_options import ModelType
 from gtno_py.training.load_config import Config
 import torch.nn as nn
 

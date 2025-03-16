@@ -4,49 +4,10 @@ import torch
 import pickle as pkl
 from torch.utils.data import Dataset, DataLoader
 import os
-from enum import StrEnum
 from typing import final, override
-from tensordict import TensorDict
 from pathlib import Path
 import torch.nn.functional as F
-
-
-@final
-class DataPartition(StrEnum):
-    train = "train"
-    val = "val"
-    test = "test"
-
-
-@final
-class MD17Version(StrEnum):
-    md17 = "md17"
-    rmd17 = "rmd17"
-
-
-@final
-class MD17MoleculeType(StrEnum):
-    aspirin = "aspirin"
-    benzene = "benzene"
-    ethanol = "ethanol"
-    malonaldehyde = "malonaldehyde"
-    naphthalene = "naphthalene"
-    salicylic = "salicylic"
-    toluene = "toluene"
-    uracil = "uracil"
-
-
-@final
-class RMD17MoleculeType(StrEnum):
-    azobenzene = "azobenzene"
-    benzene = "benzene"
-    ethanol = "ethanol"
-    malonaldehyde = "malonaldehyde"
-    naphthalene = "naphthalene"
-    paracetamol = "paracetamol"
-    salicylic = "salicylic"
-    toluene = "toluene"
-    uracil = "uracil"
+from gtno_py.training.config_options import DataPartition, MD17Version, MD17MoleculeType, RMD17MoleculeType
 
 
 class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
@@ -100,11 +61,15 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
 
         match md17_version:
             case MD17Version.md17:
+                if not isinstance(molecule_type, MD17MoleculeType):
+                    raise ValueError(f"For MD17Version.md17, molecule_type must be MD17MoleculeType, got {molecule_type}")
                 full_dir = os.path.join(data_dir + "md17_npz/" + "md17_" + molecule_type + ".npz")
                 split_dir = os.path.join(split_dir + "md17_splits/" + "md17_" + molecule_type + "_split.pkl")
                 positions_col = "R"
                 charges_col = "z"
             case MD17Version.rmd17:
+                if not isinstance(molecule_type, RMD17MoleculeType):
+                    raise ValueError(f"For MD17Version.rmd17, molecule_type must be RMD17MoleculeType, got {molecule_type}")
                 full_dir = os.path.join(data_dir + "rmd17_npz/" + "rmd17_" + molecule_type + ".npz")
                 split_dir = os.path.join(split_dir + "rmd17_splits/" + "rmd17_" + molecule_type + "_split.pkl")
                 positions_col = "coords"

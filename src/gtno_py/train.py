@@ -4,7 +4,7 @@ import torch.optim as optim
 from tqdm import tqdm
 import json
 from datetime import datetime
-from gtno_py.dataloaders.egno_dataloder import MD17MoleculeType, RMD17MoleculeType
+from gtno_py.training.config_options import MD17MoleculeType, RMD17MoleculeType
 import wandb
 from gtno_py.utils import log_weights
 import os
@@ -45,7 +45,7 @@ def main(num_epochs: int, model: nn.Module, molecule_type: MD17MoleculeType | RM
     start_time = datetime.now()
 
     # Initialize components
-    if config.dataloader.multitask:
+    if config.benchmark.multitask:
         train_loader, val_loader, test_loader = create_dataloaders_multitask(config)
     else:
         train_loader, val_loader, test_loader = create_dataloaders_single(config, molecule_type)

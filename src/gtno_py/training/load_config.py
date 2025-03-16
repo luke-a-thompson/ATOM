@@ -1,8 +1,17 @@
 from pydantic import BaseModel
-from gtno_py.dataloaders.egno_dataloder import MD17MoleculeType, RMD17MoleculeType, MD17Version
-from gtno_py.training.model_options import OptimizerType, SchedulerType, DeviceType
-from gtno_py.gtno.gtno_model import NormType, GraphHeterogenousAttentionType, ValueResidualType, ModelType
-from gtno_py.gtno.activations import FFNActivation
+from gtno_py.training.config_options import (
+    OptimizerType,
+    SchedulerType,
+    DeviceType,
+    NormType,
+    GraphHeterogenousAttentionType,
+    ValueResidualType,
+    ModelType,
+    FFNActivation,
+    MD17MoleculeType,
+    RMD17MoleculeType,
+    MD17Version,
+)
 import tomllib
 
 
@@ -11,8 +20,9 @@ class WandbConfig(BaseModel):
 
 
 class BenchmarkConfig(BaseModel):
-    runs: int
     compile: bool
+    runs: int
+    multitask: bool
     molecule_type: MD17MoleculeType | RMD17MoleculeType | list[MD17MoleculeType | RMD17MoleculeType]
     max_nodes: int
     md17_version: MD17Version
@@ -21,7 +31,6 @@ class BenchmarkConfig(BaseModel):
 
 
 class DataloaderConfig(BaseModel):
-    multitask: bool
     explicit_hydrogen: bool
     explicit_hydrogen_gradients: bool
     rrwp_length: int

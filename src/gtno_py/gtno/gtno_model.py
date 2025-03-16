@@ -1,32 +1,12 @@
 from typing import final, override
 import torch
 import torch.nn as nn
-from enum import Enum
-from gtno_py.gtno.activations import FFNActivation, ReLU2, SwiGLU
+from gtno_py.gtno.activations import ReLU2, SwiGLU
+from gtno_py.training.config_options import FFNActivation, NormType, ValueResidualType, GraphHeterogenousAttentionType
 from tensordict import TensorDict
 from gtno_py.gtno.cross_attentions import QuadraticHeterogenousCrossAttention
 from gtno_py.gtno.mlps import MLP
 from e3nn import o3
-from enum import StrEnum
-
-
-class ModelType(StrEnum):
-    GTNO = "GTNO"
-
-
-class NormType(StrEnum):
-    LAYER = "layer"
-    RMS = "rms"
-
-
-class ValueResidualType(StrEnum):
-    NONE = "none"
-    LEARNABLE = "learnable"
-    FIXED = "fixed"
-
-
-class GraphHeterogenousAttentionType(StrEnum):
-    GHCA = "GHCA"
 
 
 @final

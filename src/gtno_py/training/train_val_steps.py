@@ -1,4 +1,3 @@
-from typing import Any
 from tensordict._td import TensorDict
 import torch.nn as nn
 import torch.optim as optim

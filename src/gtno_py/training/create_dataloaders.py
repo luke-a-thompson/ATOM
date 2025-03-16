@@ -1,7 +1,8 @@
 import torch
 from torch.utils.data import DataLoader
-from gtno_py.dataloaders.egno_dataloder import MD17DynamicsDataset, DataPartition, MD17MoleculeType, RMD17MoleculeType
+from gtno_py.dataloaders.egno_dataloder import MD17DynamicsDataset
 from gtno_py.training.load_config import Config
+from gtno_py.training.config_options import MD17MoleculeType, RMD17MoleculeType, DataPartition
 
 
 def create_datasets(
