@@ -181,18 +181,6 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         self.concatenated_features = self._pad_tensor(self.concatenated_features)
         self.mole_idx = self._pad_tensor(self.mole_idx)
 
-        self.mask: torch.Tensor = (
-            torch.cat(
-                [
-                    torch.ones(self.num_nodes, dtype=torch.bool),
-                    torch.zeros(self.max_nodes - self.num_nodes, dtype=torch.bool),
-                ],
-                dim=0,
-            )
-            .expand(self.num_timesteps, -1)
-            .unsqueeze(-1)
-        )
-
         if x_t is not None:
             self.x_t: torch.Tensor = torch.Tensor(x_t)
             self.x_t = self._pad_tensor(self.x_t)
@@ -532,15 +520,27 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         # For sample index i, slice out the contiguous block of timesteps (of size num_timesteps)
         # from the pre-replicated tensors. This recovers the T timesteps associated with the i-th sample.
         # i * self.num_timesteps : (i + 1) * self.num_timesteps - We want to be this many i * timesteps *frames* from the start, and capture the whole frame
-        return {
+        sample = {
             "x_0": self.replicated_x_0[i],
             "v_0": self.replicated_v_0[i],
             "concatenated_features": self.replicated_concatenated_features[i],
             "Z": self.replicated_z_0[i],
-            "padded_nodes_mask": self.mask,
             "x_t": self.x_t[i],
             "v_t": self.v_t[i],
         }
+
+        if self.num_nodes < self.max_nodes:
+            mask = torch.cat(
+                [
+                    torch.ones(self.num_nodes, dtype=torch.bool),
+                    torch.zeros(self.max_nodes - self.num_nodes, dtype=torch.bool),
+                ]
+            )
+
+            mask = mask.unsqueeze(0).expand(self.num_timesteps, -1).unsqueeze(-1).bool()
+            sample["padded_nodes_mask"] = mask
+
+        return sample
 
     def __len__(self):
         return len(self.split_times)
@@ -663,36 +663,6 @@ if __name__ == "__main__":
         break
 
     # Test MD17DynamicsDataset
-    dataset_to_concat = MD17DynamicsDataset(
-        partition=DataPartition.train,
-        max_samples=500,
-        delta_frame=3000,
-        data_dir="data/",
-        split_dir="data/",
-        md17_version=MD17Version.md17,
-        molecule_type=MD17MoleculeType.toluene,
-        max_nodes=20,
-        force_regenerate=True,
-        num_timesteps=8,  # Set num_timesteps for replication
-    )
-
-    datasets = []
-    molecule_list = [MD17MoleculeType.benzene, MD17MoleculeType.ethanol]
-    for molecule in molecule_list:
-        dataset_to_concat = MD17DynamicsDataset(
-            partition=DataPartition.train,
-            max_samples=500,
-            delta_frame=3000,
-            data_dir="data/",
-            split_dir="data/",
-            md17_version=MD17Version.md17,
-            molecule_type=molecule,
-            max_nodes=20,
-            force_regenerate=True,
-            num_timesteps=8,  # Set num_timesteps for replication
-        )
-        datasets.append(dataset_to_concat)
-
     dataset_dynamic = MD17DynamicsDataset(
         partition=DataPartition.train,
         max_samples=500,
@@ -700,21 +670,63 @@ if __name__ == "__main__":
         data_dir="data/",
         split_dir="data/",
         md17_version=MD17Version.md17,
-        molecule_type=MD17MoleculeType.benzene,
-        max_nodes=20,
+        molecule_type=MD17MoleculeType.aspirin,
+        max_nodes=13,
         force_regenerate=True,
         num_timesteps=8,  # Set num_timesteps for replication
     )
 
-    # dataloader_dynamic = DataLoader(dataset_dynamic, batch_size=100, shuffle=True)
-    combined_dataset = torch.utils.data.ConcatDataset(datasets)
-    dataloader_concat = DataLoader(combined_dataset, batch_size=100, shuffle=True)
+    dataloader_dynamic = DataLoader(dataset_dynamic, batch_size=100, shuffle=True)
+    print("MD17DynamicsDataset Output Shapes:")
+    for data in dataloader_dynamic:
+        for key in data:
+            if key not in ["cfg", "edge_attr"]:
+                print(f"  {key}:", data[key].shape)
+        if "cfg" in data:
+            print("  cfg shapes:")
+            for key in data["cfg"]:
+                print(f"    {key}:", data["cfg"][key].shape)
+        break
 
-    print("\nMD17DynamicsMultitaskDataset Output Shapes:")
-    print("Shape: Batch size, Time steps, Nodes, Features")
-    data = next(iter(dataloader_concat))
-    for key in data:
-        if key != "Molecule_type":
-            print(f"  {key}:", data[key].shape)
-        else:
-            print(f"  Molecule_type: {data['Molecule_type'][0]}")
+    # datasets = []
+    # molecule_list = [MD17MoleculeType.benzene, MD17MoleculeType.ethanol]
+    # for molecule in molecule_list:
+    #     dataset_to_concat = MD17DynamicsDataset(
+    #         partition=DataPartition.train,
+    #         max_samples=500,
+    #         delta_frame=3000,
+    #         data_dir="data/",
+    #         split_dir="data/",
+    #         md17_version=MD17Version.md17,
+    #         molecule_type=molecule,
+    #         max_nodes=20,
+    #         force_regenerate=True,
+    #         num_timesteps=8,  # Set num_timesteps for replication
+    #     )
+    #     datasets.append(dataset_to_concat)
+
+    # dataset_dynamic = MD17DynamicsDataset(
+    #     partition=DataPartition.train,
+    #     max_samples=500,
+    #     delta_frame=3000,
+    #     data_dir="data/",
+    #     split_dir="data/",
+    #     md17_version=MD17Version.md17,
+    #     molecule_type=MD17MoleculeType.benzene,
+    #     max_nodes=6,
+    #     force_regenerate=True,
+    #     num_timesteps=8,  # Set num_timesteps for replication
+    # )
+
+    # # dataloader_dynamic = DataLoader(dataset_dynamic, batch_size=100, shuffle=True)
+    # combined_dataset = torch.utils.data.ConcatDataset(datasets)
+    # dataloader_concat = DataLoader(combined_dataset, batch_size=100, shuffle=True)
+
+    # print("\nMD17DynamicsMultitaskDataset Output Shapes:")
+    # print("Shape: Batch size, Time steps, Nodes, Features")
+    # data = next(iter(dataloader_concat))
+    # for key in data:
+    #     if key != "Molecule_type":
+    #         print(f"  {key}:", data[key].shape)
+    #     else:
+    #         print(f"  Molecule_type: {data['Molecule_type'][0]}")
