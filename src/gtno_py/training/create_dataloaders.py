@@ -26,9 +26,10 @@ def create_datasets(
         split_dir="data/",
         molecule_type=molecule_type,
         md17_version=config.benchmark.md17_version,
-        force_regenerate=config.dataloader.force_regenerate,
         explicit_hydrogen=config.dataloader.explicit_hydrogen,
         max_nodes=config.benchmark.max_nodes,
+        force_regenerate=config.dataloader.force_regenerate,
+        rrwp_length=config.dataloader.rrwp_length,
     )
 
     val_dataset = MD17DynamicsDataset(
@@ -40,9 +41,10 @@ def create_datasets(
         split_dir="data/",
         molecule_type=molecule_type,
         md17_version=config.benchmark.md17_version,
-        force_regenerate=config.dataloader.force_regenerate,
         explicit_hydrogen=config.dataloader.explicit_hydrogen,
         max_nodes=config.benchmark.max_nodes,
+        force_regenerate=config.dataloader.force_regenerate,
+        rrwp_length=config.dataloader.rrwp_length,
     )
 
     test_dataset = MD17DynamicsDataset(
@@ -54,9 +56,10 @@ def create_datasets(
         split_dir="data/",
         molecule_type=molecule_type,
         md17_version=config.benchmark.md17_version,
-        force_regenerate=config.dataloader.force_regenerate,
         explicit_hydrogen=config.dataloader.explicit_hydrogen,
         max_nodes=config.benchmark.max_nodes,
+        force_regenerate=config.dataloader.force_regenerate,
+        rrwp_length=config.dataloader.rrwp_length,
     )
 
     return train_dataset, val_dataset, test_dataset
