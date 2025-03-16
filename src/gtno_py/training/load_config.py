@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 from gtno_py.training.config_options import (
     OptimizerType,
     SchedulerType,
@@ -13,6 +13,7 @@ from gtno_py.training.config_options import (
     MD17Version,
 )
 import tomllib
+import importlib.util
 
 
 class WandbConfig(BaseModel):
@@ -23,11 +24,50 @@ class BenchmarkConfig(BaseModel):
     compile: bool
     runs: int
     multitask: bool
+    md17_version: MD17Version
     molecule_type: MD17MoleculeType | RMD17MoleculeType | list[MD17MoleculeType | RMD17MoleculeType]
     max_nodes: int
-    md17_version: MD17Version
     delta_T: int
     log_weights: bool
+
+    @model_validator(mode="after")
+    def validate_multitask(self) -> "BenchmarkConfig":
+        multitask = self.multitask
+        molecule_type = self.molecule_type
+
+        if multitask and not isinstance(molecule_type, list):
+            raise ValueError("If 'multitask' is True, 'molecule_type' must be a list of molecules to train on.")
+
+        return self
+
+    @model_validator(mode="after")
+    def validate_md17_version(self) -> "BenchmarkConfig":
+        md17_version = self.md17_version
+        molecule_type = self.molecule_type
+
+        if md17_version == MD17Version.md17:
+            if isinstance(molecule_type, list):
+                for mol in molecule_type:
+                    if not isinstance(mol, MD17MoleculeType):
+                        raise ValueError(f"When using MD17 version, all molecules must be MD17MoleculeType, got {mol}")
+            elif not isinstance(molecule_type, MD17MoleculeType):
+                raise ValueError(f"When using MD17 version, molecule_type must be MD17MoleculeType, got {molecule_type}")
+        elif md17_version == MD17Version.rmd17:
+            if isinstance(molecule_type, list):
+                for mol in molecule_type:
+                    if not isinstance(mol, RMD17MoleculeType):
+                        raise ValueError(f"When using RMD17 version, all molecules must be RMD17MoleculeType, got {mol}")
+            elif not isinstance(molecule_type, RMD17MoleculeType):
+                raise ValueError(f"When using RMD17 version, molecule_type must be RMD17MoleculeType, got {molecule_type}")
+
+        return self
+
+    @model_validator(mode="after")
+    def validate_log_weights(self) -> "BenchmarkConfig":
+        if self.log_weights:
+            if importlib.util.find_spec("matplotlib") is None:
+                raise ValueError("If 'log_weights' is True, matplotlib must be installed.")
+        return self
 
 
 class DataloaderConfig(BaseModel):
@@ -64,18 +104,22 @@ class SchedulerConfig(BaseModel):
 
 class ModelConfig(BaseModel):
     model_type: ModelType
-    lifting_dim: int
-    num_timesteps: int
-    norm: NormType
-    activation: FFNActivation
-    heterogenous_attention_type: GraphHeterogenousAttentionType
-    use_rope: bool
-    use_spherical_harmonics: bool
-    value_residual_type: ValueResidualType
-    use_equivariant_lifting: bool
+    # Architecture parameters
     num_layers: int
     num_heads: int
+    lifting_dim: int
+    num_timesteps: int
+    # Attention parameters
+    heterogenous_attention_type: GraphHeterogenousAttentionType
+    use_rope: bool
     learnable_attention_denom: bool
+    # Feature parameters
+    use_spherical_harmonics: bool
+    use_equivariant_lifting: bool
+    # Layer parameters
+    norm: NormType
+    activation: FFNActivation
+    value_residual_type: ValueResidualType
 
 
 class Config(BaseModel):
