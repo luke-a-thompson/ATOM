@@ -24,7 +24,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         split_dir: str,
         md17_version: MD17Version,
         molecule_type: MD17MoleculeType | RMD17MoleculeType,
-        max_nodes: int,
+        max_nodes: int | None,
         explicit_hydrogen: bool = False,
         rrwp_length: int = 8,
         train_par: float = 0.1,
@@ -51,7 +51,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         self.partition: DataPartition = partition
         self.md17_version: MD17Version = md17_version
         self.molecule_type: MD17MoleculeType | RMD17MoleculeType = molecule_type
-        self.max_nodes: int = max_nodes
+        self.max_nodes: int | None = max_nodes
         self.delta_frame: int = delta_frame
         self.num_timesteps: int = num_timesteps
         self.max_samples: int = max_samples
@@ -453,11 +453,12 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
 
     def _pad_tensor(self, tensor: torch.Tensor) -> torch.Tensor:
         # tensor shape assumed to be (num_samples, N, d)
-        assert tensor.shape[-2] <= self.max_nodes, f"Tensor shape: {tensor.shape}, max_nodes: {self.max_nodes}"
-        pad_amt = self.max_nodes - tensor.shape[-2]
-        if pad_amt > 0:
-            # pad (last_dim_left, last_dim_right, node_dim_left, node_dim_right)
-            return F.pad(tensor, (0, 0, 0, pad_amt))
+        if self.max_nodes is not None:
+            assert tensor.shape[-2] <= self.max_nodes, f"Tensor shape: {tensor.shape}, max_nodes: {self.max_nodes}"
+            pad_amt = self.max_nodes - tensor.shape[-2]
+            if pad_amt > 0:
+                # pad (last_dim_left, last_dim_right, node_dim_left, node_dim_right)
+                return F.pad(tensor, (0, 0, 0, pad_amt))
         return tensor
 
     @override
@@ -494,7 +495,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
             "v_t": self.v_t[i],
         }
 
-        if self.num_nodes < self.max_nodes:
+        if self.max_nodes is not None:
             mask = torch.cat(
                 [
                     torch.ones(self.num_nodes, dtype=torch.bool),
@@ -526,7 +527,7 @@ class MD17DynamicsDataset(MD17Dataset):
         split_dir: str,
         md17_version: MD17Version,
         molecule_type: MD17MoleculeType | RMD17MoleculeType,
-        max_nodes: int,
+        max_nodes: int | None,
         explicit_hydrogen: bool = False,
         train_par: float = 0.1,
         val_par: float = 0.05,

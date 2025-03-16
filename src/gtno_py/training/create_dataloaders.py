@@ -3,11 +3,13 @@ from torch.utils.data import DataLoader
 from gtno_py.dataloaders.egno_dataloder import MD17DynamicsDataset
 from gtno_py.training.load_config import Config
 from gtno_py.training.config_options import MD17MoleculeType, RMD17MoleculeType, DataPartition
+from tqdm import tqdm
 
 
 def create_datasets(
     config: Config,
     molecule_type: MD17MoleculeType | RMD17MoleculeType,
+    max_nodes: int | None = None,
 ) -> tuple[MD17DynamicsDataset, MD17DynamicsDataset, MD17DynamicsDataset]:
     """Create train, test and validation Torch datasets.
 
@@ -28,7 +30,7 @@ def create_datasets(
         molecule_type=molecule_type,
         md17_version=config.benchmark.md17_version,
         explicit_hydrogen=config.dataloader.explicit_hydrogen,
-        max_nodes=config.benchmark.max_nodes,
+        max_nodes=max_nodes,
         force_regenerate=config.dataloader.force_regenerate,
         rrwp_length=config.dataloader.rrwp_length,
     )
@@ -43,7 +45,7 @@ def create_datasets(
         molecule_type=molecule_type,
         md17_version=config.benchmark.md17_version,
         explicit_hydrogen=config.dataloader.explicit_hydrogen,
-        max_nodes=config.benchmark.max_nodes,
+        max_nodes=max_nodes,
         force_regenerate=config.dataloader.force_regenerate,
         rrwp_length=config.dataloader.rrwp_length,
     )
@@ -58,7 +60,7 @@ def create_datasets(
         molecule_type=molecule_type,
         md17_version=config.benchmark.md17_version,
         explicit_hydrogen=config.dataloader.explicit_hydrogen,
-        max_nodes=config.benchmark.max_nodes,
+        max_nodes=max_nodes,
         force_regenerate=config.dataloader.force_regenerate,
         rrwp_length=config.dataloader.rrwp_length,
     )
@@ -79,7 +81,7 @@ def create_dataloaders_single(
     Returns:
         tuple[DataLoader[dict[str, torch.Tensor]], DataLoader[dict[str, torch.Tensor]], DataLoader[dict[str, torch.Tensor]]]: The train/val/test Torch dataloaders.
     """
-    train_dataset, val_dataset, test_dataset = create_datasets(config, molecule_type)
+    train_dataset, val_dataset, test_dataset = create_datasets(config, molecule_type, max_nodes=None)
 
     train_loader = DataLoader(
         train_dataset,
@@ -120,11 +122,17 @@ def create_dataloaders_multitask(
     Returns:
         tuple[DataLoader[dict[str, torch.Tensor]], DataLoader[dict[str, torch.Tensor]], DataLoader[dict[str, torch.Tensor]]]: The train/val/test Torch dataloaders.
     """
+    max_nodes = 0
+    for molecule_type in config.benchmark.molecule_type:
+        max_nodes_finder, _, _ = create_datasets(config, molecule_type, max_nodes=None)
+        max_nodes = max(max_nodes, max_nodes_finder.num_nodes)
+
+    tqdm.write(f"Inferred max_nodes across all molecules as: {max_nodes}")
     train_loaders = []
     val_loaders = []
     test_loaders = []
     for molecule_type in config.benchmark.molecule_type:
-        train_dataset, val_dataset, test_dataset = create_datasets(config, molecule_type)
+        train_dataset, val_dataset, test_dataset = create_datasets(config, molecule_type, max_nodes=max_nodes)
         train_loaders.append(train_dataset)
         val_loaders.append(val_dataset)
         test_loaders.append(test_dataset)

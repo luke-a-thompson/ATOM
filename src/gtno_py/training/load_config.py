@@ -26,7 +26,6 @@ class BenchmarkConfig(BaseModel):
     multitask: bool
     md17_version: MD17Version
     molecule_type: MD17MoleculeType | RMD17MoleculeType | list[MD17MoleculeType | RMD17MoleculeType]
-    max_nodes: int
     delta_T: int
     log_weights: bool
 
