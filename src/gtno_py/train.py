@@ -29,7 +29,7 @@ project_name = input("Enter project name: ")
 _ = wandb.init(project="GTNO", name=project_name, config=dict(config), mode="disabled" if not config.wandb.use_wandb else "online")
 
 # Set device and seeds
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device(config.training.device)
 set_seeds(config.training.seed)
 
 
