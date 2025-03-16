@@ -165,6 +165,7 @@ class GTNO(nn.Module):
 
         assert num_timesteps > 1, f"num_timesteps must be greater than 1. Got {num_timesteps}"
         self.num_timesteps = num_timesteps
+        self.use_equivariant_lifting = use_equivariant_lifting
 
         match use_equivariant_lifting:
             case True:
@@ -227,7 +228,13 @@ class GTNO(nn.Module):
         # Lift the inputs
         lifted_x_0: torch.Tensor = self.lifting_layers["x_0"](x_0)
         lifted_v_0: torch.Tensor = self.lifting_layers["v_0"](v_0)
-        lifted_concat_features: torch.Tensor = self.lifting_layers["concatenated_features"](concat_features[..., :4], concat_features[..., 4:])
+        match self.use_equivariant_lifting:
+            case True:
+                lifted_concat_features: torch.Tensor = self.lifting_layers["concatenated_features"](concat_features[..., :4], concat_features[..., 4:])
+            case False:
+                lifted_concat_features: torch.Tensor = self.lifting_layers["concatenated_features"](concat_features)
+            case _:
+                raise ValueError(f"Invalid equivariant lifting type: {self.use_equivariant_lifting}, select from one of {bool.__members__.keys()}")
 
         initial_v: torch.Tensor | None = None  # Value residual: Starts as none, becomes x_0 the first layer
         for layer in self.transformer_blocks:
