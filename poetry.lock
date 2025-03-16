@@ -283,13 +283,13 @@ dev = ["pre-commit", "pytest"]
 
 [[package]]
 name = "filelock"
-version = "3.17.0"
+version = "3.18.0"
 description = "A platform independent file lock."
 optional = false
 python-versions = ">=3.9"
 files = [
-    {file = "filelock-3.17.0-py3-none-any.whl", hash = "sha256:533dc2f7ba78dc2f0f531fc6c4940addf7b70a481e269a5a3b93be94ffbe8338"},
-    {file = "filelock-3.17.0.tar.gz", hash = "sha256:ee4e77401ef576ebb38cd7f13b9b28893194acc20a8e68e18730ba9c0e54660e"},
+    {file = "filelock-3.18.0-py3-none-any.whl", hash = "sha256:c401f4f8377c4464e6db25fff06205fd89bdd83b65eb0488ed1b160f780e21de"},
+    {file = "filelock-3.18.0.tar.gz", hash = "sha256:adbc88eabb99d2fec8c9c1b229b171f18afa655400173ddc653d5d01501fb9f2"},
 ]
 
 [package.extras]
@@ -1917,26 +1917,34 @@ dev = ["hypothesis (>=6.70.0)", "pytest (>=7.1.0)"]
 
 [[package]]
 name = "tensordict"
-version = "0.6.2"
+version = "0.7.2"
 description = ""
 optional = false
 python-versions = "*"
 files = [
-    {file = "tensordict-0.6.2-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:a00aea0dd7d38026b7e4721d3e4c9759fed99829d8f3d337f4f5174c42138c87"},
-    {file = "tensordict-0.6.2-cp310-cp310-manylinux1_x86_64.whl", hash = "sha256:24a505926cca17401411b9ed7377013c57dd49d579f350ac2e002d701a7f6cfd"},
-    {file = "tensordict-0.6.2-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:e5132b369ac9e84eb0e9e28d1954f6d1370e06927ab3c502e02a6d35a1ed629a"},
-    {file = "tensordict-0.6.2-cp311-cp311-manylinux1_x86_64.whl", hash = "sha256:3e036ae56532b6308a9e95de29db97f1ec9b83f569c716a602d7d48dc0b47ef5"},
-    {file = "tensordict-0.6.2-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:529515ffcb0c6ab5d1c0c85798defe8972e5390412c356c79b87f4073e48b537"},
-    {file = "tensordict-0.6.2-cp312-cp312-manylinux1_x86_64.whl", hash = "sha256:6ce86d8f9ed53d1c893e0064729a799eb06371902e2d5a2f3c83c6af010cf3c2"},
-    {file = "tensordict-0.6.2-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:1bfb1d41877fc19b709a7ad20c3b36f19224e5013263989de8e994bd98559fda"},
-    {file = "tensordict-0.6.2-cp39-cp39-manylinux1_x86_64.whl", hash = "sha256:490371099494cdb3250b77d64e5ea63da8c3715a612ffab03e5f9a791161bffd"},
+    {file = "tensordict-0.7.2-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:e651ea0288f8c1651cb0cb26618afabe2a995c39949ecede2077e0ff045165fb"},
+    {file = "tensordict-0.7.2-cp310-cp310-manylinux1_x86_64.whl", hash = "sha256:1ced5cb1104a92df0b88a92f5828e9f395b7dddc6cbc01d839ca3f8635338e20"},
+    {file = "tensordict-0.7.2-cp310-cp310-win_amd64.whl", hash = "sha256:2991f0659bc60666e16b3f1075f4e164f87308e930b865e79f230c597d7ba3fb"},
+    {file = "tensordict-0.7.2-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:14c9ad93eb0330e162e51e053ae6ffebeb06f9de63263040da37fc3c2e580236"},
+    {file = "tensordict-0.7.2-cp311-cp311-manylinux1_x86_64.whl", hash = "sha256:b3ee17b965bbfab6d1e1ad619cefec0bf7d20c9c933bc82f320091a8ef43c457"},
+    {file = "tensordict-0.7.2-cp311-cp311-win_amd64.whl", hash = "sha256:db287eac7943d09e6146be4ba8018b868adddeda63a9474c7483caa6b23b997f"},
+    {file = "tensordict-0.7.2-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:13b338995b76079dc797f0d21c2d34cb3fa32201e6de41aefcdcecf9c2e09395"},
+    {file = "tensordict-0.7.2-cp312-cp312-manylinux1_x86_64.whl", hash = "sha256:dad90ef545aa613df0706dc4bdb8d05fd2fc15c4b1a2f461ebf12bb3ec4b3381"},
+    {file = "tensordict-0.7.2-cp312-cp312-win_amd64.whl", hash = "sha256:bc2148a21286db6f42cbc308b59d552f90338cb3d0702b3ee4f294c0321146e3"},
+    {file = "tensordict-0.7.2-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:c8d31cce0ead74bb5144b45f6da69458f63b5f03ebf1ca751740a9ff16f5e4cb"},
+    {file = "tensordict-0.7.2-cp313-cp313-manylinux1_x86_64.whl", hash = "sha256:42b190185fbc1174a8ec1512fb9b5b18752d8f597332dcd2b4fe712808d38f47"},
+    {file = "tensordict-0.7.2-cp313-cp313-win_amd64.whl", hash = "sha256:e329b1077d7e4f48745caeb6fed39256651065b47be845753c1d3cb71ed8f2b9"},
+    {file = "tensordict-0.7.2-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:e7dd5026328e90bf2f8954fbd412fac2f9c6e0aa68b77c1678f000fe4d480b13"},
+    {file = "tensordict-0.7.2-cp39-cp39-manylinux1_x86_64.whl", hash = "sha256:d42d92e6fcc9a9977229f29c0235b4b64c54f5035f60d53f144c243f930f4409"},
+    {file = "tensordict-0.7.2-cp39-cp39-win_amd64.whl", hash = "sha256:282300e97887611f1f7ef806db3ada7a50ca62c1fe6aedd6ebe9b441021c6b68"},
 ]
 
 [package.dependencies]
 cloudpickle = "*"
 numpy = "*"
 orjson = "*"
-torch = ">=2.5.0"
+packaging = "*"
+torch = ">=2.6.0"
 
 [package.extras]
 checkpointing = ["torchsnapshot-nightly"]
@@ -2176,4 +2184,4 @@ workspaces = ["wandb-workspaces"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "66d6f81393de28240cb5e29e35df50b1531ec220741239af2e0fece206f3064d"
+content-hash = "8e1a7a84fb678e9aecf04a1a461472d5f36cf27c1454c3d3b6c31af177a2d663"

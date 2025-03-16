@@ -1,9 +1,11 @@
+from typing import Any
+from tensordict._td import TensorDict
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 import torch
 import torch.nn.functional as F
-import tensordict
+from tensordict import TensorDict
 from gtno_py.utils import add_brownian_noise
 from gtno_py.training.load_config import Config
 
@@ -31,10 +33,11 @@ def train_epoch(
     total_loss = 0.0
 
     for batch in dataloader:
-        batch = tensordict.from_dict(batch).to(config.training.device)
-        assert batch["x_0"].shape[1] == (config.model.num_timesteps), batch["x_0"].shape
+        batch = TensorDict.from_dict(batch, device=torch.device(config.training.device), auto_batch_size=True)
+        assert batch["x_0"].shape[1] == (config.model.num_timesteps), f"{batch['x_0'].shape[1]} != {config.model.num_timesteps}"
         target_coords: torch.Tensor = batch.pop("x_t")
         _ = batch.pop("v_t")
+        mask: torch.Tensor | None = batch.get("padded_nodes_mask", None)
 
         if config.training.learnable_noise_std:
             batch["x_0"], batch["v_0"], batch["concatenated_features"] = add_brownian_noise(
@@ -65,7 +68,10 @@ def train_epoch(
             loss_raw = F.mse_loss(pred_coords, target_coords, reduction="none")
             # Mask is [B,T,N,H]
             # Apply mask and compute average loss over valid nodes.
-            loss = (loss_raw * batch["padded_nodes_mask"]).sum() / batch["padded_nodes_mask"].sum()
+            if mask is not None:
+                loss = (loss_raw * mask).sum() / mask.sum()
+            else:
+                loss = loss_raw.mean()
 
         total_loss += loss.item() * batch.batch_size[0]
 
@@ -100,9 +106,10 @@ def eval_epoch(
 
     with torch.no_grad():
         for batch in loader:
-            batch = tensordict.from_dict(batch).to(config.training.device)
+            batch = TensorDict.from_dict(batch, device=torch.device(config.training.device), auto_batch_size=True)
             target_coords = batch.pop("x_t")
             _ = batch.pop("v_t")
+            mask: torch.Tensor | None = batch.get("padded_nodes_mask", None)
 
             pred_coords: torch.Tensor = model(batch)
 
@@ -121,11 +128,17 @@ def eval_epoch(
             else:
                 # For the full coordinates loss (shape: [batch, 8, 20, 4])
                 loss_raw_s2t = F.mse_loss(pred_coords, target_coords, reduction="none")
-                masked_s2t_loss = (loss_raw_s2t * batch["padded_nodes_mask"]).sum() / batch["padded_nodes_mask"].sum()
+                if mask is not None:
+                    masked_s2t_loss = (loss_raw_s2t * mask).sum() / mask.sum()
+                else:
+                    masked_s2t_loss = loss_raw_s2t.mean()
 
                 # For the last slice loss (shape: [batch, 20, 4])
                 loss_raw_s2s = F.mse_loss(pred_coords[:, -1, :, :], target_coords[:, -1, :, :], reduction="none")
-                masked_s2s_loss = (loss_raw_s2s * batch["padded_nodes_mask"][:, -1, :]).sum() / batch["padded_nodes_mask"][:, -1, :].sum()
+                if mask is not None:
+                    masked_s2s_loss = (loss_raw_s2s * mask[:, -1, :]).sum() / mask[:, -1, :].sum()
+                else:
+                    masked_s2s_loss = loss_raw_s2s.mean()
 
                 total_s2t_loss += masked_s2t_loss.item() * batch.batch_size[0]
                 total_s2s_loss += masked_s2s_loss.item() * batch.batch_size[0]
