@@ -38,6 +38,7 @@ class TestMD17DynamicsDataset:
             data_dir="data/",
             split_dir="data/",
             molecule_type=MD17MoleculeType.aspirin,
+            max_nodes=13,
         )
 
         train_loader = DataLoader(
@@ -94,6 +95,7 @@ class TestMD17DynamicsDataset:
             data_dir="data/",
             split_dir="data/",
             molecule_type=MD17MoleculeType.benzene,
+            max_nodes=6,
         )
 
         train_loader = DataLoader(
@@ -134,6 +136,7 @@ class TestMD17DynamicsDataset:
             md17_version=MD17Version.md17,
             molecule_type=MD17MoleculeType.aspirin,
             force_regenerate=True,
+            max_nodes=13,
         )
 
         # Create a simple input tensor with shape (max_samples, 10, 4)
@@ -161,8 +164,8 @@ class TestMD17DynamicsDataset:
 
         # Expected output: replicate input_tensor along a new time dimension, resulting in shape (max_samples*num_timesteps, 10, 4)
         # Since num_timesteps=2 and max_samples=1, expected shape is (2, 10, 4) with both time slices identical.
-        expected_output_tensor = torch.cat([input_tensor, input_tensor], dim=0)
-        assert expected_output_tensor.shape == (num_timesteps, 10, 4), f"Expected tensor shape {expected_output_tensor.shape} != (2, 10, 4)"
+        expected_output_tensor = torch.cat([input_tensor, input_tensor], dim=0).unsqueeze(0)
+        assert expected_output_tensor.shape == (1, num_timesteps, 10, 4), f"Expected tensor shape {expected_output_tensor.shape} != (1, 2, 10, 4)"
 
         # Use the dataset's _replicate_tensor method to perform replication.
         output_tensor = dataset._replicate_tensor(input_tensor)
@@ -172,3 +175,87 @@ class TestMD17DynamicsDataset:
         assert torch.equal(output_tensor, expected_output_tensor), f"Output tensor:\n{output_tensor}\nExpected tensor:\n{expected_output_tensor}"
 
         print("test_replicate_tensor passed!")
+
+    def test_pad_tensor(self):
+        device = torch.device("cpu")
+        num_timesteps = 2
+        max_samples = 1
+        max_nodes = 15  # Set max_nodes larger than actual nodes
+
+        # Instantiate a real dataset
+        dataset = MD17DynamicsDataset(
+            partition=DataPartition.train,
+            max_samples=max_samples,
+            delta_frame=3000,
+            num_timesteps=num_timesteps,
+            data_dir="data/",
+            split_dir="data/",
+            md17_version=MD17Version.md17,
+            molecule_type=MD17MoleculeType.aspirin,
+            force_regenerate=True,
+            max_nodes=max_nodes,
+        )
+
+        # Create a test tensor with shape (batch_size, num_nodes, feature_dim)
+        num_nodes = 10  # Smaller than max_nodes
+        feature_dim = 4
+        input_tensor = torch.ones((max_samples, num_nodes, feature_dim), dtype=torch.float32)
+
+        # Apply padding
+        padded_tensor = dataset._pad_tensor(input_tensor)
+
+        # Verify shape is correct
+        expected_shape = (max_samples, max_nodes, feature_dim)
+        assert padded_tensor.shape == expected_shape, f"Padded tensor shape {padded_tensor.shape} != Expected shape {expected_shape}"
+
+        # Verify original values are preserved
+        assert torch.all(padded_tensor[:, :num_nodes, :] == 1.0), "Original values were modified during padding"
+
+        # Verify padded values are zeros
+        assert torch.all(padded_tensor[:, num_nodes:, :] == 0.0), "Padded values are not zeros"
+
+        print("test_pad_tensor passed!")
+
+    def test_node_masking(self):
+        """
+        Test that the node masking correctly identifies real vs. padded nodes in the dataset.
+        """
+        device = torch.device("cpu")
+        num_timesteps = 3
+        max_samples = 2
+        max_nodes = 12  # Set max_nodes larger than actual nodes
+
+        # Instantiate a dataset with a molecule that has fewer atoms than max_nodes
+        dataset = MD17DynamicsDataset(
+            partition=DataPartition.train,
+            max_samples=max_samples,
+            delta_frame=3000,
+            num_timesteps=num_timesteps,
+            data_dir="data/",
+            split_dir="data/",
+            md17_version=MD17Version.md17,
+            molecule_type=MD17MoleculeType.benzene,  # Benzene has 6 carbon atoms (or 12 with hydrogens)
+            force_regenerate=False,
+            max_nodes=max_nodes,
+        )
+
+        # Get a sample from the dataset
+        sample = dataset[0]
+
+        # Check that the mask has the correct shape: (num_timesteps, max_nodes, 1)
+        expected_mask_shape = (num_timesteps, max_nodes, 1)
+        assert sample["padded_nodes_mask"].shape == expected_mask_shape, f"Mask shape {sample['padded_nodes_mask'].shape} != Expected shape {expected_mask_shape}"
+
+        # Check that the number of True values in the mask equals the actual number of nodes
+        actual_nodes = dataset.num_nodes
+        assert actual_nodes == 6, f"Actual number of nodes {actual_nodes} != Expected number of nodes 6"
+        true_count = sample["padded_nodes_mask"].sum().item()
+        expected_true_count = actual_nodes * num_timesteps  # True for each real node across all timesteps
+        assert true_count == expected_true_count, f"True count in mask {true_count} != Expected count {expected_true_count}"
+
+        # Verify that the mask is True for real nodes and False for padded nodes
+        for t in range(num_timesteps):
+            assert torch.all(sample["padded_nodes_mask"][t, :actual_nodes, 0] == True), f"Real nodes not correctly masked as True at timestep {t}"
+            assert torch.all(sample["padded_nodes_mask"][t, actual_nodes:, 0] == False), f"Padded nodes not correctly masked as False at timestep {t}"
+
+        print("test_node_masking passed!")
