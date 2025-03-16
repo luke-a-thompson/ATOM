@@ -79,6 +79,14 @@ class DataloaderConfig(BaseModel):
     pin_memory: bool
     force_regenerate: bool
 
+    @model_validator(mode="after")
+    def validate_explicit_hydrogen_gradients(self) -> "DataloaderConfig":
+        if self.explicit_hydrogen_gradients and not self.explicit_hydrogen:
+            raise ValueError(
+                "If 'explicit_hydrogen_gradients' is True, 'explicit_hydrogen' must also be True. You cannot calculate the gradients for hydrogen atoms without them being present in the graph."
+            )
+        return self
+
 
 class TrainingConfig(BaseModel):
     device: DeviceType
