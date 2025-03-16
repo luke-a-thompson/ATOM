@@ -130,6 +130,8 @@ def benchmark(
         model = torch.compile(initialize_model(config).to(device), dynamic=True)
     else:
         model = initialize_model(config).to(device)
+    tqdm.write(f"Total params: {sum(p.numel() for p in model.parameters()):,}")
+    tqdm.write(f"Total trainable params: {sum(p.numel() for p in model.parameters() if p.requires_grad):,}")
 
     molecule_progress_bar = tqdm(molecules, leave=False, unit="molecule", position=0)
     for molecule in molecule_progress_bar:
