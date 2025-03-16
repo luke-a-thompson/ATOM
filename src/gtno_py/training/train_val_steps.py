@@ -69,7 +69,8 @@ def train_epoch(
             # Mask is [B,T,N,H]
             # Apply mask and compute average loss over valid nodes.
             if mask is not None:
-                loss = (loss_raw * mask).sum() / mask.sum()
+                mask_expanded = mask.expand_as(loss_raw)
+                loss = (loss_raw * mask_expanded).sum() / mask_expanded.sum()
             else:
                 loss = loss_raw.mean()
 
@@ -129,18 +130,21 @@ def eval_epoch(
                 # For the full coordinates loss (shape: [batch, 8, 20, 4])
                 loss_raw_s2t = F.mse_loss(pred_coords, target_coords, reduction="none")
                 if mask is not None:
-                    masked_s2t_loss = (loss_raw_s2t * mask).sum() / mask.sum()
+                    mask_expanded_s2t = mask.expand_as(loss_raw_s2t)
+                    s2t_loss = (loss_raw_s2t * mask_expanded_s2t).sum() / mask_expanded_s2t.sum()
                 else:
-                    masked_s2t_loss = loss_raw_s2t.mean()
+                    s2t_loss = loss_raw_s2t.mean()
 
                 # For the last slice loss (shape: [batch, 20, 4])
                 loss_raw_s2s = F.mse_loss(pred_coords[:, -1, :, :], target_coords[:, -1, :, :], reduction="none")
                 if mask is not None:
-                    masked_s2s_loss = (loss_raw_s2s * mask[:, -1, :]).sum() / mask[:, -1, :].sum()
+                    mask_last = mask[:, -1, :]  # Shape: [B, N, 1]
+                    mask_last = mask_last.expand_as(loss_raw_s2s)  # Now shape: [B, N, 3]
+                    s2s_loss = (loss_raw_s2s * mask_last).sum() / mask_last.sum()
                 else:
-                    masked_s2s_loss = loss_raw_s2s.mean()
+                    s2s_loss = loss_raw_s2s.mean()
 
-                total_s2t_loss += masked_s2t_loss.item() * batch.batch_size[0]
-                total_s2s_loss += masked_s2s_loss.item() * batch.batch_size[0]
+                total_s2t_loss += s2t_loss.item() * batch.batch_size[0]
+                total_s2s_loss += s2s_loss.item() * batch.batch_size[0]
 
     return total_s2t_loss / len(loader.dataset), total_s2s_loss / len(loader.dataset)
