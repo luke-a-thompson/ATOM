@@ -167,8 +167,6 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         self.edge_attr, self.edges = self._build_edge_attributes(one_hop_adjacency, two_hop_adjacency, z, x_0, v_0)
         if self.rrwp_length > 0:
             self.rrwp: torch.Tensor = self.calculate_rrwp(one_hop_adjacency, self.rrwp_length)
-        else:
-            self.rrwp: torch.Tensor = torch.zeros(self.max_samples, self.num_nodes, 0)
 
         self.x_0: torch.Tensor = torch.cat([x_0, torch.norm(x_0, dim=-1, keepdim=True)], dim=-1)
         self.v_0: torch.Tensor = torch.cat([v_0, torch.norm(v_0, dim=-1, keepdim=True)], dim=-1)
@@ -183,12 +181,17 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         self.concatenated_features = self._pad_tensor(self.concatenated_features)
         self.mole_idx = self._pad_tensor(self.mole_idx)
 
-        self.mask: torch.Tensor = torch.cat(
-            [
-                torch.ones(self.num_nodes, dtype=torch.bool),
-                torch.zeros(self.max_nodes - self.num_nodes, dtype=torch.bool),
-            ]
-        ).unsqueeze(0).unsqueeze(-1)
+        self.mask: torch.Tensor = (
+            torch.cat(
+                [
+                    torch.ones(self.num_nodes, dtype=torch.bool),
+                    torch.zeros(self.max_nodes - self.num_nodes, dtype=torch.bool),
+                ],
+                dim=0,
+            )
+            .expand(self.num_timesteps, -1)
+            .unsqueeze(-1)
+        )
 
         if x_t is not None:
             self.x_t: torch.Tensor = torch.Tensor(x_t)
@@ -227,19 +230,20 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         v_0_xyz = self.v_0[..., :3]
         x_0_norm = self.x_0[..., 3:]
         v_0_norm = self.v_0[..., 3:]
-        rrwp = self.rrwp.unsqueeze(0).expand(self.max_samples, -1, -1)  # Expand from [1, 6, 8] to [max_samples, 6, 8]
 
-        concatenated_features = torch.cat(
-            [
-                x_0_xyz,
-                x_0_norm,
-                v_0_xyz,
-                v_0_norm,
-                self.z_0,
-                rrwp,
-            ],
-            dim=-1,
-        )
+        features_to_concat = [
+            x_0_xyz,
+            x_0_norm,
+            v_0_xyz,
+            v_0_norm,
+            self.z_0,
+        ]
+
+        if self.rrwp_length > 0:
+            rrwp = self.rrwp.unsqueeze(0).expand(self.max_samples, -1, -1)  # Expand from [1, 6, 8] to [max_samples, 6, 8]
+            features_to_concat.append(rrwp)
+
+        concatenated_features = torch.cat(features_to_concat, dim=-1)
         return concatenated_features
 
     def _replicate_tensor(self, tensor: torch.Tensor) -> torch.Tensor:
@@ -563,6 +567,7 @@ class MD17DynamicsDataset(MD17Dataset):
         val_par: float = 0.05,
         test_par: float = 0.05,
         num_timesteps: int = 8,  # Number of timesteps for dynamics
+        rrwp_length: int = 8,
         seed: int = 100,
         force_regenerate: bool = False,
     ):
@@ -582,6 +587,7 @@ class MD17DynamicsDataset(MD17Dataset):
             seed=seed,
             force_regenerate=force_regenerate,
             num_timesteps=num_timesteps,  # Pass num_timesteps to base class for replication
+            rrwp_length=rrwp_length,
         )
         self.x_t, self.v_t = self.get_dynamic_target_frames()
 
