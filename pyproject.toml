@@ -21,13 +21,20 @@ pytorch_optimizer = "^3.3.4"
 pydantic = "^2.10.6"
 wandb = "0.18.3"
 tqdm = "^4.67.1"
+
 matplotlib = "^3.8.0"
 usyd-colors = "^0.1.0"
+pubchempy = "^1.0.4"
+rdkit = "^2024.9.6"
 
 [tool.poetry.dev-dependencies]
 pytest = "^8.3.4"
 types-tqdm = "^4.67.0.20241119"
 pandas-stubs = "^2.2.3.241126"
+
+[tool.poetry.extras]
+visualization = ["matplotlib", "usyd-colors"]
+chemical_sieve = ["pubchempy", "rdkit"]
 
 [tool.black]
 line-length = 150

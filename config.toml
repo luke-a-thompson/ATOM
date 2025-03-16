@@ -3,24 +3,32 @@ use_wandb = false
 
 [benchmark]
 runs = 1
-compile = true
-molecule_type = "toluene"
-md17_version = "rmd17"
+compile = false
+# multitask = false
+# molecule_type = "aspirin"
+multitask = true
+molecule_type = ["aspirin", "benzene"]
+md17_version = "md17"
 delta_T = 3000
-# delta_T = 30000
-
-[training]
-seed = 42
-batch_size = 100
-epochs = 1000
-max_grad_norm = 1.0
-learnable_noise_std = false
-brownian_noise_std = 0.1
+log_weights = false
 
 [dataloader]
+explicit_hydrogen = false
+explicit_hydrogen_gradients = false
+rrwp_length = 0  # 0 for no RRWPs
 persistent_workers = true
 num_workers = 4
 pin_memory = true
+force_regenerate = true
+
+[training]
+device = "cuda"
+seed = 42
+batch_size = 50
+epochs = 1000
+max_grad_norm = 1.0
+learnable_noise_std = true
+brownian_noise_std = 0.2
 
 [optimizer]
 type = "adamw"
@@ -33,15 +41,20 @@ adam_eps = 1e-10
 type = "none"
 
 [model]
-model_type = "gtno"
-lifting_dim = 128
-num_timesteps = 8
-norm = "rms"
-activation = "swiglu"
-heterogenous_attention_type = "GHCA"
-use_rope = true
-use_spherical_harmonics = false
-value_residual_type = "learnable"
-use_equivariant_lifting = true
+model_type = "GTNO"
+# Architecture parameters
 num_layers = 5
 num_heads = 8
+lifting_dim = 128
+num_timesteps = 8
+# Attention parameters
+heterogenous_attention_type = "GHCA"
+use_rope = true
+learnable_attention_denom = false
+# Feature parameters
+use_spherical_harmonics = false
+use_equivariant_lifting = true
+# Layer parameters
+norm = "rms"
+activation = "swiglu"
+value_residual_type = "learnable"

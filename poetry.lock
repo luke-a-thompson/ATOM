@@ -1352,6 +1352,19 @@ dev = ["abi3audit", "black (==24.10.0)", "check-manifest", "coverage", "packagin
 test = ["pytest", "pytest-xdist", "setuptools"]
 
 [[package]]
+name = "pubchempy"
+version = "1.0.4"
+description = "A simple Python wrapper around the PubChem PUG REST API."
+optional = false
+python-versions = "*"
+files = [
+    {file = "PubChemPy-1.0.4.tar.gz", hash = "sha256:24e9dc2fc90ab153b2764bf805e510b1410700884faf0510a9e7cf0d61d8ed0e"},
+]
+
+[package.extras]
+pandas = ["pandas"]
+
+[[package]]
 name = "pydantic"
 version = "2.10.6"
 description = "Data validation using Python type hints"
@@ -1533,13 +1546,13 @@ six = ">=1.5"
 
 [[package]]
 name = "pytorch-optimizer"
-version = "3.4.2"
+version = "3.5.0"
 description = "optimizer & lr scheduler & objective function collections in PyTorch"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "pytorch_optimizer-3.4.2-py3-none-any.whl", hash = "sha256:98bdb354ee62a5e7ca53285463b600cfb968ad318b8c8bc395f194e0bf478d29"},
-    {file = "pytorch_optimizer-3.4.2.tar.gz", hash = "sha256:a4f3fa15b6dff2d21950f2f3115b063ee57233be3c654dc46ef9ff8a11573f4d"},
+    {file = "pytorch_optimizer-3.5.0-py3-none-any.whl", hash = "sha256:5b244b24a7da82de56409e2e6f5d6a310cf341af601b5bb91283afff80572076"},
+    {file = "pytorch_optimizer-3.5.0.tar.gz", hash = "sha256:8ff34ff4d09a3149a53e2133a1b5a2bdb84358574003d3bc393eae7de40513b7"},
 ]
 
 [package.dependencies]
@@ -1618,6 +1631,44 @@ files = [
     {file = "PyYAML-6.0.2-cp39-cp39-win_amd64.whl", hash = "sha256:39693e1f8320ae4f43943590b49779ffb98acb81f788220ea932a6b6c51004d8"},
     {file = "pyyaml-6.0.2.tar.gz", hash = "sha256:d584d9ec91ad65861cc08d42e834324ef890a082e591037abe114850ff7bbc3e"},
 ]
+
+[[package]]
+name = "rdkit"
+version = "2024.9.6"
+description = "A collection of chemoinformatics and machine-learning software written in C++ and Python"
+optional = false
+python-versions = "*"
+files = [
+    {file = "rdkit-2024.9.6-cp310-cp310-macosx_10_15_x86_64.whl", hash = "sha256:015c7200fffefdae53b59a4658e0323e2d16ac16b2b00174188f769a0cabe52a"},
+    {file = "rdkit-2024.9.6-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:ffe05be4354178b48bfd60ea40c847e6364e75e71893bd2c659da8819c8afab6"},
+    {file = "rdkit-2024.9.6-cp310-cp310-manylinux_2_28_aarch64.whl", hash = "sha256:6e6bc9b6edc3e5efa88f796d8a86192b72b5d54ce9488f8ccb043e6b74308b79"},
+    {file = "rdkit-2024.9.6-cp310-cp310-manylinux_2_28_x86_64.whl", hash = "sha256:2b5573055c8defbad7ce25db10786a56e0699faf3282daea21100c59f7af7298"},
+    {file = "rdkit-2024.9.6-cp310-cp310-win_amd64.whl", hash = "sha256:9d64c865de57c15bbe7726f20a967016f2ac04f738889c83210091be944b512b"},
+    {file = "rdkit-2024.9.6-cp311-cp311-macosx_10_15_x86_64.whl", hash = "sha256:bbb3fe860e5ccb8debad592ded991b2aca611c997640fc6e68b0f41beb648639"},
+    {file = "rdkit-2024.9.6-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:a28971024ba0300f7c566874212b8c2c8f7db984e85418eaceec5cb739bcab1d"},
+    {file = "rdkit-2024.9.6-cp311-cp311-manylinux_2_28_aarch64.whl", hash = "sha256:6e236da74308b19f695ed259b12b75e100e56593333f2b47cff2420e9746e571"},
+    {file = "rdkit-2024.9.6-cp311-cp311-manylinux_2_28_x86_64.whl", hash = "sha256:7b473a715711e7f1f747173fc18a16b02d5952eadbeedb09d05d1f0a6879c282"},
+    {file = "rdkit-2024.9.6-cp311-cp311-win_amd64.whl", hash = "sha256:f302e8a347debe24ffeeb303b8b031ef2e61265872a6450f46aa819b25f5c684"},
+    {file = "rdkit-2024.9.6-cp312-cp312-macosx_10_15_x86_64.whl", hash = "sha256:f57a2ad6ceff54917586f47a01ecbe43bbdf4a6f00defd746b500228752ccf84"},
+    {file = "rdkit-2024.9.6-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:4f3931ff192aeee29ce41cf7c30650883fc10f1504af2a9dcc67d8554a0779d3"},
+    {file = "rdkit-2024.9.6-cp312-cp312-manylinux_2_28_aarch64.whl", hash = "sha256:97661c84a9dc10797d197db1024757676e0ca29a306d5eec289bbfdf4c53c80c"},
+    {file = "rdkit-2024.9.6-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:82e91020e700979f6fc94a4722b47d770912d54cd9accb1c85961c57550cb945"},
+    {file = "rdkit-2024.9.6-cp312-cp312-win_amd64.whl", hash = "sha256:995df4e0b09a866fc628b6c9f1c10dca32726964ff1c7506cbf7975af0a9ba60"},
+    {file = "rdkit-2024.9.6-cp313-cp313-macosx_10_15_x86_64.whl", hash = "sha256:5001786e1f06749fa4cf7d6a9d23b36afc6d9b028d500777a3861c8a4d91238b"},
+    {file = "rdkit-2024.9.6-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:b2578458414600beb3a5691fc900e0640da3c571b30ed3dc76381cfe5caadc9e"},
+    {file = "rdkit-2024.9.6-cp313-cp313-manylinux_2_28_aarch64.whl", hash = "sha256:4fbf4d680a1070a15f6d9c7cf93218bed87c7110e4e7a467d1b449e430e20ff5"},
+    {file = "rdkit-2024.9.6-cp313-cp313-manylinux_2_28_x86_64.whl", hash = "sha256:4b0efe61d9eee664dc19203478e3312e596be0d200c3bbd4ef1b584aef7146d3"},
+    {file = "rdkit-2024.9.6-cp313-cp313-win_amd64.whl", hash = "sha256:6c740c543b55f99d8d3bdea92c68617ef5669bcf2cc1652752a65f156f26dbc0"},
+    {file = "rdkit-2024.9.6-cp39-cp39-macosx_10_15_x86_64.whl", hash = "sha256:274a64dacd35ef7e1c664d3a0488cd048018265da7a8d3ea447a83c6039c1907"},
+    {file = "rdkit-2024.9.6-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:a5342038c985c3628709922b752682590348af1e7117a88ba79540fc0d583dc0"},
+    {file = "rdkit-2024.9.6-cp39-cp39-manylinux_2_28_aarch64.whl", hash = "sha256:214057a99ee0ccbd3d217cd32add691665814c0bb18f05c79d3bfab98d05d22e"},
+    {file = "rdkit-2024.9.6-cp39-cp39-manylinux_2_28_x86_64.whl", hash = "sha256:159c0ac4b8edf0568619ba78af0cefe9eb5755328768e18ef52d26e9e5335311"},
+    {file = "rdkit-2024.9.6-cp39-cp39-win_amd64.whl", hash = "sha256:c11ad2cb103cd3607a2de3fd49cdbe38886dad0319accb7d51d71d59bc13e8fd"},
+]
+
+[package.dependencies]
+numpy = "*"
+Pillow = "*"
 
 [[package]]
 name = "requests"
@@ -2181,7 +2232,11 @@ perf = ["orjson"]
 sweeps = ["sweeps (>=0.2.0)"]
 workspaces = ["wandb-workspaces"]
 
+[extras]
+chemical-sieve = ["pubchempy", "rdkit"]
+visualization = ["matplotlib", "usyd-colors"]
+
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "8e1a7a84fb678e9aecf04a1a461472d5f36cf27c1454c3d3b6c31af177a2d663"
+content-hash = "510552b56ba52b2fbefc9e728acac6a703255f586d8a35f0059ba29add99b6ec"
