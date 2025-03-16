@@ -110,7 +110,7 @@ class GTNOBlock(nn.Module):
         v_0: torch.Tensor,
         concatenated_features: torch.Tensor,
         q_data: torch.Tensor,
-        mask: torch.Tensor | None = None,
+        mask: torch.Tensor | None,
         initial_v: torch.Tensor | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         concatenated_features = self.pre_norm(concatenated_features)
@@ -118,7 +118,7 @@ class GTNOBlock(nn.Module):
         v_0 = self.pre_norm(v_0)
 
         hetero_attended_nodes: torch.Tensor = x_0 + self.heterogenous_attention(x_0, v_0, concatenated_features, q_data=q_data, mask=mask)
-        x_0 = hetero_attended_nodes + self.ffn(hetero_attended_nodes)
+        x_0 = hetero_attended_nodes + self.ffn(hetero_attended_nodes, mask)
 
         if self.value_residual_type == ValueResidualType.LEARNABLE:
             # Set initial_v if not provided (first layer); otherwise apply value residual
@@ -172,7 +172,7 @@ class GTNO(nn.Module):
                     {
                         "x_0": o3.Linear("1x1o + 1x0e", "42x1o + 2x0e"),  # Use e3nn lifting for equivariant embedding
                         "v_0": o3.Linear("1x1o + 1x0e", "42x1o + 2x0e"),  # Same for velocity
-                        "concatenated_features": o3.FullyConnectedTensorProduct("1x1o + 1x0e", "1x1o + 1x0e + 1x0e", "42x1o + 2x0e"),  # Keep standard MLP for other inputs
+                        "concatenated_features": o3.FullyConnectedTensorProduct("1x1o + 1x0e", "1x1o + 1x0e + 1x0e", "42x1o + 2x0e"),
                     }
                 )
             case False:
@@ -213,21 +213,28 @@ class GTNO(nn.Module):
     def forward(self, batch: TensorDict) -> torch.Tensor:
         # Batch: [Batch, Timesteps, Nodes, d]
         # Mask the inputs before applying the equivariant lifting layers
-        x_0_masked: torch.Tensor = batch["x_0"] * batch["padded_nodes_mask"]
-        v_0_masked: torch.Tensor = batch["v_0"] * batch["padded_nodes_mask"]
-        concatenated_features_masked: torch.Tensor = batch["concatenated_features"] * batch["padded_nodes_mask"]
+        mask: torch.Tensor | None = batch.get("padded_nodes_mask", None)
+
+        if mask is not None:
+            x_0: torch.Tensor = batch["x_0"] * mask
+            v_0: torch.Tensor = batch["v_0"] * mask
+            concat_features: torch.Tensor = batch["concatenated_features"] * mask
+        else:
+            x_0: torch.Tensor = batch["x_0"]
+            v_0: torch.Tensor = batch["v_0"]
+            concat_features: torch.Tensor = batch["concatenated_features"]
 
         # Lift the inputs
-        x_0: torch.Tensor = self.lifting_layers["x_0"](x_0_masked)
-        v_0: torch.Tensor = self.lifting_layers["v_0"](v_0_masked)
-        concatenated_features: torch.Tensor = self.lifting_layers["concatenated_features"](concatenated_features_masked[..., :4], concatenated_features_masked[..., 4:])
+        lifted_x_0: torch.Tensor = self.lifting_layers["x_0"](x_0)
+        lifted_v_0: torch.Tensor = self.lifting_layers["v_0"](v_0)
+        lifted_concat_features: torch.Tensor = self.lifting_layers["concatenated_features"](concat_features[..., :4], concat_features[..., 4:])
 
         initial_v: torch.Tensor | None = None  # Value residual: Starts as none, becomes x_0 the first layer
         for layer in self.transformer_blocks:
-            x_0, initial_v = layer(x_0, v_0, concatenated_features, q_data=concatenated_features, mask=batch["padded_nodes_mask"], initial_v=initial_v)
+            lifted_x_0, initial_v = layer(lifted_x_0, lifted_v_0, lifted_concat_features, q_data=lifted_concat_features, mask=mask, initial_v=initial_v)
 
         # Batch (x, y, z) + projection layer
-        pred_pos: torch.Tensor = batch["x_0"][..., :3] + self.projection_layer(x_0)
+        pred_pos: torch.Tensor = batch["x_0"][..., :3] + self.projection_layer(lifted_x_0)
 
         return pred_pos  # Outputting the positions (x, y, z) for N nodes over T timesteps. Batched.
 

@@ -51,7 +51,7 @@ class TemporalRoPEWithOffset(nn.Module):
         self.freqs = (1.0 / (self.base ** (2 * torch.arange(0, self.half_dim, device=self.offset.device).float() / d_head))).unsqueeze(0).unsqueeze(0)  # [1, 1, half_dim]
 
     @override
-    def forward(self, tensor: torch.Tensor, mask: torch.Tensor | None = None) -> torch.Tensor:
+    def forward(self, tensor: torch.Tensor, mask: torch.Tensor | None) -> torch.Tensor:
         """
         Args:
             tensor: shape [B, n_heads, seq_len, d_head].
@@ -239,7 +239,7 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
             self.spherical_harmonics = SphericalHarmonicsAttentionBias(num_timesteps=self.num_timesteps, max_degree=1, num_heads=self.num_heads, hidden_dim=16)
 
     @override
-    def forward(self, x_0: torch.Tensor, v_0: torch.Tensor, concatenated_features: torch.Tensor, q_data: torch.Tensor, mask: torch.Tensor | None = None) -> torch.Tensor:
+    def forward(self, x_0: torch.Tensor, v_0: torch.Tensor, concatenated_features: torch.Tensor, q_data: torch.Tensor, mask: torch.Tensor | None) -> torch.Tensor:
         """
         1. Flatten queries => [B, seq_q, d], then project to [B, heads, seq_q, d_head].
         2. For each heterogeneous feature, do:
@@ -311,10 +311,10 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
             # 2) softmax over seq_k dimension (dim=-1)
             attn_weights: torch.Tensor = self.attention_dropout(F.softmax(scores, dim=-1))
             # 3) multiply by V
-            out_i = attn_weights @ v_proj
+            feat_i_out = attn_weights @ v_proj
 
             # Gate
-            out_sum = out_sum + gates[i] * out_i
+            out_sum = out_sum + gates[i] * feat_i_out
 
         out_sum = out_sum.permute(0, 2, 1, 3).reshape(B, T * N, self.lifting_dim)
         out_sum: torch.Tensor = self.out_proj(out_sum)
