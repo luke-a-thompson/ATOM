@@ -125,7 +125,7 @@ def eval_epoch(
 
                 # For the last slice loss (shape: [batch, 20, 4])
                 loss_raw_s2s = F.mse_loss(pred_coords[:, -1, :, :], target_coords[:, -1, :, :], reduction="none")
-                masked_s2s_loss = (loss_raw_s2s * batch["padded_nodes_mask"]).sum() / batch["padded_nodes_mask"].sum()
+                masked_s2s_loss = (loss_raw_s2s * batch["padded_nodes_mask"][:, -1, :]).sum() / batch["padded_nodes_mask"][:, -1, :].sum()
 
                 total_s2t_loss += masked_s2t_loss.item() * batch.batch_size[0]
                 total_s2s_loss += masked_s2s_loss.item() * batch.batch_size[0]
