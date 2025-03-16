@@ -172,7 +172,7 @@ class GTNO(nn.Module):
                     {
                         "x_0": o3.Linear("1x1o + 1x0e", "42x1o + 2x0e"),  # Use e3nn lifting for equivariant embedding
                         "v_0": o3.Linear("1x1o + 1x0e", "42x1o + 2x0e"),  # Same for velocity
-                        "concatenated_features": o3.FullyConnectedTensorProduct("1x1o + 1x0e", "1x1o + 1x0e + 1x0e + 8x0e", "42x1o + 2x0e"),  # Keep standard MLP for other inputs
+                        "concatenated_features": o3.FullyConnectedTensorProduct("1x1o + 1x0e", "1x1o + 1x0e + 1x0e", "42x1o + 2x0e"),  # Keep standard MLP for other inputs
                     }
                 )
             case False:
@@ -212,10 +212,6 @@ class GTNO(nn.Module):
     @override
     def forward(self, batch: TensorDict) -> torch.Tensor:
         # Batch: [Batch, Timesteps, Nodes, d]
-        assert (
-            torch.broadcast_shapes(batch["padded_nodes_mask"].shape, batch["x_0"].shape) == batch["x_0"].shape
-        ), f"Incompatible shapes: mask {batch['padded_nodes_mask'].shape}, x_0 {batch['x_0'].shape}"
-
         # Mask the inputs before applying the equivariant lifting layers
         x_0_masked: torch.Tensor = batch["x_0"] * batch["padded_nodes_mask"]
         v_0_masked: torch.Tensor = batch["v_0"] * batch["padded_nodes_mask"]
@@ -232,8 +228,6 @@ class GTNO(nn.Module):
 
         # Batch (x, y, z) + projection layer
         pred_pos: torch.Tensor = batch["x_0"][..., :3] + self.projection_layer(x_0)
-        if batch["padded_nodes_mask"] is not None:
-            pred_pos = torch.where(batch["padded_nodes_mask"].bool(), pred_pos, batch["x_0"][..., :3])
 
         return pred_pos  # Outputting the positions (x, y, z) for N nodes over T timesteps. Batched.
 
