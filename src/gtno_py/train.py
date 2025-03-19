@@ -234,8 +234,8 @@ def multitask_benchmark(config: Config) -> None:
 
     tqdm.write(f"\nSaved benchmark results to {results_filename}")
     tqdm.write(f"Benchmark Results ({config.benchmark.runs} runs, {config.training.epochs} epochs/run):")
-    tqdm.write(f"  Average Test Loss: {multi_run_results.s2s_test_loss_mean:.4f} ± {multi_run_results.s2s_test_loss_std:.4f}")
-    tqdm.write(f"  Average Test Loss Final Timestep: {multi_run_results.s2s_test_loss_mean:.4f} ± {multi_run_results.s2s_test_loss_std:.4f}")
+    tqdm.write(f"  Average Test Loss: {multi_run_results.s2s_test_loss_mean*100:.2f}x10^-2 ± {multi_run_results.s2s_test_loss_std*100:.2f}x10^-2")
+    tqdm.write(f"  Average Test Loss Final Timestep: {multi_run_results.s2s_test_loss_mean*100:.2f}x10^-2 ± {multi_run_results.s2s_test_loss_std*100:.2f}x10^-2")
     tqdm.write(f"  Average Time per Run: {multi_run_results.mean_secs_per_run:.1f}s")
     tqdm.write(f"  Average Time per Epoch: {multi_run_results.mean_secs_per_epoch:.1f}s")
     tqdm.write(f"  Average Best Val Loss Epoch: {multi_run_results.mean_best_val_loss_epoch:.1f}")
