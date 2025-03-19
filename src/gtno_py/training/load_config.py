@@ -79,15 +79,14 @@ class DataloaderConfig(BaseModel):
             train_set = set(self.train_molecules)
             val_set = set(self.validation_molecules)
             test_set = set(self.test_molecules)
-
             if train_set.intersection(val_set):
-                warn(f"Train and validation molecule sets overlap: {train_set.intersection(val_set)}")
+                warn(f"Train and validation molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(val_set))}")
 
             if train_set.intersection(test_set):
-                warn(f"Train and test molecule sets overlap: {train_set.intersection(test_set)}.")
+                warn(f"Train and test molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(test_set))}.")
 
             if val_set.intersection(test_set):
-                warn(f"Validation and test molecule sets overlap: {val_set.intersection(test_set)}")
+                warn(f"Validation and test molecule sets overlap: {', '.join(str(mol) for mol in val_set.intersection(test_set))}")
 
         return self
 
