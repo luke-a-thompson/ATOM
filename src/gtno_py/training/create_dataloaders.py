@@ -23,12 +23,12 @@ def create_datasets(
     train_dataset = MD17DynamicsDataset(
         partition=DataPartition.train,
         max_samples=500,
-        delta_frame=config.benchmark.delta_T,
+        delta_frame=config.dataloader.delta_T,
         num_timesteps=config.model.num_timesteps,
         data_dir="data/",
         split_dir="data/",
         molecule_type=molecule_type,
-        md17_version=config.benchmark.md17_version,
+        md17_version=config.dataloader.md17_version,
         explicit_hydrogen=config.dataloader.explicit_hydrogen,
         max_nodes=max_nodes,
         force_regenerate=config.dataloader.force_regenerate,
@@ -38,12 +38,12 @@ def create_datasets(
     val_dataset = MD17DynamicsDataset(
         partition=DataPartition.val,
         max_samples=2000,
-        delta_frame=config.benchmark.delta_T,
+        delta_frame=config.dataloader.delta_T,
         num_timesteps=config.model.num_timesteps,
         data_dir="data/",
         split_dir="data/",
         molecule_type=molecule_type,
-        md17_version=config.benchmark.md17_version,
+        md17_version=config.dataloader.md17_version,
         explicit_hydrogen=config.dataloader.explicit_hydrogen,
         max_nodes=max_nodes,
         force_regenerate=config.dataloader.force_regenerate,
@@ -53,12 +53,12 @@ def create_datasets(
     test_dataset = MD17DynamicsDataset(
         partition=DataPartition.test,
         max_samples=2000,
-        delta_frame=config.benchmark.delta_T,
+        delta_frame=config.dataloader.delta_T,
         num_timesteps=config.model.num_timesteps,
         data_dir="data/",
         split_dir="data/",
         molecule_type=molecule_type,
-        md17_version=config.benchmark.md17_version,
+        md17_version=config.dataloader.md17_version,
         explicit_hydrogen=config.dataloader.explicit_hydrogen,
         max_nodes=max_nodes,
         force_regenerate=config.dataloader.force_regenerate,
@@ -123,18 +123,30 @@ def create_dataloaders_multitask(
         tuple[DataLoader[dict[str, torch.Tensor]], DataLoader[dict[str, torch.Tensor]], DataLoader[dict[str, torch.Tensor]]]: The train/val/test Torch dataloaders.
     """
     max_nodes = 0
-    for molecule_type in config.benchmark.molecule_type:
-        max_nodes_finder, _, _ = create_datasets(config, molecule_type, max_nodes=None)
+    # We return a single dataset, so we can just take the num_nodes from that
+    assert config.dataloader.train_molecules is not None
+    assert config.dataloader.validation_molecules is not None
+    assert config.dataloader.test_molecules is not None
+    for all_molecule_types in config.dataloader.train_molecules + config.dataloader.validation_molecules + config.dataloader.test_molecules:
+        max_nodes_finder, _, _ = create_datasets(config, all_molecule_types, max_nodes=None)
         max_nodes = max(max_nodes, max_nodes_finder.num_nodes)
 
     tqdm.write(f"Inferred max_nodes across all molecules as: {max_nodes}")
     train_loaders = []
     val_loaders = []
     test_loaders = []
-    for molecule_type in config.benchmark.molecule_type:
-        train_dataset, val_dataset, test_dataset = create_datasets(config, molecule_type, max_nodes=max_nodes)
+
+    if config.dataloader.train_molecules is None or config.dataloader.validation_molecules is None or config.dataloader.test_molecules is None:
+        raise ValueError("train_molecules, validation_molecules, and test_molecules must be specified for multitask dataloaders")
+
+    for train_molecule_type in config.dataloader.train_molecules:
+        train_dataset, _, _ = create_datasets(config, train_molecule_type, max_nodes=max_nodes)
         train_loaders.append(train_dataset)
+    for validation_molecule_type in config.dataloader.validation_molecules:
+        _, val_dataset, _ = create_datasets(config, validation_molecule_type, max_nodes=max_nodes)
         val_loaders.append(val_dataset)
+    for test_molecule_type in config.dataloader.test_molecules:
+        _, _, test_dataset = create_datasets(config, test_molecule_type, max_nodes=max_nodes)
         test_loaders.append(test_dataset)
 
     multitask_train_dataset: torch.utils.data.ConcatDataset[MD17DynamicsDataset] = torch.utils.data.ConcatDataset(train_loaders)

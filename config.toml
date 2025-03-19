@@ -2,20 +2,28 @@
 use_wandb = false
 
 [benchmark]
-runs = 1
-compile = false
+runs = 2
+compile = true
 # multitask = false
 # molecule_type = "aspirin"
-multitask = true
-molecule_type = ["aspirin", "benzene"]
-md17_version = "md17"
-delta_T = 3000
 log_weights = false
 
 [dataloader]
+multitask = true
+delta_T = 3000
+# Single-task dataloader parameters
+md17_version = "md17"
+molecule_type = "aspirin"  # Iterates through single-task learning on these molecules
+
+# Multitask dataloader parameters
+train_molecules = ["aspirin", "benzene", "ethanol", "toluene", "uracil", "salicylic"]
+validation_molecules = ["malonaldehyde"]
+test_molecules = ["naphthalene"]
+
+# Other dataloader parameters
 explicit_hydrogen = false
 explicit_hydrogen_gradients = false
-rrwp_length = 0  # 0 for no RRWPs
+rrwp_length = 8  # 0 for no RRWPs
 persistent_workers = true
 num_workers = 4
 pin_memory = true
@@ -24,11 +32,11 @@ force_regenerate = true
 [training]
 device = "cuda"
 seed = 42
-batch_size = 50
+batch_size = 100
 epochs = 1000
 max_grad_norm = 1.0
 learnable_noise_std = true
-brownian_noise_std = 0.2
+brownian_noise_std = 0.1
 
 [optimizer]
 type = "adamw"
