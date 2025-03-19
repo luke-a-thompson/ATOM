@@ -14,6 +14,7 @@ from gtno_py.training.config_options import (
 )
 import tomllib
 import importlib.util
+from warnings import warn
 
 
 class WandbConfig(BaseModel):
@@ -23,24 +24,75 @@ class WandbConfig(BaseModel):
 class BenchmarkConfig(BaseModel):
     compile: bool
     runs: int
-    multitask: bool
-    md17_version: MD17Version
-    molecule_type: MD17MoleculeType | RMD17MoleculeType | list[MD17MoleculeType | RMD17MoleculeType]
-    delta_T: int
     log_weights: bool
 
     @model_validator(mode="after")
-    def validate_multitask(self) -> "BenchmarkConfig":
-        multitask = self.multitask
-        molecule_type = self.molecule_type
+    def validate_log_weights(self) -> "BenchmarkConfig":
+        if self.log_weights:
+            if importlib.util.find_spec("matplotlib") is None:
+                raise ValueError("If 'log_weights' is True, matplotlib must be installed.")
+        return self
 
-        if multitask and not isinstance(molecule_type, list):
-            raise ValueError("If 'multitask' is True, 'molecule_type' must be a list of molecules to train on.")
+
+class DataloaderConfig(BaseModel):
+    multitask: bool
+    md17_version: MD17Version
+    # Single-task dataloader parameters
+    molecule_type: MD17MoleculeType | RMD17MoleculeType | list[MD17MoleculeType | RMD17MoleculeType]
+
+    # Multitask dataloader parameters
+    train_molecules: list[MD17MoleculeType | RMD17MoleculeType] | None = None
+    validation_molecules: list[MD17MoleculeType | RMD17MoleculeType] | None = None
+    test_molecules: list[MD17MoleculeType | RMD17MoleculeType] | None = None
+
+    delta_T: int
+    explicit_hydrogen: bool
+    explicit_hydrogen_gradients: bool
+    rrwp_length: int
+    persistent_workers: bool
+    num_workers: int
+    pin_memory: bool
+    force_regenerate: bool
+
+    @model_validator(mode="after")
+    def validate_singletask(self) -> "DataloaderConfig":
+        if not self.multitask and self.molecule_type is None:
+            raise ValueError("If 'multitask' is False, 'molecule_type' must be specified.")
+
+        if not self.multitask and (self.train_molecules or self.validation_molecules or self.test_molecules):
+            raise ValueError(
+                "If 'multitask' is True, 'train_molecules', 'validation_molecules', and 'test_molecules' must not be specified. They are only used for multitask dataloaders."
+            )
+        return self
+
+    @model_validator(mode="after")
+    def validate_multitask(self) -> "DataloaderConfig":
+        if self.multitask and (not self.train_molecules or not self.validation_molecules or not self.test_molecules):
+            raise ValueError("If 'multitask' is True, 'train_molecules', 'validation_molecules', and 'test_molecules' must be specified.")
 
         return self
 
     @model_validator(mode="after")
-    def validate_md17_version(self) -> "BenchmarkConfig":
+    def validate_train_molecules(self) -> "DataloaderConfig":
+        if self.multitask and self.train_molecules and self.validation_molecules and self.test_molecules:
+            # Check for shared molecules between train, validation, and test sets
+            train_set = set(self.train_molecules)
+            val_set = set(self.validation_molecules)
+            test_set = set(self.test_molecules)
+
+            if train_set.intersection(val_set):
+                warn(f"Train and validation molecule sets overlap: {train_set.intersection(val_set)}")
+
+            if train_set.intersection(test_set):
+                warn(f"Train and test molecule sets overlap: {train_set.intersection(test_set)}.")
+
+            if val_set.intersection(test_set):
+                warn(f"Validation and test molecule sets overlap: {val_set.intersection(test_set)}")
+
+        return self
+
+    @model_validator(mode="after")
+    def validate_md17_version(self) -> "DataloaderConfig":
         md17_version = self.md17_version
         molecule_type = self.molecule_type
 
@@ -60,23 +112,6 @@ class BenchmarkConfig(BaseModel):
                 raise ValueError(f"When using RMD17 version, molecule_type must be RMD17MoleculeType, got {molecule_type}")
 
         return self
-
-    @model_validator(mode="after")
-    def validate_log_weights(self) -> "BenchmarkConfig":
-        if self.log_weights:
-            if importlib.util.find_spec("matplotlib") is None:
-                raise ValueError("If 'log_weights' is True, matplotlib must be installed.")
-        return self
-
-
-class DataloaderConfig(BaseModel):
-    explicit_hydrogen: bool
-    explicit_hydrogen_gradients: bool
-    rrwp_length: int
-    persistent_workers: bool
-    num_workers: int
-    pin_memory: bool
-    force_regenerate: bool
 
     @model_validator(mode="after")
     def validate_explicit_hydrogen_gradients(self) -> "DataloaderConfig":

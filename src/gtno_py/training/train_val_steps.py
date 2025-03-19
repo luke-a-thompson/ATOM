@@ -29,7 +29,7 @@ def train_epoch(
         float: The loss of the epoch.
     """
     _ = model.train()
-    total_loss = 0.0
+    total_s2t_loss = 0.0
 
     for batch in dataloader:
         batch = TensorDict.from_dict(batch, device=torch.device(config.training.device), auto_batch_size=True)
@@ -73,7 +73,7 @@ def train_epoch(
             else:
                 loss = loss_raw.mean()
 
-        total_loss += loss.item() * batch.batch_size[0]
+        total_s2t_loss += loss.item() * batch.batch_size[0]
 
         _ = loss.backward()
         _ = torch.nn.utils.clip_grad_norm_(model.parameters(), config.training.max_grad_norm)
@@ -82,7 +82,7 @@ def train_epoch(
         if scheduler and not isinstance(scheduler, optim.lr_scheduler.ReduceLROnPlateau):
             scheduler.step()
 
-    return total_loss / float(len(dataloader.dataset))
+    return total_s2t_loss / float(len(dataloader.dataset))
 
 
 def eval_epoch(
