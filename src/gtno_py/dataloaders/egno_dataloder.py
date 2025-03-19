@@ -533,7 +533,7 @@ class MD17DynamicsDataset(MD17Dataset):
         val_par: float = 0.05,
         test_par: float = 0.05,
         num_timesteps: int = 8,  # Number of timesteps for dynamics
-        rrwp_length: int = 8,
+        rrwp_length: int = 0,
         seed: int = 100,
         force_regenerate: bool = False,
     ):
