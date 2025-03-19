@@ -5,7 +5,7 @@ import wandb
 import matplotlib.pyplot as plt
 import os
 import numpy as np
-
+from pathlib import Path
 
 def get_context(instance: object) -> str:
     """
@@ -26,7 +26,7 @@ def get_context(instance: object) -> str:
     return f"{class_name}.{method_name}"
 
 
-def log_weights(named_parameters, epoch, save_dir=None):
+def log_weights(named_parameters: list[tuple[str, torch.Tensor]], epoch: int, save_dir: Path):
     """Log feature weights to wandb and/or save as numpy arrays.
 
     Args:
