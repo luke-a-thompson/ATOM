@@ -135,7 +135,7 @@ class SphericalHarmonicsAttentionBias(nn.Module):
         # Total number of coefficients from l=0 to max_degree.
         self.num_coeff = sum(2 * l + 1 for l in range(max_degree + 1))
         self.num_timesteps = num_timesteps
-        self.mlp = MLP(in_features=self.num_coeff, out_features=num_heads, hidden_features=hidden_dim, hidden_layers=2, activation=nn.SiLU(), dropout_p=0.1)
+        self.mlp = MLP(in_dim=self.num_coeff, out_dim=num_heads, hidden_dim=hidden_dim, hidden_layers=2, activation=nn.SiLU(), dropout_p=0.1)
         self.eps = 1e-6
 
     @override
@@ -216,11 +216,11 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
 
         assert self.d_head % 2 == 0, "d_head must be even"
 
+        # Keys/Values for heterogeneous features
+        self.kv_projs = nn.ModuleList([nn.Linear(lifting_dim, 2 * lifting_dim) for _ in range(num_hetero_feats)])
         # Query projection (applied to node embeddings)
         self.query = nn.Linear(lifting_dim, lifting_dim)
 
-        # Keys/Values for heterogeneous features
-        self.kv_projs = nn.ModuleList([nn.Linear(lifting_dim, 2 * lifting_dim) for _ in range(num_hetero_feats)])
         self.out_proj = nn.Linear(lifting_dim, lifting_dim)
         self.attention_dropout = nn.Dropout(attention_dropout)
 
