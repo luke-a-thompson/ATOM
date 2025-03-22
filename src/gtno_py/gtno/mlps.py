@@ -5,7 +5,15 @@ from typing import final, override
 
 @final
 class MLP(nn.Module):
-    def __init__(self, in_features: int, out_features: int, hidden_features: int, hidden_layers: int, activation: nn.Module, dropout_p: float) -> None:
+    def __init__(
+        self,
+        in_dim: int,
+        out_dim: int,
+        hidden_dim: int,
+        hidden_layers: int,
+        activation: nn.Module,
+        dropout_p: float,
+    ) -> None:
         """
         A simple MLP with a specified number of layers and hidden features.
 
@@ -22,15 +30,25 @@ class MLP(nn.Module):
         super().__init__()
         layers = []
         for i in range(hidden_layers):
-            in_size = in_features if i == 0 else hidden_features
-            layers.extend([nn.Linear(in_size, hidden_features), activation])
+            in_size = in_dim if i == 0 else hidden_dim
+            layers.extend([nn.Linear(in_size, hidden_dim), activation])
         if dropout_p > 0.0:
             layers.append(nn.Dropout(dropout_p))
-        layers.append(nn.Linear(hidden_features, out_features))
+        layers.append(nn.Linear(hidden_dim, out_dim))
         self.layers = nn.ModuleList(layers)
 
+        # Zero initialize the final layer - Following NanoGPT
+        final_layer = self.layers[-1]
+        if isinstance(final_layer, nn.Linear):
+            _ = nn.init.zeros_(final_layer.weight)
+            _ = nn.init.zeros_(final_layer.bias)
+
     @override
-    def forward(self, x: torch.Tensor, mask: torch.Tensor | None) -> torch.Tensor:
+    def forward(
+        self,
+        x: torch.Tensor,
+        mask: torch.Tensor | None = None,
+    ) -> torch.Tensor:
         for layer in self.layers:
             x = layer(x)
 
