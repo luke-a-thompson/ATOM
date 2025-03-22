@@ -26,6 +26,7 @@ matplotlib = "^3.8.0"
 usyd-colors = "^0.1.0"
 pubchempy = "^1.0.4"
 rdkit = "^2024.9.6"
+tlparse = "^0.3.37"
 
 [tool.poetry.dev-dependencies]
 pytest = "^8.3.4"

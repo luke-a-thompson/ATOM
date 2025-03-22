@@ -2,8 +2,6 @@ from tqdm.std import tqdm
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from tqdm import tqdm
-import json
 from datetime import datetime
 from gtno_py.training.config_options import MD17MoleculeType, RMD17MoleculeType
 import wandb
@@ -25,6 +23,12 @@ from gtno_py.training import (
     set_seeds,
     reset_weights,
 )
+
+os.environ["TORCHDYNAMO_CACHE_DIR"] = "/home/luke/gtno_py/torch_compiler/dynamo_cache"
+os.environ["TORCHINDUCTOR_CACHE_DIR"] = "/home/luke/gtno_py/torch_compiler/inductor_cache"
+assert os.access(Path("/home/luke/gtno_py/torch_compiler/trace"), os.W_OK), "Directory trace_dir is not writable."
+if config.training.use_trace:
+    os.environ["TORCH_TRACE"] = "/home/luke/gtno_py/torch_compiler/trace"
 
 config = Config.from_toml("config.toml")
 
@@ -100,7 +104,7 @@ def main(model: nn.Module, molecule_type: MD17MoleculeType | RMD17MoleculeType |
                 "Train s2t loss": f"{train_s2t_loss*100:.2f}x10^-2",
                 "Val s2t loss": f"{val_s2t_loss*100:.2f}x10^-2",
                 "Best val s2t loss": f"{best_val_loss*100:.2f}x10^-2",
-                "Current LR": f"{optimizer.param_groups[0]['lr']*100:.4f}x10^-2",
+                f"Current {str(optimizer)} LR": f"{optimizer.param_groups[0]['lr']*100:.4f}x10^-2",
             }
         )
     end_training_time = datetime.now()

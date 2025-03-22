@@ -2,8 +2,9 @@
 use_wandb = false
 
 [benchmark]
-runs = 2
+runs = 1
 compile = true
+compile_trace = true
 # multitask = false
 # molecule_type = "aspirin"
 log_weights = false
@@ -16,30 +17,32 @@ md17_version = "md17"
 molecule_type = "aspirin"  # Iterates through single-task learning on these molecules
 
 # Multitask dataloader parameters
-train_molecules = ["aspirin", "benzene", "ethanol", "toluene", "uracil", "salicylic"]
-validation_molecules = ["malonaldehyde"]
+train_molecules = ["aspirin", "benzene", "ethanol", "toluene", "uracil", "salicylic", "malonaldehyde"]
+validation_molecules = ["aspirin", "benzene", "ethanol", "toluene", "uracil", "salicylic", "malonaldehyde"]
 test_molecules = ["naphthalene"]
 
 # Other dataloader parameters
 explicit_hydrogen = false
 explicit_hydrogen_gradients = false
+radius_graph_threshold = 1.6
 rrwp_length = 8  # 0 for no RRWPs
 persistent_workers = true
 num_workers = 4
 pin_memory = true
+prefetch_factor = 2
 force_regenerate = true
 
 [training]
 device = "cuda"
 seed = 42
 batch_size = 100
-epochs = 1000
+epochs = 250
 max_grad_norm = 1.0
 learnable_noise_std = true
 brownian_noise_std = 0.1
 
 [optimizer]
-type = "adamw"
+type = "muon"
 learning_rate = 1e-3
 weight_decay = 1e-5
 adam_betas = [0.9, 0.999]
@@ -55,6 +58,8 @@ num_layers = 5
 num_heads = 8
 lifting_dim = 128
 num_timesteps = 8
+# Output parameters
+output_heads = 4
 # Attention parameters
 heterogenous_attention_type = "GHCA"
 use_rope = true

@@ -15,6 +15,7 @@ from gtno_py.training.config_options import (
 import tomllib
 import importlib.util
 from warnings import warn
+import torch
 
 
 class WandbConfig(BaseModel):
@@ -23,8 +24,27 @@ class WandbConfig(BaseModel):
 
 class BenchmarkConfig(BaseModel):
     compile: bool
+    compile_trace: bool
     runs: int
     log_weights: bool
+
+    @model_validator(mode="after")
+    def validate_compile(self) -> "BenchmarkConfig":
+        if self.compile and torch.cuda.get_device_capability() < (7, 0):
+            raise ValueError("CUDA 7.0 or higher is required to compile the model. We recommend CUDA 11.0 or higher.")
+        return self
+
+    @model_validator(mode="after")
+    def validate_compile_trace(self) -> "BenchmarkConfig":
+        if self.compile_trace and not self.compile:
+            raise ValueError("'compile_trace' must be True if 'compile' is True.")
+        return self
+
+    @model_validator(mode="after")
+    def validate_runs(self) -> "BenchmarkConfig":
+        if self.runs < 1:
+            raise ValueError("'runs' must be greater than 0.")
+        return self
 
     @model_validator(mode="after")
     def validate_log_weights(self) -> "BenchmarkConfig":
@@ -48,10 +68,12 @@ class DataloaderConfig(BaseModel):
     delta_T: int
     explicit_hydrogen: bool
     explicit_hydrogen_gradients: bool
+    radius_graph_threshold: float
     rrwp_length: int
     persistent_workers: bool
     num_workers: int
     pin_memory: bool
+    prefetch_factor: int
     force_regenerate: bool
 
     @model_validator(mode="after")
@@ -150,6 +172,8 @@ class ModelConfig(BaseModel):
     num_heads: int
     lifting_dim: int
     num_timesteps: int
+    # Output parameters
+    output_heads: int
     # Attention parameters
     heterogenous_attention_type: GraphHeterogenousAttentionType
     use_rope: bool
@@ -161,6 +185,18 @@ class ModelConfig(BaseModel):
     norm: NormType
     activation: FFNActivation
     value_residual_type: ValueResidualType
+
+    @model_validator(mode="after")
+    def validate_output_heads(self) -> "ModelConfig":
+        if self.output_heads < 1:
+            raise ValueError("'output_heads' must be greater than 0.")
+        return self
+
+    @model_validator(mode="after")
+    def validate_lifting_dim_and_num_heads(self) -> "ModelConfig":
+        if self.lifting_dim % self.num_heads != 0:
+            raise ValueError("'lifting_dim' must be divisible by 'num_heads'.")
+        return self
 
 
 class Config(BaseModel):
