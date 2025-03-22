@@ -77,7 +77,7 @@ def train_epoch(
 
         _ = loss.backward()
         _ = torch.nn.utils.clip_grad_norm_(model.parameters(), config.training.max_grad_norm)
-        optimizer.step()
+        _ = torch.compile(optimizer.step())
 
         if scheduler and not isinstance(scheduler, optim.lr_scheduler.ReduceLROnPlateau):
             scheduler.step()
@@ -106,8 +106,8 @@ def eval_epoch(
 
     with torch.no_grad():
         for batch in loader:
-            batch = TensorDict.from_dict(batch, device=torch.device(config.training.device), auto_batch_size=True)
-            target_coords = batch.pop("x_t")
+            batch: TensorDict = TensorDict.from_dict(batch, device=torch.device(config.training.device), auto_batch_size=True)
+            target_coords: torch.Tensor = batch.pop(key="x_t")
             _ = batch.pop("v_t")
             mask: torch.Tensor | None = batch.get("padded_nodes_mask", None)
 
