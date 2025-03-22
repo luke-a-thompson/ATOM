@@ -26,6 +26,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         molecule_type: MD17MoleculeType | RMD17MoleculeType,
         max_nodes: int | None,
         explicit_hydrogen: bool = False,
+        radius_graph_threshold: float = 1.6,
         rrwp_length: int = 8,
         train_par: float = 0.1,
         val_par: float = 0.05,
@@ -56,6 +57,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         self.num_timesteps: int = num_timesteps
         self.max_samples: int = max_samples
         self.verbose: bool = verbose
+        self.radius_graph_threshold: float = radius_graph_threshold
         self.rrwp_length: int = rrwp_length
         self.dft_imprecision_margin: int = 10_000
 
@@ -128,7 +130,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
 
         self.num_nodes: int = z.shape[0]
 
-        one_hop_adjacency, two_hop_adjacency = self._compute_adjacency_matrix(x, self.num_nodes, 1.6)
+        one_hop_adjacency, two_hop_adjacency = self._compute_adjacency_matrix(x, self.num_nodes, self.radius_graph_threshold)
         self.edge_attr, self.edges = self._build_edge_attributes(one_hop_adjacency, two_hop_adjacency, z, x_0, v_0)
         if self.rrwp_length > 0:
             self.rrwp: torch.Tensor = self.calculate_rrwp(one_hop_adjacency, self.rrwp_length)
@@ -533,6 +535,7 @@ class MD17DynamicsDataset(MD17Dataset):
         val_par: float = 0.05,
         test_par: float = 0.05,
         num_timesteps: int = 8,  # Number of timesteps for dynamics
+        radius_graph_threshold: float = 1.6,
         rrwp_length: int = 0,
         seed: int = 100,
         force_regenerate: bool = False,
@@ -554,6 +557,7 @@ class MD17DynamicsDataset(MD17Dataset):
             force_regenerate=force_regenerate,
             num_timesteps=num_timesteps,  # Pass num_timesteps to base class for replication
             rrwp_length=rrwp_length,
+            radius_graph_threshold=radius_graph_threshold,
         )
         self.x_t, self.v_t = self.get_dynamic_target_frames()
 
