@@ -22,10 +22,12 @@ def initialize_model(config: Config) -> nn.Module:
                 num_layers=config.model.num_layers,
                 num_heads=config.model.num_heads,
                 heterogenous_attention_type=config.model.heterogenous_attention_type,
+                output_heads=config.model.output_heads,
                 num_timesteps=config.model.num_timesteps,
                 use_rope=config.model.use_rope,
                 use_spherical_harmonics=config.model.use_spherical_harmonics,
                 use_equivariant_lifting=config.model.use_equivariant_lifting,
+                rrwp_length=config.dataloader.rrwp_length,
                 value_residual_type=config.model.value_residual_type,
                 learnable_attention_denom=config.model.learnable_attention_denom,
             )

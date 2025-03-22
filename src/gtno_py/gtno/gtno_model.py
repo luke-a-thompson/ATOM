@@ -55,7 +55,7 @@ class GTNOBlock(nn.Module):
             case _:
                 raise ValueError(f"Invalid activation function: {activation}, select from one of {FFNActivation.__members__.keys()}")
 
-        self.ffn = MLP(in_features=lifting_dim, out_features=lifting_dim, hidden_features=lifting_dim, hidden_layers=2, activation=activation_fn, dropout_p=0.0)
+        self.ffn = MLP(in_dim=lifting_dim, out_dim=lifting_dim, hidden_dim=lifting_dim, hidden_layers=2, activation=activation_fn, dropout_p=0.0)
 
         self.heterogenous_attention: nn.Module
         match heterogenous_attention_type:
@@ -92,7 +92,7 @@ class GTNOBlock(nn.Module):
         q_data: torch.Tensor,
         mask: torch.Tensor | None,
         initial_v: torch.Tensor | None = None,
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor | None]:  # None when value residual not yet set
         concatenated_features = self.pre_norm(concatenated_features)
         x_0 = self.pre_norm(x_0)
         v_0 = self.pre_norm(v_0)
@@ -121,10 +121,12 @@ class GTNO(nn.Module):
         num_layers: int,
         num_heads: int,
         heterogenous_attention_type: GraphHeterogenousAttentionType,
+        output_heads: int,
         num_timesteps: int,
         use_rope: bool,
         use_spherical_harmonics: bool,
         use_equivariant_lifting: bool,
+        rrwp_length: int,
         value_residual_type: ValueResidualType,
         learnable_attention_denom: bool,
     ) -> None:
@@ -146,14 +148,20 @@ class GTNO(nn.Module):
         assert num_timesteps > 1, f"num_timesteps must be greater than 1. Got {num_timesteps}"
         self.num_timesteps = num_timesteps
         self.use_equivariant_lifting = use_equivariant_lifting
+        self.lifting_dim = lifting_dim
+        self.rrwp_length = rrwp_length
+        self.output_heads = output_heads
+
+        concat_irreps_1, concat_irreps_2 = self._get_concat_feature_irreps()
+        lifting_dim_irreps = self._get_lifting_dim_irreps()
 
         match use_equivariant_lifting:
             case True:
                 self.lifting_layers = nn.ModuleDict(
                     {
-                        "x_0": o3.Linear("1x1o + 1x0e", "42x1o + 2x0e"),  # Use e3nn lifting for equivariant embedding
-                        "v_0": o3.Linear("1x1o + 1x0e", "42x1o + 2x0e"),  # Same for velocity
-                        "concatenated_features": o3.FullyConnectedTensorProduct("1x1o + 1x0e", "1x1o + 1x0e + 1x0e", "42x1o + 2x0e"),
+                        "x_0": o3.Linear("1x1o + 1x0e", lifting_dim_irreps),  # In: (x,y,z, ||x||)
+                        "v_0": o3.Linear("1x1o + 1x0e", lifting_dim_irreps),  # In: (vx,vy,vz, ||v||)
+                        "concatenated_features": o3.FullyConnectedTensorProduct(concat_irreps_1, concat_irreps_2, lifting_dim_irreps),
                     }
                 )
             case False:
@@ -161,7 +169,7 @@ class GTNO(nn.Module):
                     {
                         "x_0": nn.Linear(4, lifting_dim),
                         "v_0": nn.Linear(4, lifting_dim),
-                        "concatenated_features": nn.Linear(9, lifting_dim),
+                        "concatenated_features": nn.Linear(9 + rrwp_length, lifting_dim),
                     }
                 )
             case _:
@@ -186,7 +194,24 @@ class GTNO(nn.Module):
         )
 
         # Final projection to (x, y, z)
-        self.projection_layer = o3.Linear("42x1o + 2x0e", "1x1o")
+        if self.output_heads > 1:
+            self.weight_pred_gate_net = nn.Sequential(
+                MLP(
+                    in_dim=lifting_dim,
+                    out_dim=self.output_heads,
+                    hidden_dim=lifting_dim // 4,
+                    hidden_layers=2,
+                    activation=SwiGLU(lifting_dim // 4),
+                    dropout_p=0.0,
+                ),
+                nn.Softmax(dim=-1),
+            )
+
+            self.projection_layers = nn.Sequential(
+                *[o3.Linear(lifting_dim_irreps, "1x1o") for _ in range(self.output_heads)],
+            )
+        else:
+            self.projection_layer = o3.Linear(lifting_dim_irreps, "1x1o")
 
         self._initialise_weights(self)
 
@@ -221,7 +246,21 @@ class GTNO(nn.Module):
             lifted_x_0, initial_v = layer(lifted_x_0, lifted_v_0, lifted_concat_features, q_data=lifted_concat_features, mask=mask, initial_v=initial_v)
 
         # Batch (x, y, z) + projection layer
-        pred_pos: torch.Tensor = batch["x_0"][..., :3] + self.projection_layer(lifted_x_0)
+        if self.output_heads > 1:
+            # Decides which output heads should be emphasised
+            head_weights: torch.Tensor = self.weight_pred_gate_net(lifted_concat_features.mean(dim=(1, 2)))  # mean pool over nodes and timesteps (molecule-level summary)
+            # Project each head's predictions to the final output space
+            pred_pos_per_head: list[torch.Tensor] = [self.projection_layers[i](lifted_x_0) for i in range(self.output_heads)]
+            # Weighted sum of the heads
+            final_pred_pos = torch.zeros_like(pred_pos_per_head[0])
+
+            for i in range(self.output_heads):
+                final_pred_pos = final_pred_pos + head_weights[:, i].view(-1, 1, 1, 1) * pred_pos_per_head[i]  # Weighted sum
+        else:
+            # Single-head prediction
+            final_pred_pos: torch.Tensor = self.projection_layer(lifted_x_0)
+
+        pred_pos: torch.Tensor = batch["x_0"][..., :3] + final_pred_pos  # Residual connection
 
         return pred_pos  # Outputting the positions (x, y, z) for N nodes over T timesteps. Batched.
 
@@ -232,3 +271,26 @@ class GTNO(nn.Module):
                 _ = nn.init.kaiming_normal_(module.weight, nonlinearity="leaky_relu")
                 if module.bias is not None:
                     _ = nn.init.zeros_(module.bias)
+
+    def _get_lifting_dim_irreps(self) -> str:
+        """
+        Returns the irreps for the lifting dimension.
+        """
+        vector_lifting_dim_irreps: int = self.lifting_dim // 3
+        scalar_lifting_dim_irreps: int = self.lifting_dim - vector_lifting_dim_irreps * 3  # Remainder
+
+        lifting_dim_irreps: str = f"{vector_lifting_dim_irreps}x1o + {scalar_lifting_dim_irreps}x0e"
+        return lifting_dim_irreps
+
+    def _get_concat_feature_irreps(self) -> tuple[str, str]:
+        """
+        Returns the irreps for the concatenated features.
+        """
+        concat_irreps_1: str = "1x1o + 1x0e"  # (x,y,z, ||x||)
+        concat_irreps_2: str = "1x1o + 1x0e + 1x0e"  # (vx,vy,vz, ||v||, Z)
+        if self.rrwp_length > 0:
+            concat_irreps_2_rrwp: str = f"{concat_irreps_2} + {self.rrwp_length}x0e"
+        else:
+            concat_irreps_2_rrwp: str = concat_irreps_2
+
+        return concat_irreps_1, concat_irreps_2_rrwp

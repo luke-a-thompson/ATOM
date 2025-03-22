@@ -32,6 +32,7 @@ def create_datasets(
         explicit_hydrogen=config.dataloader.explicit_hydrogen,
         max_nodes=max_nodes,
         force_regenerate=config.dataloader.force_regenerate,
+        radius_graph_threshold=config.dataloader.radius_graph_threshold,
         rrwp_length=config.dataloader.rrwp_length,
     )
 
@@ -47,6 +48,7 @@ def create_datasets(
         explicit_hydrogen=config.dataloader.explicit_hydrogen,
         max_nodes=max_nodes,
         force_regenerate=config.dataloader.force_regenerate,
+        radius_graph_threshold=config.dataloader.radius_graph_threshold,
         rrwp_length=config.dataloader.rrwp_length,
     )
 
@@ -62,6 +64,7 @@ def create_datasets(
         explicit_hydrogen=config.dataloader.explicit_hydrogen,
         max_nodes=max_nodes,
         force_regenerate=config.dataloader.force_regenerate,
+        radius_graph_threshold=config.dataloader.radius_graph_threshold,
         rrwp_length=config.dataloader.rrwp_length,
     )
 
@@ -90,6 +93,7 @@ def create_dataloaders_single(
         persistent_workers=config.dataloader.persistent_workers,
         num_workers=config.dataloader.num_workers,
         pin_memory=config.dataloader.pin_memory,
+        prefetch_factor=config.dataloader.prefetch_factor,
     )
     val_loader = DataLoader(
         val_dataset,
@@ -98,6 +102,7 @@ def create_dataloaders_single(
         persistent_workers=config.dataloader.persistent_workers,
         num_workers=config.dataloader.num_workers,
         pin_memory=config.dataloader.pin_memory,
+        prefetch_factor=config.dataloader.prefetch_factor,
     )
     test_loader = DataLoader(
         test_dataset,
@@ -106,6 +111,7 @@ def create_dataloaders_single(
         persistent_workers=config.dataloader.persistent_workers,
         num_workers=config.dataloader.num_workers,
         pin_memory=config.dataloader.pin_memory,
+        prefetch_factor=config.dataloader.prefetch_factor,
     )
 
     return train_loader, val_loader, test_loader
