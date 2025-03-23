@@ -131,7 +131,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         self.num_nodes: int = z.shape[0]
 
         one_hop_adjacency, two_hop_adjacency = self._compute_adjacency_matrix(x, self.num_nodes, self.radius_graph_threshold)
-        self.edge_attr, self.edges = self._build_edge_attributes(one_hop_adjacency, two_hop_adjacency, z, x_0, v_0)
+        self.edge_attr, self.edge_index = self._build_edge_attributes(one_hop_adjacency, two_hop_adjacency, z, x_0)
         if self.rrwp_length > 0:
             self.rrwp: torch.Tensor = self.calculate_rrwp(one_hop_adjacency, self.rrwp_length)
 
@@ -376,26 +376,34 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         assert one_hop_edges.shape == two_hop_edges.shape == (num_atoms, num_atoms)
         return one_hop_edges, two_hop_edges
 
-    def _build_edge_attributes(self, one_hop_adjacency, two_hop_adjacency, z, x_0, v_0):
+    def _build_edge_attributes(
+        self,
+        one_hop_adjacency: torch.Tensor,
+        two_hop_adjacency: torch.Tensor,
+        z: torch.Tensor,
+        x_0: torch.Tensor,
+    ) -> tuple[torch.Tensor, tuple[torch.Tensor, torch.Tensor]]:
         """
-        Legacy EGNO function for computing edge attributes.
-
         Args:
             one_hop_adjacency: One-hop adjacency matrix
             two_hop_adjacency: Two-hop adjacency matrix
-            mole_idx: Molecule index
-            x_0: Initial positions
-            v_0: Initial velocities
+            z: Atom types
+            x_0: Atom positions (multiple frames; frame 0 is used for edge computation)
 
         Returns:
             edge_attr: Edge attributes containing source, target, type, and distance
-            edges: Edges containing source and target indices
+            edge_index: Edges containing source and target indices
+
+        In EGNO parlance:
+            Source_indices: rows
+            Target_indices: cols
+            Edge_index: edges
         """
 
         n_node = z.shape[0]
-        edge_attr = []
-        rows = []
-        cols = []
+        edge_attr: list[list[float]] = []
+        source_indices: list[int] = []
+        target_indices: list[int] = []
 
         x_0_frame_one = x_0[0]  # use frame 0 to compute edges
         for i in range(n_node):
@@ -403,21 +411,24 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
                 if i == j:
                     continue
                 else:
-                    first_frame_distance = np.linalg.norm(x_0_frame_one[i] - x_0_frame_one[j])
+                    first_frame_distance = np.linalg.norm(x_0_frame_one[i] - x_0_frame_one[j]).item()
                     if one_hop_adjacency[i][j]:
-                        rows.append(i)
-                        cols.append(j)
-                        edge_attr.append([z[i], z[j], 1, first_frame_distance])
-                        assert not two_hop_adjacency[i][j]
+                        source_indices.append(i)
+                        target_indices.append(j)
+                        edge_attr.append([z[i].item(), z[j].item(), 1.0, first_frame_distance])
+                        assert not two_hop_adjacency[i, j], f"Conflict at ({i}, {j})"
                     if two_hop_adjacency[i][j]:
-                        rows.append(i)
-                        cols.append(j)
-                        edge_attr.append([z[i], z[j], 2, first_frame_distance])
-                        assert not one_hop_adjacency[i][j]
+                        source_indices.append(i)
+                        target_indices.append(j)
+                        edge_attr.append([z[i].item(), z[j].item(), 2.0, first_frame_distance])
+                        assert not one_hop_adjacency[i, j], f"Conflict at ({i}, {j})"
 
-        edges = [rows, cols]
+        edge_index = (
+            torch.Tensor(source_indices),
+            torch.Tensor(target_indices),
+        )
         edge_attr_tensor = torch.Tensor(np.array(edge_attr))
-        return edge_attr_tensor, edges
+        return edge_attr_tensor, edge_index
 
     def calculate_rrwp(self, adj: torch.Tensor, walk_length: int = 8) -> torch.Tensor:
         """
