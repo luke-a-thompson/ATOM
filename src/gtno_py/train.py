@@ -24,13 +24,13 @@ from gtno_py.training import (
     reset_weights,
 )
 
+config = Config.from_toml("config.toml")
+
 os.environ["TORCHDYNAMO_CACHE_DIR"] = "/home/luke/gtno_py/torch_compiler/dynamo_cache"
 os.environ["TORCHINDUCTOR_CACHE_DIR"] = "/home/luke/gtno_py/torch_compiler/inductor_cache"
 assert os.access(Path("/home/luke/gtno_py/torch_compiler/trace"), os.W_OK), "Directory trace_dir is not writable."
-if config.training.use_trace:
+if config.benchmark.compile_trace:
     os.environ["TORCH_TRACE"] = "/home/luke/gtno_py/torch_compiler/trace"
-
-config = Config.from_toml("config.toml")
 
 project_name = input("Enter project name: ")
 
