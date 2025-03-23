@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from typing import override, final
+from gtno_py.training.config_options import FFNActivation
 
 
 # ReLU² Activation Function
@@ -27,3 +28,28 @@ class SwiGLU(nn.Module):
         gate: torch.Tensor = self.linear_gate(x)
         value: torch.Tensor = self.linear_value(x)
         return F.silu(gate) * value  # Element-wise product
+
+
+def get_activation(activation: FFNActivation, input_dim: int | None = None) -> nn.Module:
+    if activation == FFNActivation.SWIGLU and input_dim is None:
+        raise ValueError("input_dim must be provided for SwiGLU activation")
+
+    activation_fn: nn.Module
+    match activation:
+        case FFNActivation.RELU:
+            activation_fn = nn.ReLU()
+        case FFNActivation.LEAKY_RELU:
+            activation_fn = nn.LeakyReLU()
+        case FFNActivation.RELU2:
+            activation_fn = ReLU2()
+        case FFNActivation.GELU:
+            activation_fn = nn.GELU()
+        case FFNActivation.SILU:
+            activation_fn = nn.SiLU()
+        case FFNActivation.SWIGLU:
+            assert input_dim is not None
+            activation_fn = SwiGLU(input_dim=input_dim)
+        case _:
+            raise ValueError(f"Invalid activation function: {activation}, select from one of {FFNActivation.__members__.keys()}")
+
+    return activation_fn
