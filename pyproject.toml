@@ -10,6 +10,9 @@ keywords = ["graph transformer", "quantum chemistry", "molecular dynamics", "neu
 include = "gtno_py"
 from = "src"
 
+[tool.poetry.scripts]
+train = "gtno_py.train:main"
+
 [tool.poetry.dependencies]
 python = "^3.12"
 numpy = "^2.0.0"

@@ -1,9 +1,15 @@
 import torch
 from torch.utils.data import DataLoader
-from gtno_py.dataloaders.egno_dataloder import MD17DynamicsDataset
-from gtno_py.training.load_config import Config
-from gtno_py.training.config_options import MD17MoleculeType, RMD17MoleculeType, DataPartition
 from tqdm import tqdm
+
+from gtno_py.dataloaders.egno_dataloder import MD17DynamicsDataset
+from gtno_py.training.config_options import (
+    DataPartition,
+    MD17MoleculeType,
+    ModelType,
+    RMD17MoleculeType,
+)
+from gtno_py.training.load_config import Config
 
 
 def create_datasets(
@@ -20,11 +26,18 @@ def create_datasets(
     Returns:
         tuple[MD17DynamicsDataset, MD17DynamicsDataset, MD17DynamicsDataset]: The train/val/test Torch datasets.
     """
+
+    # If we are using a message passing model, we need to return the edge data
+    if config.benchmark.model_type == ModelType.EGNO:
+        return_edge_data = True
+    else:
+        return_edge_data = False
+
     train_dataset = MD17DynamicsDataset(
         partition=DataPartition.train,
         max_samples=500,
         delta_frame=config.dataloader.delta_T,
-        num_timesteps=config.model.num_timesteps,
+        num_timesteps=config.dataloader.num_timesteps,
         data_dir="data/",
         split_dir="data/",
         molecule_type=molecule_type,
@@ -34,13 +47,14 @@ def create_datasets(
         force_regenerate=config.dataloader.force_regenerate,
         radius_graph_threshold=config.dataloader.radius_graph_threshold,
         rrwp_length=config.dataloader.rrwp_length,
+        return_edge_data=return_edge_data,
     )
 
     val_dataset = MD17DynamicsDataset(
         partition=DataPartition.val,
         max_samples=2000,
         delta_frame=config.dataloader.delta_T,
-        num_timesteps=config.model.num_timesteps,
+        num_timesteps=config.dataloader.num_timesteps,
         data_dir="data/",
         split_dir="data/",
         molecule_type=molecule_type,
@@ -50,13 +64,14 @@ def create_datasets(
         force_regenerate=config.dataloader.force_regenerate,
         radius_graph_threshold=config.dataloader.radius_graph_threshold,
         rrwp_length=config.dataloader.rrwp_length,
+        return_edge_data=return_edge_data,
     )
 
     test_dataset = MD17DynamicsDataset(
         partition=DataPartition.test,
         max_samples=2000,
         delta_frame=config.dataloader.delta_T,
-        num_timesteps=config.model.num_timesteps,
+        num_timesteps=config.dataloader.num_timesteps,
         data_dir="data/",
         split_dir="data/",
         molecule_type=molecule_type,
@@ -66,6 +81,7 @@ def create_datasets(
         force_regenerate=config.dataloader.force_regenerate,
         radius_graph_threshold=config.dataloader.radius_graph_threshold,
         rrwp_length=config.dataloader.rrwp_length,
+        return_edge_data=return_edge_data,
     )
 
     return train_dataset, val_dataset, test_dataset

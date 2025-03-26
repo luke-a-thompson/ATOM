@@ -41,12 +41,6 @@ class RMD17MoleculeType(StrEnum):
 
 
 @final
-class DeviceType(StrEnum):
-    CPU = "cpu"
-    CUDA = "cuda"
-
-
-@final
 class OptimizerType(StrEnum):
     SGD = "sgd"
     ADAMW = "adamw"
@@ -63,6 +57,7 @@ class SchedulerType(StrEnum):
 @final
 class ModelType(StrEnum):
     GTNO = "GTNO"
+    EGNO = "EGNO"
 
 
 @final
@@ -86,6 +81,7 @@ class GraphHeterogenousAttentionType(StrEnum):
 @final
 class FFNActivation(StrEnum):
     RELU = "relu"
+    LEAKY_RELU = "leaky_relu"
     RELU2 = "relu2"
     GELU = "gelu"
     SILU = "silu"

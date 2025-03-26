@@ -55,7 +55,14 @@ class GTNOBlock(nn.Module):
             case _:
                 raise ValueError(f"Invalid activation function: {activation}, select from one of {FFNActivation.__members__.keys()}")
 
-        self.ffn = MLP(in_dim=lifting_dim, out_dim=lifting_dim, hidden_dim=lifting_dim, hidden_layers=2, activation=activation_fn, dropout_p=0.0)
+        self.ffn = MLP(
+            in_dim=lifting_dim,
+            hidden_dim=lifting_dim,
+            out_dim=lifting_dim,
+            hidden_layers=2,
+            activation=activation_fn,
+            dropout_p=0.0,
+        )
 
         self.heterogenous_attention: nn.Module
         match heterogenous_attention_type:

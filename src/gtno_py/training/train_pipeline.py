@@ -1,12 +1,106 @@
-from tensordict._td import TensorDict
+from datetime import datetime
+from pathlib import Path
+
+from tensordict import TensorDict
+import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import DataLoader
-import torch
-import torch.nn.functional as F
-from tensordict import TensorDict
-from gtno_py.utils import add_brownian_noise
-from gtno_py.training.load_config import Config
+from tqdm.std import tqdm
+import wandb
+
+from gtno_py.training import (
+    Config,
+    MD17MoleculeType,
+    RMD17MoleculeType,
+    SingleRunResults,
+    add_brownian_noise,
+    create_dataloaders_multitask,
+    create_dataloaders_single,
+    initialize_optimizer,
+    initialize_scheduler,
+    log_weights,
+    reset_weights,
+)
+
+
+def train_model(config: Config, model: nn.Module, molecule_type: MD17MoleculeType | RMD17MoleculeType | None, benchmark_dir: Path, run_number: int) -> SingleRunResults:
+    """Full training pipeline."""
+
+    if config.dataloader.multitask and molecule_type is None:
+        train_loader, val_loader, test_loader = create_dataloaders_multitask(config)
+    elif molecule_type is not None:
+        train_loader, val_loader, test_loader = create_dataloaders_single(config, molecule_type)
+    else:
+        raise ValueError("molecule_type must be provided for single-task dataloaders")
+
+    optimizer = initialize_optimizer(config, model)
+    scheduler = initialize_scheduler(config, optimizer)
+
+    # Create a temporary directory for this run
+    run_dir = benchmark_dir / f"run_{run_number+1}"
+    run_dir.mkdir(parents=True, exist_ok=True)
+    best_val_model = run_dir / "best_val_model.pth"
+
+    # Training loop
+    best_val_loss = float("inf")
+    best_val_loss_epoch = 0
+
+    start_training_time = datetime.now()
+    progress_bar = tqdm(range(config.training.epochs), desc="Training", leave=False, unit="epoch", position=2)
+    for epoch in progress_bar:
+        train_s2t_loss = train_epoch(
+            config,
+            model,
+            optimizer,
+            train_loader,
+            scheduler,
+        )
+        val_s2t_loss, _ = eval_epoch(config, model, val_loader)
+
+        # Log gate parameters and save to weights_dir if provided
+        if config.benchmark.log_weights:
+            log_weights(list(model.named_parameters()), epoch, save_dir=run_dir)
+
+        wandb.log({"train_s2t_loss": train_s2t_loss, "val_s2t_loss": val_s2t_loss, "lr": optimizer.param_groups[0]["lr"]})
+
+        # if val_loss < best_val_loss and epoch > 0.5 * num_epochs:
+        if val_s2t_loss < best_val_loss:
+            best_val_loss = val_s2t_loss
+            best_val_loss_epoch = epoch
+            torch.save(model.state_dict(), best_val_model)
+
+        if scheduler and isinstance(scheduler, optim.lr_scheduler.ReduceLROnPlateau):
+            scheduler.step(val_s2t_loss)
+
+        # Update progress bar with losses
+        progress_bar.set_postfix(
+            {
+                "Train s2t loss": f"{train_s2t_loss*100:.2f}x10^-2",
+                "Val s2t loss": f"{val_s2t_loss*100:.2f}x10^-2",
+                "Best val s2t loss": f"{best_val_loss*100:.2f}x10^-2",
+                f"Current {str(optimizer)} LR": f"{optimizer.param_groups[0]['lr']*100:.4f}x10^-2",
+            }
+        )
+    end_training_time = datetime.now()
+
+    # Final evaluation
+    _ = model.load_state_dict(torch.load(best_val_model, weights_only=True))
+    s2t_test_loss, s2s_test_loss = eval_epoch(config, model, test_loader)
+
+    reset_weights(model)
+
+    results = SingleRunResults(
+        s2t_test_loss=s2t_test_loss,
+        s2s_test_loss=s2s_test_loss,
+        best_val_loss_epoch=best_val_loss_epoch,
+        start_time=start_training_time,
+        end_time=end_training_time,
+        model_path=Path(best_val_model),
+    )
+
+    return results
 
 
 def train_epoch(
@@ -33,12 +127,12 @@ def train_epoch(
 
     for batch in dataloader:
         batch = TensorDict.from_dict(batch, device=torch.device(config.training.device), auto_batch_size=True)
-        assert batch["x_0"].shape[1] == (config.model.num_timesteps), f"{batch['x_0'].shape[1]} != {config.model.num_timesteps}"
+        assert batch["x_0"].shape[1] == (config.dataloader.num_timesteps), f"{batch['x_0'].shape[1]} != {config.dataloader.num_timesteps}"
         target_coords: torch.Tensor = batch.pop("x_t")
         _ = batch.pop("v_t")
         mask: torch.Tensor | None = batch.get("padded_nodes_mask", None)
 
-        if config.training.learnable_noise_std:
+        if config.training.brownian_noise_std > 0.0:
             batch["x_0"], batch["v_0"], batch["concatenated_features"] = add_brownian_noise(
                 batch["x_0"],
                 batch["v_0"],

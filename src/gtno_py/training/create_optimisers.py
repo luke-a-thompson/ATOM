@@ -1,9 +1,10 @@
-from gtno_py.training.load_config import Config
+import pytorch_optimizer as pt_optim
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import pytorch_optimizer as pt_optim
+
 from gtno_py.training.config_options import OptimizerType, SchedulerType
+from gtno_py.training.load_config import Config
 
 
 def initialize_optimizer(config: Config, model: nn.Module) -> torch.optim.Optimizer:

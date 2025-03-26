@@ -1,19 +1,33 @@
-from pydantic import BaseModel, model_validator
 from datetime import datetime
 from pathlib import Path
-from gtno_py.training import Config
+
+from pydantic import BaseModel, model_validator
 import torch
+
+from gtno_py.training import Config
 
 
 class SingleRunResults(BaseModel):
     s2t_test_loss: float
     s2s_test_loss: float
     best_val_loss_epoch: int
-    run_time: float
-    seconds_per_epoch: float
     start_time: datetime
     end_time: datetime
+    run_time: float | None = None
+    seconds_per_epoch: float | None = None
     model_path: Path
+
+    @model_validator(mode="after")
+    def compute_run_time(self) -> "SingleRunResults":
+        if self.start_time and self.end_time:
+            self.run_time = (self.end_time - self.start_time).total_seconds()
+        return self
+
+    @model_validator(mode="after")
+    def compute_seconds_per_epoch(self) -> "SingleRunResults":
+        if self.run_time and self.best_val_loss_epoch:
+            self.seconds_per_epoch = self.run_time / self.best_val_loss_epoch
+        return self
 
 
 class MultiRunResults(BaseModel):

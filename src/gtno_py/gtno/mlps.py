@@ -8,8 +8,8 @@ class MLP(nn.Module):
     def __init__(
         self,
         in_dim: int,
-        out_dim: int,
         hidden_dim: int,
+        out_dim: int,
         hidden_layers: int,
         activation: nn.Module,
         dropout_p: float,
@@ -19,8 +19,8 @@ class MLP(nn.Module):
 
         Parameters:
             in_features: The number of input features.
-            out_features: The number of output features.
             hidden_features: The number of features in the hidden layers.
+            out_features: The number of output features.
             hidden_layers: The number of hidden layers.
             activation: The activation function to use in the hidden layers.
             dropout_p: The dropout probability.

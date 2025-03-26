@@ -1,21 +1,22 @@
-from pydantic import BaseModel, model_validator
-from gtno_py.training.config_options import (
-    OptimizerType,
-    SchedulerType,
-    DeviceType,
-    NormType,
-    GraphHeterogenousAttentionType,
-    ValueResidualType,
-    ModelType,
-    FFNActivation,
-    MD17MoleculeType,
-    RMD17MoleculeType,
-    MD17Version,
-)
-import tomllib
 import importlib.util
+import tomllib
 from warnings import warn
+
+from pydantic import BaseModel, model_validator
 import torch
+
+from gtno_py.training.config_options import (
+    FFNActivation,
+    GraphHeterogenousAttentionType,
+    MD17MoleculeType,
+    MD17Version,
+    ModelType,
+    NormType,
+    OptimizerType,
+    RMD17MoleculeType,
+    SchedulerType,
+    ValueResidualType,
+)
 
 
 class WandbConfig(BaseModel):
@@ -23,6 +24,7 @@ class WandbConfig(BaseModel):
 
 
 class BenchmarkConfig(BaseModel):
+    model_type: ModelType
     compile: bool
     compile_trace: bool
     runs: int
@@ -32,12 +34,6 @@ class BenchmarkConfig(BaseModel):
     def validate_compile(self) -> "BenchmarkConfig":
         if self.compile and torch.cuda.get_device_capability() < (7, 0):
             raise ValueError("CUDA 7.0 or higher is required to compile the model. We recommend CUDA 11.0 or higher.")
-        return self
-
-    @model_validator(mode="after")
-    def validate_compile_trace(self) -> "BenchmarkConfig":
-        if self.compile_trace and not self.compile:
-            raise ValueError("'compile_trace' must be True if 'compile' is True.")
         return self
 
     @model_validator(mode="after")
@@ -59,6 +55,7 @@ class DataloaderConfig(BaseModel):
     md17_version: MD17Version
     # Single-task dataloader parameters
     molecule_type: MD17MoleculeType | RMD17MoleculeType | list[MD17MoleculeType | RMD17MoleculeType]
+    num_timesteps: int
 
     # Multitask dataloader parameters
     train_molecules: list[MD17MoleculeType | RMD17MoleculeType] | None = None
@@ -81,9 +78,9 @@ class DataloaderConfig(BaseModel):
         if not self.multitask and self.molecule_type is None:
             raise ValueError("If 'multitask' is False, 'molecule_type' must be specified.")
 
-        if not self.multitask and (self.train_molecules or self.validation_molecules or self.test_molecules):
+        if self.multitask is True and not (self.train_molecules or self.validation_molecules or self.test_molecules):
             raise ValueError(
-                "If 'multitask' is True, 'train_molecules', 'validation_molecules', and 'test_molecules' must not be specified. They are only used for multitask dataloaders."
+                "If 'multitask' is True, 'train_molecules', 'validation_molecules', and 'test_molecules' must be specified. They are only used for multitask dataloaders."
             )
         return self
 
@@ -144,13 +141,35 @@ class DataloaderConfig(BaseModel):
 
 
 class TrainingConfig(BaseModel):
-    device: DeviceType
+    device: torch.device
     seed: int
     batch_size: int
     epochs: int
     max_grad_norm: float
-    learnable_noise_std: bool
     brownian_noise_std: float
+
+    class Config:
+        arbitrary_types_allowed = True
+
+    @model_validator(mode="after")
+    def validate_brownian_noise_std(self) -> "TrainingConfig":
+        if self.brownian_noise_std < 0.0:
+            raise ValueError("'brownian_noise_std' must be 0.0 or greater.")
+        return self
+
+    @model_validator(mode="before")
+    @classmethod
+    def convert_device_to_torch_device(cls, values: dict[str, object]) -> dict[str, object]:
+        device_value = values.get("device")
+        if device_value is not None:
+            if not isinstance(device_value, (str, int, torch.device)):
+                raise ValueError(f"Invalid type for device: {device_value}")
+
+            try:
+                values["device"] = torch.device(device_value)
+            except (TypeError, ValueError) as e:
+                raise ValueError(f"Could not convert {device_value} to torch.device: {e}")
+        return values
 
 
 class OptimizerConfig(BaseModel):
@@ -165,13 +184,11 @@ class SchedulerConfig(BaseModel):
     type: SchedulerType
 
 
-class ModelConfig(BaseModel):
-    model_type: ModelType
+class GTNOConfig(BaseModel):
     # Architecture parameters
     num_layers: int
     num_heads: int
     lifting_dim: int
-    num_timesteps: int
     # Output parameters
     output_heads: int
     # Attention parameters
@@ -187,15 +204,37 @@ class ModelConfig(BaseModel):
     value_residual_type: ValueResidualType
 
     @model_validator(mode="after")
-    def validate_output_heads(self) -> "ModelConfig":
+    def validate_output_heads(self) -> "GTNOConfig":
         if self.output_heads < 1:
             raise ValueError("'output_heads' must be greater than 0.")
         return self
 
     @model_validator(mode="after")
-    def validate_lifting_dim_and_num_heads(self) -> "ModelConfig":
+    def validate_lifting_dim_and_num_heads(self) -> "GTNOConfig":
         if self.lifting_dim % self.num_heads != 0:
             raise ValueError("'lifting_dim' must be divisible by 'num_heads'.")
+        return self
+
+
+class EGNOConfig(BaseModel):
+    num_layers: int
+    lifting_dim: int
+    activation: FFNActivation
+    normalise_scalars: bool
+    use_time_conv: bool
+    num_fourier_modes: int
+    time_embed_dim: int
+
+    @model_validator(mode="after")
+    def validate_lifting_dim(self) -> "EGNOConfig":
+        if self.lifting_dim % 2 != 0:
+            raise ValueError("'lifting_dim' must be even.")
+        return self
+
+    @model_validator(mode="after")
+    def validate_num_fourier_modes(self) -> "EGNOConfig":
+        if self.num_fourier_modes < 1:
+            raise ValueError("'num_fourier_modes' must be greater than 0.")
         return self
 
 
@@ -206,7 +245,8 @@ class Config(BaseModel):
     training: TrainingConfig
     optimizer: OptimizerConfig
     scheduler: SchedulerConfig
-    model: ModelConfig
+    gtno_config: GTNOConfig
+    egno_config: EGNOConfig
 
     @classmethod
     def from_toml(cls, path: str) -> "Config":

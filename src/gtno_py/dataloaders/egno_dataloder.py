@@ -25,6 +25,8 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         md17_version: MD17Version,
         molecule_type: MD17MoleculeType | RMD17MoleculeType,
         max_nodes: int | None,
+        return_edge_data: bool,
+        num_timesteps: int = 1,  # Number of timesteps to replicate
         explicit_hydrogen: bool = False,
         radius_graph_threshold: float = 1.6,
         rrwp_length: int = 8,
@@ -33,7 +35,6 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         test_par: float = 0.05,
         seed: int = 100,
         force_regenerate: bool = False,
-        num_timesteps: int = 1,  # Number of timesteps to replicate
         verbose: bool = False,
     ):
         """
@@ -55,6 +56,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         self.max_nodes: int | None = max_nodes
         self.delta_frame: int = delta_frame
         self.num_timesteps: int = num_timesteps
+        self.return_edge_data: bool = return_edge_data
         self.max_samples: int = max_samples
         self.verbose: bool = verbose
         self.radius_graph_threshold: float = radius_graph_threshold
@@ -131,7 +133,8 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         self.num_nodes: int = z.shape[0]
 
         one_hop_adjacency, two_hop_adjacency = self._compute_adjacency_matrix(x, self.num_nodes, self.radius_graph_threshold)
-        self.edge_attr, self.edge_index = self._build_edge_attributes(one_hop_adjacency, two_hop_adjacency, z, x_0)
+        if self.return_edge_data:
+            self.edge_attr, self.edge_index = self._build_edge_attributes(one_hop_adjacency, two_hop_adjacency, z, x_0)
         if self.rrwp_length > 0:
             self.rrwp: torch.Tensor = self.calculate_rrwp(one_hop_adjacency, self.rrwp_length)
 
@@ -391,8 +394,9 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
             x_0: Atom positions (multiple frames; frame 0 is used for edge computation)
 
         Returns:
-            edge_attr: Edge attributes containing source, target, type, and distance
-            edge_index: Edges containing source and target indices
+            edge_attr: Tensor of shape (num_edges, 4) where each row contains:
+                [source feature, target feature, edge type (1 for one-hop, 2 for two-hop), distance].
+            edge_index: Tuple of two torch.Tensor (sources, targets).
 
         In EGNO parlance:
             Source_indices: rows
@@ -519,6 +523,11 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
             mask = mask.unsqueeze(0).expand(self.num_timesteps, -1).unsqueeze(-1).bool()
             sample["padded_nodes_mask"] = mask
 
+        if self.return_edge_data:
+            sample["edge_attr"] = self.edge_attr
+            sample["source_node_indices"] = self.edge_index[0]
+            sample["target_node_indices"] = self.edge_index[1]
+
         return sample
 
     def __len__(self):
@@ -541,11 +550,12 @@ class MD17DynamicsDataset(MD17Dataset):
         md17_version: MD17Version,
         molecule_type: MD17MoleculeType | RMD17MoleculeType,
         max_nodes: int | None,
+        return_edge_data: bool,
+        num_timesteps: int = 8,  # Number of timesteps for dynamics
         explicit_hydrogen: bool = False,
         train_par: float = 0.1,
         val_par: float = 0.05,
         test_par: float = 0.05,
-        num_timesteps: int = 8,  # Number of timesteps for dynamics
         radius_graph_threshold: float = 1.6,
         rrwp_length: int = 0,
         seed: int = 100,
@@ -560,13 +570,14 @@ class MD17DynamicsDataset(MD17Dataset):
             md17_version=md17_version,
             molecule_type=molecule_type,
             max_nodes=max_nodes,
+            num_timesteps=num_timesteps,  # Pass num_timesteps to base class for replication
+            return_edge_data=return_edge_data,
             explicit_hydrogen=explicit_hydrogen,
             train_par=train_par,
             val_par=val_par,
             test_par=test_par,
             seed=seed,
             force_regenerate=force_regenerate,
-            num_timesteps=num_timesteps,  # Pass num_timesteps to base class for replication
             rrwp_length=rrwp_length,
             radius_graph_threshold=radius_graph_threshold,
         )
@@ -630,12 +641,13 @@ if __name__ == "__main__":
         max_nodes=20,
         force_regenerate=False,
         num_timesteps=1,  # Set num_timesteps for replication
+        return_edge_data=False,
     )
     dataloader_static = DataLoader(dataset_static, batch_size=100, shuffle=True)
     print("MD17Dataset Output Shapes:")
     for data in dataloader_static:
         for key in data:
-            if key not in ["cfg", "edge_attr"]:
+            if key not in ["cfg", "edge_attr", "edge_index"]:
                 print(f"  {key}:", data[key].shape)
         if "cfg" in data:
             print("  cfg shapes:")
@@ -655,6 +667,7 @@ if __name__ == "__main__":
         max_nodes=13,
         force_regenerate=True,
         num_timesteps=8,  # Set num_timesteps for replication
+        return_edge_data=False,
     )
 
     dataloader_dynamic = DataLoader(dataset_dynamic, batch_size=100, shuffle=True)

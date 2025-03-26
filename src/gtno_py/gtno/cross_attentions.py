@@ -135,7 +135,14 @@ class SphericalHarmonicsAttentionBias(nn.Module):
         # Total number of coefficients from l=0 to max_degree.
         self.num_coeff = sum(2 * l + 1 for l in range(max_degree + 1))
         self.num_timesteps = num_timesteps
-        self.mlp = MLP(in_dim=self.num_coeff, out_dim=num_heads, hidden_dim=hidden_dim, hidden_layers=2, activation=nn.SiLU(), dropout_p=0.1)
+        self.mlp = MLP(
+            in_dim=self.num_coeff,
+            hidden_dim=hidden_dim,
+            out_dim=num_heads,
+            hidden_layers=2,
+            activation=nn.SiLU(),
+            dropout_p=0.1,
+        )
         self.eps = 1e-6
 
     @override
