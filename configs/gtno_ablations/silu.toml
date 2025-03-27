@@ -3,9 +3,10 @@ use_wandb = false
 
 [benchmark]
 model_type = "GTNO"
+benchmark_name = "silu"
 compile = true
 compile_trace = false
-runs = 1
+runs = 3
 log_weights = false
 
 [dataloader]
@@ -15,7 +16,7 @@ md17_version = "md17"
 num_timesteps = 8
 
 # Single-task dataloader parameters
-molecule_type = "benzene"  # Iterates through single-task learning on these molecules
+molecule_type = "aspirin"  # Iterates through single-task learning on these molecules
 
 # Multitask dataloader parameters
 train_molecules = ["aspirin", "benzene", "ethanol", "toluene", "uracil", "salicylic", "malonaldehyde"]
@@ -68,7 +69,7 @@ use_spherical_harmonics = false
 use_equivariant_lifting = true
 # Layer parameters
 norm = "rms"
-activation = "swiglu"
+activation = "silu"
 value_residual_type = "learnable"
 
 [egno_config]

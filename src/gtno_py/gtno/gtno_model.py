@@ -2,9 +2,9 @@ from typing import final, override
 import torch
 import torch.nn as nn
 from gtno_py.gtno.activations import ReLU2, SwiGLU
-from gtno_py.training.config_options import FFNActivation, NormType, ValueResidualType, GraphHeterogenousAttentionType
+from gtno_py.training.config_options import FFNActivation, NormType, ValueResidualType, AttentionType
 from tensordict import TensorDict
-from gtno_py.gtno.cross_attentions import QuadraticHeterogenousCrossAttention
+from gtno_py.gtno.attentions import QuadraticHeterogenousCrossAttention, QuadraticSelfAttention
 from gtno_py.gtno.mlps import MLP
 from e3nn import o3
 
@@ -17,7 +17,7 @@ class GTNOBlock(nn.Module):
         norm: NormType,
         activation: FFNActivation,
         num_heads: int,
-        heterogenous_attention_type: GraphHeterogenousAttentionType,
+        attention_type: AttentionType,
         num_timesteps: int,
         use_rope: bool,
         use_spherical_harmonics: bool,
@@ -27,6 +27,7 @@ class GTNOBlock(nn.Module):
         super().__init__()
 
         self.num_timesteps = num_timesteps
+        self.attention_type = attention_type
 
         self.pre_norm: nn.Module
         match norm:
@@ -64,10 +65,19 @@ class GTNOBlock(nn.Module):
             dropout_p=0.0,
         )
 
-        self.heterogenous_attention: nn.Module
-        match heterogenous_attention_type:
-            case GraphHeterogenousAttentionType.GHCA:
-                self.heterogenous_attention = QuadraticHeterogenousCrossAttention(
+        self.attention: nn.Module
+        match self.attention_type:
+            case AttentionType.SELF:
+                self.attention = QuadraticSelfAttention(
+                    lifting_dim=lifting_dim,
+                    num_heads=num_heads,
+                    num_timesteps=self.num_timesteps,
+                    use_rope=use_rope,
+                    use_spherical_harmonics=use_spherical_harmonics,
+                    learnable_attention_denom=learnable_attention_denom,
+                )
+            case AttentionType.GHCA:
+                self.attention = QuadraticHeterogenousCrossAttention(
                     num_hetero_feats=3,
                     lifting_dim=lifting_dim,
                     num_heads=num_heads,
@@ -77,7 +87,7 @@ class GTNOBlock(nn.Module):
                     learnable_attention_denom=learnable_attention_denom,
                 )
             case _:
-                raise ValueError(f"Invalid heterogenous attention type: {heterogenous_attention_type}, select from one of {GraphHeterogenousAttentionType.__members__.keys()}")  # type: ignore
+                raise ValueError(f"Invalid heterogenous attention type: {attention_type}, select from one of {AttentionType.__members__.keys()}")  # type: ignore
 
         self.value_residual_type = value_residual_type
 
@@ -87,6 +97,8 @@ class GTNOBlock(nn.Module):
                 self.lambda_v_residual = nn.Parameter(torch.tensor(0.5))  # Initialize lambda to 0.5
             case ValueResidualType.FIXED:
                 self.lambda_v_residual = torch.tensor(0.5)
+            case ValueResidualType.NONE:
+                self.lambda_v_residual = torch.empty(0)
             case _:
                 raise ValueError(f"Invalid value residual type: {self.value_residual_type}, select from one of {ValueResidualType.__members__.keys()}")
 
@@ -104,8 +116,11 @@ class GTNOBlock(nn.Module):
         x_0 = self.pre_norm(x_0)
         v_0 = self.pre_norm(v_0)
 
-        hetero_attended_nodes: torch.Tensor = x_0 + self.heterogenous_attention(x_0, v_0, concatenated_features, q_data=q_data, mask=mask)
-        x_0 = hetero_attended_nodes + self.ffn(hetero_attended_nodes, mask)
+        if self.attention_type == AttentionType.SELF:
+            attended_nodes: torch.Tensor = x_0 + self.attention(tensor=x_0, mask=mask)
+        else:
+            attended_nodes: torch.Tensor = x_0 + self.attention(x_0, v_0, concatenated_features, q_data=q_data, mask=mask)
+        x_0 = attended_nodes + self.ffn(attended_nodes, mask)
 
         if self.value_residual_type == ValueResidualType.LEARNABLE:
             # Set initial_v if not provided (first layer); otherwise apply value residual
@@ -127,7 +142,7 @@ class GTNO(nn.Module):
         activation: FFNActivation,
         num_layers: int,
         num_heads: int,
-        heterogenous_attention_type: GraphHeterogenousAttentionType,
+        attention_type: AttentionType,
         output_heads: int,
         num_timesteps: int,
         use_rope: bool,
@@ -189,7 +204,7 @@ class GTNO(nn.Module):
                     norm,
                     activation,
                     num_heads,
-                    heterogenous_attention_type,
+                    attention_type,
                     num_timesteps,
                     use_rope,
                     use_spherical_harmonics,

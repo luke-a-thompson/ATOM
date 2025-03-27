@@ -12,9 +12,39 @@ from gtno_py.training.load_config import Config
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Train GTNO model with configuration file")
-    parser.add_argument("config_path", type=str, help="Path to the config.toml file")
+    parser = argparse.ArgumentParser(description="Train GTNO model with configuration file(s)")
+    group = parser.add_mutually_exclusive_group(required=True)
+    _ = group.add_argument(
+        "--config",
+        type=str,
+        help="Path to a single config.toml file",
+    )
+    _ = group.add_argument(
+        "--configs",
+        type=str,
+        help="Path to directory containing config.toml files to run sequentially",
+    )
     return parser.parse_args()
+
+
+def get_config_files(directory: str) -> list[Path]:
+    """Get all .toml configuration files from a directory.
+
+    Args:
+        directory (str): Path to directory containing config files
+
+    Returns:
+        list[Path]: List of paths to .toml config files, sorted alphabetically
+    """
+    dir_path = Path(directory)
+    if not dir_path.is_dir():
+        raise NotADirectoryError(f"The path {directory} is not a directory")
+
+    config_files = sorted(dir_path.glob("*.toml"))
+    if not config_files:
+        raise FileNotFoundError(f"No .toml files found in directory {directory}")
+
+    return config_files
 
 
 def set_seeds(seed: int) -> None:

@@ -47,7 +47,7 @@ def singletask_benchmark(config: Config) -> None:
 
         # Create a directory for this molecule's benchmark
         timestamp = datetime.now().strftime("%d-%b-%Y_%H-%M-%S")
-        benchmark_dir = Path(f"benchmark_runs/{project_name}_{str(molecule)}_{timestamp}")
+        benchmark_dir = Path(f"benchmark_runs/{config.benchmark.benchmark_name}_{str(molecule)}_{timestamp}")
         benchmark_dir.mkdir(parents=True, exist_ok=True)
         run_results: list[SingleRunResults] = []
 
@@ -61,7 +61,13 @@ def singletask_benchmark(config: Config) -> None:
         multi_run_results = MultiRunResults(single_run_results=run_results, config=config)
 
         # Save to JSON
-        multi_run_results_json = multi_run_results.model_dump_json(indent=2)
+        multi_run_results_json = multi_run_results.model_dump_json(
+            indent=2,
+            exclude={
+                "config": {"training": {"device"}},
+                "single_run_results": {"__all__": {"device"}},
+            },
+        )
         results_filename = f"{benchmark_dir}/results.json"
         with open(results_filename, "w") as f:
             f.write(multi_run_results_json)
@@ -94,7 +100,7 @@ def multitask_benchmark(config: Config) -> None:
 
     # Create a directory for this molecule's benchmark
     timestamp = datetime.now().strftime("%d-%b-%Y_%H-%M-%S")
-    benchmark_dir = Path(f"benchmark_runs/{project_name}_multitask_{timestamp}")
+    benchmark_dir = Path(f"benchmark_runs/{config.benchmark.benchmark_name}_multitask_{timestamp}")
     benchmark_dir.mkdir(parents=True, exist_ok=True)
     run_results: list[SingleRunResults] = []
 
@@ -108,7 +114,13 @@ def multitask_benchmark(config: Config) -> None:
     multi_run_results = MultiRunResults(single_run_results=run_results, config=config)
 
     # Save to JSON
-    multi_run_results_json = multi_run_results.model_dump_json(indent=2)
+    multi_run_results_json = multi_run_results.model_dump_json(
+        indent=2,
+        exclude={
+            "config": {"training": {"device"}},
+            "single_run_results": {"__all__": {"device"}},
+        },
+    )
     results_filename = f"{benchmark_dir}/results.json"
     with open(results_filename, "w") as f:
         f.write(multi_run_results_json)

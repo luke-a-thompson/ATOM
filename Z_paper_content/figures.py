@@ -200,7 +200,75 @@ def plot_learnable_attention_weights(
     plt.show()
 
 
+def plot_horizontal_bars(save_path: Path | None = None) -> None:
+    """
+    Create 8 horizontal bars with fake data, styled consistently with other figures.
+
+    Args:
+        save_path: Optional path to save the figure
+        font_size: Font size for the plot elements
+
+    Returns:
+        None
+    """
+    # Get colors from the palette
+    grey, red, blue, yellow, white = get_palette("primary").hex_colors()
+
+    # Create fake data
+    # Dictionary with category names as keys and tuples of (mean, std_dev) as values
+    data_dict: dict[str, tuple[float, float]] = {
+        "GTNO": (6.93, 0.04),  # Default GTNO
+        "Fixed value residual": (6.89, 0.25),  # Fixed value residual
+        "No Equivariant Lifting": (8.59, 3.42),  # No equivariant lifting results
+        "No noise": (8.05, 0.09),  # No noise
+        "No RoPE": (7.80, 0.05),  # No noise (RoPE) results
+        "No Value Residual": (6.89, 0.25),  # No value residual results
+        "Regular Attention": (7.14, 0.09),  # Regular attention results
+        "SiLU": (7.01, 0.23),  # SiLU results
+    }
+
+    # Sort the dictionary by values (first element of tuple) in descending order
+    data_dict = dict(sorted(data_dict.items(), key=lambda x: x[1][0]))
+
+    # Extract categories and values from the dictionary
+    categories: list[str] = list(data_dict.keys())
+    values: npt.NDArray[np.float64] = np.array([v[0] for v in data_dict.values()])
+    std_devs: npt.NDArray[np.float64] = np.array([v[1] for v in data_dict.values()])
+
+    # Create figure and axis
+    fig, ax = plt.subplots(figsize=(4, 5))
+
+    # Create horizontal bars with grey edge color and error bars
+    bars = ax.barh(categories, values, xerr=std_devs, color=red, alpha=0.8, edgecolor=grey, linewidth=0, error_kw={"ecolor": grey, "capsize": 3, "capthick": 1, "elinewidth": 1})
+
+    # Remove top and right spines
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    # Add value labels at the end of each bar
+    for i, bar in enumerate(bars):
+        width = values[i]
+        ax.text(width + std_devs[i] + 0.1, bar.get_y() + bar.get_height() / 2, f"{width:.2f}±{std_devs[i]:.2f}", va="center")  # Position after the error bar
+
+    # Customize axis
+    ax.set_xlabel("S2S MSE")
+    # ax.set_xlim(5e-2, 1e-1)
+
+    # Remove y-axis label since categories are self-explanatory
+    ax.set_ylabel("")
+
+    # Adjust layout
+    plt.tight_layout()
+
+    # Save if path provided
+    if save_path:
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+        plt.savefig(save_path, format="pdf", dpi=300, bbox_inches="tight")
+        print(f"Figure saved as PDF to {save_path}")
+
+
 if __name__ == "__main__":
     set_matplotlib_style()
     # plot_learnable_attention_weights(Path("benchmark_runs/Paper_learned_denom_ethanol_06-Mar-2025_01-36-47/weights_run1"), "ethanol")
-    plot_lambda_value_residuals(Path("benchmark_runs/Paper_learned_denom_toluene_06-Mar-2025_02-29-46/weights_run1"), "ethanol")
+    # plot_lambda_value_residuals(Path("benchmark_runs/Paper_learned_denom_toluene_06-Mar-2025_02-29-46/weights_run1"), "ethanol")
+    plot_horizontal_bars(save_path=Path("Z_paper_content/ablations/ablation_MD17.pdf"))

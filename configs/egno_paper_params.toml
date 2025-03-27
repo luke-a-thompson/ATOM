@@ -2,10 +2,10 @@
 use_wandb = false
 
 [benchmark]
-model_type = "GTNO"
-compile = true
+model_type = "EGNO"
+compile = false
 compile_trace = false
-runs = 1
+runs = 3
 log_weights = false
 
 [dataloader]
@@ -15,7 +15,7 @@ md17_version = "md17"
 num_timesteps = 8
 
 # Single-task dataloader parameters
-molecule_type = "benzene"  # Iterates through single-task learning on these molecules
+molecule_type = "aspirin"  # Iterates through single-task learning on these molecules
 
 # Multitask dataloader parameters
 train_molecules = ["aspirin", "benzene", "ethanol", "toluene", "uracil", "salicylic", "malonaldehyde"]
@@ -27,7 +27,7 @@ explicit_hydrogen = false
 explicit_hydrogen_gradients = false
 radius_graph_threshold = 1.6
 rrwp_length = 0  # 0 for no RRWPs
-normalize_z = false
+normalize_z = true
 persistent_workers = true
 num_workers = 4
 pin_memory = true
@@ -39,18 +39,18 @@ device = "cuda"
 seed = 42
 batch_size = 100
 epochs = 1000
-max_grad_norm = 1.0
-brownian_noise_std = 0.1
+max_grad_norm = 99.0
+brownian_noise_std = 0.0
 
 [optimizer]
-type = "adamw"
-learning_rate = 1e-3
-weight_decay = 1e-5
+type = "adam"
+learning_rate = 5e-4
+weight_decay = 1e-15
 adam_betas = [0.9, 0.999]
-adam_eps = 1e-10
+adam_eps = 1e-8
 
 [scheduler]
-type = "none"
+type = "step"
 
 [gtno_config]
 # Architecture parameters
@@ -58,7 +58,7 @@ num_layers = 5
 num_heads = 8
 lifting_dim = 128
 # Output parameters
-output_heads = 1
+output_heads = 4
 # Attention parameters
 heterogenous_attention_type = "GHCA"
 use_rope = true

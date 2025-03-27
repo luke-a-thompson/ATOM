@@ -7,21 +7,35 @@ from gtno_py.training import (
     set_environment_variables,
     singletask_benchmark,
     multitask_benchmark,
+    get_config_files,
 )
 
 
 def main() -> None:
     args = parse_args()
-    config = Config.from_toml(args.config_path)
-    project_name = input("Enter project name: ")
-    _ = wandb.init(project="GTNO", name=project_name, config=dict(config), mode="disabled" if not config.wandb.use_wandb else "online")
-    set_seeds(config.training.seed)
-    set_environment_variables(config)
+    if args.config:
+        config = Config.from_toml(args.config)
+        _ = wandb.init(project="GTNO", name=config.benchmark.benchmark_name, config=dict(config), mode="disabled" if not config.wandb.use_wandb else "online")
+        set_seeds(config.training.seed)
+        set_environment_variables(config)
 
-    if config.dataloader.multitask:
-        multitask_benchmark(config)
+        if config.dataloader.multitask:
+            multitask_benchmark(config)
+        else:
+            singletask_benchmark(config)
+    elif args.configs:
+        for config_path in get_config_files(args.configs):
+            config = Config.from_toml(config_path)
+            _ = wandb.init(project="GTNO", name=config.benchmark.benchmark_name, config=dict(config), mode="disabled" if not config.wandb.use_wandb else "online")
+            set_seeds(config.training.seed)
+            set_environment_variables(config)
+
+            if config.dataloader.multitask:
+                multitask_benchmark(config)
+            else:
+                singletask_benchmark(config)
     else:
-        singletask_benchmark(config)
+        raise ValueError("No config file or directory provided")
 
 
 if __name__ == "__main__":

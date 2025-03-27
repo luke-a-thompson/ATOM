@@ -246,7 +246,7 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
             self.spherical_harmonics = SphericalHarmonicsAttentionBias(num_timesteps=self.num_timesteps, max_degree=1, num_heads=self.num_heads, hidden_dim=16)
 
     @override
-    def forward(self, x_0: torch.Tensor, v_0: torch.Tensor, concatenated_features: torch.Tensor, q_data: torch.Tensor, mask: torch.Tensor | None) -> torch.Tensor:
+    def forward(self, x_0: torch.Tensor, v_0: torch.Tensor | None, concatenated_features: torch.Tensor| None, q_data: torch.Tensor, mask: torch.Tensor | None) -> torch.Tensor:
         """
         1. Flatten queries => [B, seq_q, d], then project to [B, heads, seq_q, d_head].
         2. For each heterogeneous feature, do:
@@ -329,4 +329,94 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         out = out_sum.view(B, T, N, self.lifting_dim)
 
         # Unflatten => [B*T, N, d]
+        return out
+
+
+@final
+class QuadraticSelfAttention(nn.Module):
+    def __init__(
+        self,
+        num_heads: int,
+        num_timesteps: int,
+        lifting_dim: int,
+        use_rope: bool,
+        use_spherical_harmonics: bool,
+        learnable_attention_denom: bool = False,
+        attention_dropout: float = 0.2,
+    ) -> None:
+        super().__init__()
+        self.num_heads = num_heads
+        self.lifting_dim = lifting_dim
+        self.num_timesteps = num_timesteps
+        self.use_rope = use_rope
+        self.use_spherical_harmonics = use_spherical_harmonics
+        self.d_head = self.lifting_dim // self.num_heads
+
+        assert self.d_head % 2 == 0, "d_head must be even"
+
+        self.kv_projs = nn.Linear(lifting_dim, 2 * lifting_dim)
+        self.query = nn.Linear(lifting_dim, lifting_dim)
+        self.out_proj = nn.Linear(lifting_dim, lifting_dim)
+        self.attention_dropout = nn.Dropout(attention_dropout)
+
+        denom_init = torch.full((num_heads,), float(self.d_head))
+        if learnable_attention_denom:
+            self.attention_denom = nn.Parameter(denom_init)
+        else:
+            self.register_buffer("attention_denom", denom_init, persistent=False)
+
+        if use_rope:
+            self.rope = TemporalRoPEWithOffset(num_timesteps=self.num_timesteps, d_head=self.d_head, n_heads=self.num_heads, base=1000.0, learnable_offset=False)
+
+        if use_spherical_harmonics:
+            self.spherical_harmonics = SphericalHarmonicsAttentionBias(num_timesteps=self.num_timesteps, max_degree=1, num_heads=self.num_heads, hidden_dim=16)
+
+    @override
+    def forward(self, tensor: torch.Tensor, mask: torch.Tensor | None) -> torch.Tensor:
+        """
+        Conventional self-attention on an arbitrary input tensor (e.g., x_0 for position self-attention).
+
+        Args:
+            x_0: shape [B, T, N, d]
+            mask: shape [B, T, N, 1]
+        """
+        B, T, N, d = tensor.shape
+
+        if mask is not None:
+            assert mask.shape == (B, T, N, 1), f"Expected mask shape (B,T,N,1) but got {mask.shape}"
+            mask = mask.reshape(B, T * N)
+            key_mask = mask.unsqueeze(1).unsqueeze(1)  # [B, 1, 1, T*N] for attention scores
+            rope_mask = mask.unsqueeze(1).unsqueeze(-1)  # [B, 1, T*N, 1] for RoPE
+        else:
+            key_mask = None
+            rope_mask = None
+
+        q_proj: torch.Tensor = self.query(tensor).view(B, T * N, self.num_heads, self.d_head).permute(0, 2, 1, 3)
+
+        if self.use_rope:
+            q_proj = self.rope(q_proj, rope_mask)
+
+        if self.use_spherical_harmonics:
+            bias: torch.Tensor = self.spherical_harmonics(tensor[..., :3])
+
+        kv: torch.Tensor = self.kv_projs(tensor)
+        k_proj, v_proj = torch.chunk(kv, 2, dim=-1)
+        k_proj = k_proj.view(B, N * T, self.num_heads, self.d_head).permute(0, 2, 1, 3)
+        v_proj = v_proj.view(B, N * T, self.num_heads, self.d_head).permute(0, 2, 1, 3)
+
+        if self.use_rope:
+            k_proj = self.rope(k_proj, rope_mask)
+
+        scores: torch.Tensor = q_proj @ k_proj.transpose(-2, -1) / self.attention_denom.view(1, -1, 1, 1)
+        if mask is not None:
+            scores = scores.masked_fill(key_mask == 0, float("-inf"))
+
+        if self.use_spherical_harmonics:
+            scores = scores + bias
+
+        attn_weights: torch.Tensor = self.attention_dropout(F.softmax(scores, dim=-1))
+        out = attn_weights @ v_proj
+
+        out = out.permute(0, 2, 1, 3).reshape(B, T * N, self.lifting_dim)
+        out: torch.Tensor = self.out_proj(out).view(B, T, N, self.lifting_dim)
         return out

@@ -20,12 +20,14 @@ def initialize_optimizer(config: Config, model: nn.Module) -> torch.optim.Optimi
     match config.optimizer.type:
         case OptimizerType.SGD:
             return optim.SGD(model.parameters(), lr=config.optimizer.learning_rate, weight_decay=config.optimizer.weight_decay)
+        case OptimizerType.ADAM:
+            return optim.Adam(model.parameters(), lr=config.optimizer.learning_rate, weight_decay=config.optimizer.weight_decay)
         case OptimizerType.ADAMW:
             return optim.AdamW(model.parameters(), lr=config.optimizer.learning_rate, weight_decay=config.optimizer.weight_decay)
-        case OptimizerType.MUON:
-            return pt_optim.Muon(model.parameters(), lr=config.optimizer.learning_rate, weight_decay=config.optimizer.weight_decay)
         case OptimizerType.ADAM_MINI:
             return pt_optim.AdamMini(model.parameters(), lr=config.optimizer.learning_rate, weight_decay=config.optimizer.weight_decay)
+        case OptimizerType.MUON:
+            return pt_optim.Muon(model.parameters(), lr=config.optimizer.learning_rate, weight_decay=config.optimizer.weight_decay)
         case _:
             raise ValueError(f"Invalid optimizer type: {config.optimizer.type}")
 
@@ -43,6 +45,8 @@ def initialize_scheduler(config: Config, optimizer: torch.optim.Optimizer) -> to
     match config.scheduler.type:
         case SchedulerType.NONE:
             return None
+        case SchedulerType.STEP:
+            return optim.lr_scheduler.StepLR(optimizer, step_size=250, gamma=0.5)
         case SchedulerType.COS_ANNEALING:
             raise NotImplementedError("Cosine annealing scheduler not implemented")
         case _:

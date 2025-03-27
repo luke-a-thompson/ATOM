@@ -81,17 +81,28 @@ class EGNO(nn.Module):
         # Get x, v to shape [B*T*N, 3]
         x: torch.Tensor = batch["x_0"][..., :3].view(B * T * N, -1)
         v: torch.Tensor = batch["v_0"][..., :3].view(B * T * N, -1)
-
-        h = torch.cat((batch["concatenated_features"][..., 3:4], batch["concatenated_features"][..., 6:7]), dim=-1)  # ||x||, Z
+        h = batch["concatenated_features"][..., -2:]  # ||v||, Z
         h = h.view(B * T * N, -1)
         h = torch.cat((h, time_emb), dim=-1)  # [B * T * N, H]
         h: torch.Tensor = self.egnn.embedding(h)
 
+        # Handle distances
+        loc = batch["x_0"][:, 0, :, :3].reshape(B * N, 3)  # Ignoring norm for distances
+        # Pre-duplicated edge indices already have shape [B*T*E]
+        rows = batch["source_node_indices"].reshape(B * E)
+        cols = batch["target_node_indices"].reshape(B * E)
+
+        # Compute squared distances for each edge
+        loc_dist = torch.sum((loc[rows.to(torch.long)] - loc[cols.to(torch.long)]) ** 2, dim=-1, keepdim=True)  # [B*E, 1]
+        loc_dist = loc_dist.repeat(T, 1)  # [T*B*E, 1]
+
+        time_offsets = (torch.arange(T, device=batch["x_0"].device) * N).repeat_interleave(B * E)
         edge_index = (
-            batch["source_node_indices"].reshape(B * E).repeat(T),
-            batch["target_node_indices"].reshape(B * E).repeat(T),
+            batch["source_node_indices"].reshape(B * E).repeat(T) + time_offsets,
+            batch["target_node_indices"].reshape(B * E).repeat(T) + time_offsets,
         )
-        edge_attr = batch["edge_attr"].reshape(B * E, -1).repeat(T, 1)  # MISSING STICK INDICIES
+        edge_attr = batch["edge_attr"].reshape(B * E, -1).repeat(T, 1)  # [T*B*E, feat_dim]
+        edge_attr = torch.cat((edge_attr, loc_dist), dim=-1)  # [T*B*E, feat_dim + 1]
 
         for i in range(self.num_layers):
             if self.use_time_conv:

@@ -30,6 +30,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         explicit_hydrogen: bool = False,
         radius_graph_threshold: float = 1.6,
         rrwp_length: int = 8,
+        normalize_z: bool = False,
         train_par: float = 0.1,
         val_par: float = 0.05,
         test_par: float = 0.05,
@@ -61,6 +62,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         self.verbose: bool = verbose
         self.radius_graph_threshold: float = radius_graph_threshold
         self.rrwp_length: int = rrwp_length
+        self.normalize_z: bool = normalize_z
         self.dft_imprecision_margin: int = 10_000
 
         match md17_version:
@@ -142,6 +144,8 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         self.v_0: torch.Tensor = torch.cat([v_0, torch.norm(v_0, dim=-1, keepdim=True)], dim=-1)
         # Expand atomic numbers to match batch dimension of x_0 and v_0
         self.z_0: torch.Tensor = torch.Tensor(z).unsqueeze(-1).unsqueeze(0).expand(self.x_0.shape[0], -1, -1)
+        if self.normalize_z:
+            self.z_0 = (self.z_0 / self.z_0.max())
         self.concatenated_features: torch.Tensor = self._compute_concatenated_features()
         self.mole_idx: torch.Tensor = torch.Tensor(torch.arange(z.shape[0])).unsqueeze(-1).expand(self.x_0.shape[0], -1, -1)
 
@@ -558,6 +562,7 @@ class MD17DynamicsDataset(MD17Dataset):
         test_par: float = 0.05,
         radius_graph_threshold: float = 1.6,
         rrwp_length: int = 0,
+        normalize_z: bool = False,
         seed: int = 100,
         force_regenerate: bool = False,
     ):
@@ -580,6 +585,7 @@ class MD17DynamicsDataset(MD17Dataset):
             force_regenerate=force_regenerate,
             rrwp_length=rrwp_length,
             radius_graph_threshold=radius_graph_threshold,
+            normalize_z=normalize_z,
         )
         self.x_t, self.v_t = self.get_dynamic_target_frames()
 

@@ -189,7 +189,7 @@ class EGNN_Layer(nn.Module):
 
         self.edge_message_net = InvariantScalarNet(
             1,
-            2 * lifting_dim + 4,  # 4 edge features
+            2 * lifting_dim + 5,  # 5 edge features
             lifting_dim,
             lifting_dim,
             activation,

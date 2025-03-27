@@ -3,8 +3,8 @@ use_wandb = false
 
 [benchmark]
 model_type = "GTNO"
-compile = true
-compile_trace = false
+compile = false
+compile_trace = true
 runs = 1
 log_weights = false
 
@@ -15,7 +15,7 @@ md17_version = "md17"
 num_timesteps = 8
 
 # Single-task dataloader parameters
-molecule_type = "benzene"  # Iterates through single-task learning on these molecules
+molecule_type = "aspirin"  # Iterates through single-task learning on these molecules
 
 # Multitask dataloader parameters
 train_molecules = ["aspirin", "benzene", "ethanol", "toluene", "uracil", "salicylic", "malonaldehyde"]
@@ -38,12 +38,12 @@ force_regenerate = true
 device = "cuda"
 seed = 42
 batch_size = 100
-epochs = 1000
+epochs = 250
 max_grad_norm = 1.0
 brownian_noise_std = 0.1
 
 [optimizer]
-type = "adamw"
+type = "muon"
 learning_rate = 1e-3
 weight_decay = 1e-5
 adam_betas = [0.9, 0.999]
@@ -58,7 +58,7 @@ num_layers = 5
 num_heads = 8
 lifting_dim = 128
 # Output parameters
-output_heads = 1
+output_heads = 4
 # Attention parameters
 heterogenous_attention_type = "GHCA"
 use_rope = true

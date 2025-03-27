@@ -44,6 +44,7 @@ class RMD17MoleculeType(StrEnum):
 class OptimizerType(StrEnum):
     SGD = "sgd"
     ADAMW = "adamw"
+    ADAM = "adam"
     MUON = "muon"
     ADAM_MINI = "adam-mini"
 
@@ -51,6 +52,7 @@ class OptimizerType(StrEnum):
 @final
 class SchedulerType(StrEnum):
     NONE = "none"
+    STEP = "step"
     COS_ANNEALING = "cosine_annealing"
 
 
@@ -69,12 +71,13 @@ class NormType(StrEnum):
 @final
 class ValueResidualType(StrEnum):
     NONE = "none"
-    LEARNABLE = "learnable"
     FIXED = "fixed"
+    LEARNABLE = "learnable"
 
 
 @final
-class GraphHeterogenousAttentionType(StrEnum):
+class AttentionType(StrEnum):
+    SELF = "self"
     GHCA = "GHCA"
 
 

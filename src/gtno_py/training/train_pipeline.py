@@ -80,7 +80,7 @@ def train_model(config: Config, model: nn.Module, molecule_type: MD17MoleculeTyp
                 "Train s2t loss": f"{train_s2t_loss*100:.2f}x10^-2",
                 "Val s2t loss": f"{val_s2t_loss*100:.2f}x10^-2",
                 "Best val s2t loss": f"{best_val_loss*100:.2f}x10^-2",
-                f"Current {str(optimizer)} LR": f"{optimizer.param_groups[0]['lr']*100:.4f}x10^-2",
+                f"Current {config.optimizer.type} LR": f"{optimizer.param_groups[0]['lr']*100:.4f}x10^-2",
             }
         )
     end_training_time = datetime.now()

@@ -113,9 +113,9 @@ def create_corrected_volatility_visualization(data_dir: Path) -> None:
 
     # Add labels for each point
     for i, molecule in enumerate(molecules):
-        plt.annotate(molecule, (position_variances[i], step_volatilities[i]), fontsize=10, ha="center", va="bottom", fontweight="bold")
+        plt.annotate(molecule.capitalize(), (position_variances[i], step_volatilities[i]), fontsize=10, ha="center", va="bottom", fontweight="bold")
 
-    plt.xlabel("Position Variance (log scale) - Flying Away Metric")
+    plt.xlabel("Position Variance - Flying Away Metric")
     plt.ylabel("Step Volatility - Jiggling Metric")
     plt.title("Molecule Behavior Comparison")
     plt.grid(True, alpha=0.3)
@@ -127,13 +127,13 @@ def create_corrected_volatility_visualization(data_dir: Path) -> None:
     plt.axhline(y=median_volatility, color="gray", linestyle="--", alpha=0.5)
     plt.axvline(x=median_variance, color="gray", linestyle="--", alpha=0.5)
 
-    plt.text(0.95, 0.95, "Flying Away & Jiggling", transform=plt.gca().transAxes, ha="right", va="top", bbox=dict(facecolor="white", alpha=0.7))
+    plt.text(0.9, 0.9, "Flying Away & Jiggling", transform=plt.gca().transAxes, ha="right", va="top", bbox=dict(facecolor="white", alpha=0.7), fontsize=12)
 
-    plt.text(0.05, 0.95, "Jiggling in Place", transform=plt.gca().transAxes, ha="left", va="top", bbox=dict(facecolor="white", alpha=0.7))
+    plt.text(0.1, 0.9, "Jiggling in Place", transform=plt.gca().transAxes, ha="left", va="top", bbox=dict(facecolor="white", alpha=0.7), fontsize=12)
 
-    plt.text(0.05, 0.05, "Stable", transform=plt.gca().transAxes, ha="left", va="bottom", bbox=dict(facecolor="white", alpha=0.7))
+    plt.text(0.1, 0.1, "Stable", transform=plt.gca().transAxes, ha="left", va="bottom", bbox=dict(facecolor="white", alpha=0.7), fontsize=12)
 
-    plt.text(0.95, 0.05, "Flying Away Smoothly", transform=plt.gca().transAxes, ha="right", va="bottom", bbox=dict(facecolor="white", alpha=0.7))
+    plt.text(0.9, 0.1, "Flying Away Smoothly", transform=plt.gca().transAxes, ha="right", va="bottom", bbox=dict(facecolor="white", alpha=0.7), fontsize=12)
 
     plt.tight_layout()
     plt.savefig("/home/luke/gtno_py/Z_paper_content/dataset/molecule_behavior_comparison.pdf", format="pdf")
@@ -252,6 +252,9 @@ def analyze_trajectory_stability(data_dir: Path) -> None:
 
 
 if __name__ == "__main__":
+    from figures import set_matplotlib_style
+
+    set_matplotlib_style()
     orig_data_dir: Path = Path("data/md17_npz")
     refresh_data_dir: Path = Path("data/rmd17_npz")
     # print_theory_summary(orig_data_dir)

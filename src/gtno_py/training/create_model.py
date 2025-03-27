@@ -23,7 +23,7 @@ def initialize_model(config: Config) -> nn.Module:
                 activation=config.gtno_config.activation,
                 num_layers=config.gtno_config.num_layers,
                 num_heads=config.gtno_config.num_heads,
-                heterogenous_attention_type=config.gtno_config.heterogenous_attention_type,
+                attention_type=config.gtno_config.heterogenous_attention_type,
                 output_heads=config.gtno_config.output_heads,
                 num_timesteps=config.dataloader.num_timesteps,
                 use_rope=config.gtno_config.use_rope,

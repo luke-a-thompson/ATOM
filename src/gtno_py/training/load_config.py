@@ -1,13 +1,13 @@
 import importlib.util
 import tomllib
 from warnings import warn
-
+from pathlib import Path
 from pydantic import BaseModel, model_validator
 import torch
 
 from gtno_py.training.config_options import (
     FFNActivation,
-    GraphHeterogenousAttentionType,
+    AttentionType,
     MD17MoleculeType,
     MD17Version,
     ModelType,
@@ -24,11 +24,22 @@ class WandbConfig(BaseModel):
 
 
 class BenchmarkConfig(BaseModel):
+    benchmark_name: str
     model_type: ModelType
     compile: bool
     compile_trace: bool
     runs: int
     log_weights: bool
+
+    @model_validator(mode="before")
+    @classmethod
+    def validate_benchmark_name(cls, values: dict[str, object]) -> dict[str, object]:
+        if values.get("benchmark_name") is None:
+            user_input = input("Enter benchmark name (leave blank to use model_type): ")
+            if not user_input:
+                user_input = str(values.get("model_type"))
+            values["benchmark_name"] = user_input
+        return values
 
     @model_validator(mode="after")
     def validate_compile(self) -> "BenchmarkConfig":
@@ -67,6 +78,7 @@ class DataloaderConfig(BaseModel):
     explicit_hydrogen_gradients: bool
     radius_graph_threshold: float
     rrwp_length: int
+    normalize_z: bool
     persistent_workers: bool
     num_workers: int
     pin_memory: bool
@@ -192,7 +204,7 @@ class GTNOConfig(BaseModel):
     # Output parameters
     output_heads: int
     # Attention parameters
-    heterogenous_attention_type: GraphHeterogenousAttentionType
+    heterogenous_attention_type: AttentionType
     use_rope: bool
     learnable_attention_denom: bool
     # Feature parameters
@@ -248,8 +260,14 @@ class Config(BaseModel):
     gtno_config: GTNOConfig
     egno_config: EGNOConfig
 
+    @model_validator(mode="after")
+    def validate_output_heads(self) -> "Config":
+        if self.gtno_config.output_heads > 1 and self.dataloader.multitask is False:
+            warn("Are you sure you want to use multiple output heads for a single-task model? This is unusual, but maybe you're onto something.")
+        return self
+
     @classmethod
-    def from_toml(cls, path: str) -> "Config":
+    def from_toml(cls, path: Path, skip_model_naming: bool = False) -> "Config":
         """
         Load configuration from a TOML file.
 
