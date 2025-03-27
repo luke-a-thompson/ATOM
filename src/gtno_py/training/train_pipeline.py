@@ -127,17 +127,20 @@ def train_epoch(
 
     for batch in dataloader:
         batch = TensorDict.from_dict(batch, device=torch.device(config.training.device), auto_batch_size=True)
+        if config.dataloader.multitask is False:
+            assert "padded_nodes_mask" not in batch, "padded_nodes_mask should not exist in batch when multitask is False"
+
         assert batch["x_0"].shape[1] == (config.dataloader.num_timesteps), f"{batch['x_0'].shape[1]} != {config.dataloader.num_timesteps}"
         target_coords: torch.Tensor = batch.pop("x_t")
         _ = batch.pop("v_t")
         mask: torch.Tensor | None = batch.get("padded_nodes_mask", None)
 
-        if config.training.brownian_noise_std > 0.0:
+        if config.training.label_noise_std > 0.0:
             batch["x_0"], batch["v_0"], batch["concatenated_features"] = add_brownian_noise(
                 batch["x_0"],
                 batch["v_0"],
                 batch["concatenated_features"],
-                config.training.brownian_noise_std,
+                config.training.label_noise_std,
             )
 
         optimizer.zero_grad()
@@ -171,7 +174,7 @@ def train_epoch(
 
         _ = loss.backward()
         _ = torch.nn.utils.clip_grad_norm_(model.parameters(), config.training.max_grad_norm)
-        _ = torch.compile(optimizer.step())
+        optimizer.step()
 
         if scheduler and not isinstance(scheduler, optim.lr_scheduler.ReduceLROnPlateau):
             scheduler.step()

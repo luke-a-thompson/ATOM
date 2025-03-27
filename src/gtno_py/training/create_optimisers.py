@@ -23,7 +23,15 @@ def initialize_optimizer(config: Config, model: nn.Module) -> torch.optim.Optimi
         case OptimizerType.ADAM:
             return optim.Adam(model.parameters(), lr=config.optimizer.learning_rate, weight_decay=config.optimizer.weight_decay)
         case OptimizerType.ADAMW:
-            return optim.AdamW(model.parameters(), lr=config.optimizer.learning_rate, weight_decay=config.optimizer.weight_decay)
+            return optim.AdamW(
+                model.parameters(),
+                betas=config.optimizer.adam_betas,
+                lr=config.optimizer.learning_rate,
+                eps=config.optimizer.adam_eps,
+                weight_decay=config.optimizer.weight_decay,
+                amsgrad=True,
+                fused=True,
+            )
         case OptimizerType.ADAM_MINI:
             return pt_optim.AdamMini(model.parameters(), lr=config.optimizer.learning_rate, weight_decay=config.optimizer.weight_decay)
         case OptimizerType.MUON:

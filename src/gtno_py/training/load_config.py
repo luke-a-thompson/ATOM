@@ -158,14 +158,15 @@ class TrainingConfig(BaseModel):
     batch_size: int
     epochs: int
     max_grad_norm: float
-    brownian_noise_std: float
+    learned_label_noise: bool
+    label_noise_std: float
 
     class Config:
         arbitrary_types_allowed = True
 
     @model_validator(mode="after")
     def validate_brownian_noise_std(self) -> "TrainingConfig":
-        if self.brownian_noise_std < 0.0:
+        if self.label_noise_std < 0.0:
             raise ValueError("'brownian_noise_std' must be 0.0 or greater.")
         return self
 

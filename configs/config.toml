@@ -3,7 +3,7 @@ use_wandb = false
 
 [benchmark]
 model_type = "GTNO"
-compile = true
+compile = false
 compile_trace = false
 runs = 1
 log_weights = false
@@ -40,7 +40,8 @@ seed = 42
 batch_size = 100
 epochs = 1000
 max_grad_norm = 1.0
-brownian_noise_std = 0.1
+learned_label_noise = false
+label_noise_std = 0.2
 
 [optimizer]
 type = "adamw"
