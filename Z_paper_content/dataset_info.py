@@ -113,11 +113,19 @@ def create_corrected_volatility_visualization(data_dir: Path) -> None:
 
     # Add labels for each point
     for i, molecule in enumerate(molecules):
-        plt.annotate(molecule.capitalize(), (position_variances[i], step_volatilities[i]), fontsize=10, ha="center", va="bottom", fontweight="bold")
+        plt.annotate(
+            molecule.capitalize(),
+            (position_variances[i], step_volatilities[i]),
+            fontsize=10,
+            ha="center",
+            va="bottom",
+            fontweight="bold",
+            xytext=(0, 5),
+            textcoords="offset points",
+        )
 
     plt.xlabel("Position Variance - Flying Away Metric")
     plt.ylabel("Step Volatility - Jiggling Metric")
-    plt.title("Molecule Behavior Comparison")
     plt.grid(True, alpha=0.3)
 
     # Add quadrant explanations
@@ -260,7 +268,7 @@ if __name__ == "__main__":
     # print_theory_summary(orig_data_dir)
 
     original_benzene_file: Path = orig_data_dir / "md17_ethanol.npz"
-    print_file_info(original_benzene_file)
+    # print_file_info(original_benzene_file)
     # refresh_benzene_file: Path = refresh_data_dir / "rmd17_benzene.npz"
     # print_file_info(refresh_benzene_file)
 
@@ -268,4 +276,4 @@ if __name__ == "__main__":
     create_corrected_volatility_visualization(orig_data_dir)
 
     # Analyze trajectory stability
-    analyze_trajectory_stability(orig_data_dir)
+    # analyze_trajectory_stability(orig_data_dir)

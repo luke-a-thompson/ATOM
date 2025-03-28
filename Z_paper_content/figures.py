@@ -236,10 +236,10 @@ def plot_horizontal_bars(save_path: Path | None = None) -> None:
     std_devs: npt.NDArray[np.float64] = np.array([v[1] for v in data_dict.values()])
 
     # Create figure and axis
-    fig, ax = plt.subplots(figsize=(4, 5))
+    fig, ax = plt.subplots(figsize=(5, 4))
 
     # Create horizontal bars with grey edge color and error bars
-    bars = ax.barh(categories, values, xerr=std_devs, color=red, alpha=0.8, edgecolor=grey, linewidth=0, error_kw={"ecolor": grey, "capsize": 3, "capthick": 1, "elinewidth": 1})
+    bars = ax.barh(categories, values, xerr=std_devs, color=red, alpha=0.8, edgecolor=grey, linewidth=0)
 
     # Remove top and right spines
     ax.spines["top"].set_visible(False)
@@ -248,7 +248,6 @@ def plot_horizontal_bars(save_path: Path | None = None) -> None:
     # Add value labels at the end of each bar
     for i, bar in enumerate(bars):
         width = values[i]
-        ax.text(width + std_devs[i] + 0.1, bar.get_y() + bar.get_height() / 2, f"{width:.2f}±{std_devs[i]:.2f}", va="center")  # Position after the error bar
 
     # Customize axis
     ax.set_xlabel("S2S MSE")
