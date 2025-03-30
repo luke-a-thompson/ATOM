@@ -122,10 +122,23 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         self.process_data(self.split_times, self.x, self.v, self.z)
 
         # --- Precompute Replication ---
+        # Shape: [max_samples, num_timesteps, nodes, d]
         self.replicated_x_0: torch.Tensor = self._replicate_tensor(self.x_0)
         self.replicated_v_0: torch.Tensor = self._replicate_tensor(self.v_0)
         self.replicated_concatenated_features: torch.Tensor = self._replicate_tensor(self.concatenated_features)
         self.replicated_z_0: torch.Tensor = self._replicate_tensor(self.z_0)
+
+        # Assert that self.replicated_x_0 contains identical data across all timesteps
+        # This means for each sample, all timesteps should have the same initial positions
+        if self.num_timesteps > 1:
+            # Get the first timestep data
+            first_timestep_data = self.replicated_x_0[0]
+
+            # Check that all other timesteps have identical data
+            for t in range(1, self.num_timesteps):
+                assert torch.allclose(self.replicated_x_0[0][t], first_timestep_data), (
+                    f"Initial positions (x_0) at timestep {t} differ from timestep 0. " f"Shape: {self.replicated_x_0.shape}"
+                )
 
     def process_data(self, split_times: npt.NDArray[np.int_], x: npt.NDArray[np.float64], v: npt.NDArray[np.float64], z: npt.NDArray[np.uint8]):
         """Processes loaded data, common to both MD17Dataset and MD17DynamicsDataset"""
@@ -145,7 +158,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         # Expand atomic numbers to match batch dimension of x_0 and v_0
         self.z_0: torch.Tensor = torch.Tensor(z).unsqueeze(-1).unsqueeze(0).expand(self.x_0.shape[0], -1, -1)
         if self.normalize_z:
-            self.z_0 = (self.z_0 / self.z_0.max())
+            self.z_0 = self.z_0 / self.z_0.max()
         self.concatenated_features: torch.Tensor = self._compute_concatenated_features()
         self.mole_idx: torch.Tensor = torch.Tensor(torch.arange(z.shape[0])).unsqueeze(-1).expand(self.x_0.shape[0], -1, -1)
 
@@ -213,7 +226,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         Replicates a single tensor along the batch dimension.
 
         Input tensor shape: [max_samples, d]
-        Output tensor shape: [max_samples * num_timesteps, d]
+        Output tensor shape: [max_samples, num_timesteps, nodes, d]
 
         Returns:
             torch.Tensor: The replicated tensor.
@@ -515,6 +528,8 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
             "x_t": self.x_t[i],
             "v_t": self.v_t[i],
         }
+
+        # Remove the debugging assertion that was stopping execution
 
         if self.max_nodes is not None:
             mask = torch.cat(

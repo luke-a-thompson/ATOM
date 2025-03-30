@@ -15,7 +15,7 @@ from gtno_py.training.load_config import Config
 def create_datasets(
     config: Config,
     molecule_type: MD17MoleculeType | RMD17MoleculeType,
-    max_nodes: int | None = None,
+    max_nodes: int | None,
 ) -> tuple[MD17DynamicsDataset, MD17DynamicsDataset, MD17DynamicsDataset]:
     """Create train, test and validation Torch datasets.
 
