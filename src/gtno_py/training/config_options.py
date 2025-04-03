@@ -13,6 +13,7 @@ class DataPartition(StrEnum):
 class MD17Version(StrEnum):
     md17 = "md17"
     rmd17 = "rmd17"
+    md61 = "md61"
 
 
 @final
@@ -37,6 +38,12 @@ class RMD17MoleculeType(StrEnum):
     paracetamol = "paracetamol"
     salicylic = "salicylic"
     toluene = "toluene"
+    uracil = "uracil"
+
+
+@final
+class MD61MoleculeType(StrEnum):
+    thymine = "thymine"  # currently RMD17
     uracil = "uracil"
 
 

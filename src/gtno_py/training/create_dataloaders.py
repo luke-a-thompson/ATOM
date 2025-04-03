@@ -6,6 +6,7 @@ from gtno_py.dataloaders.egno_dataloder import MD17DynamicsDataset
 from gtno_py.training.config_options import (
     DataPartition,
     MD17MoleculeType,
+    MD61MoleculeType,
     ModelType,
     RMD17MoleculeType,
 )
@@ -14,7 +15,7 @@ from gtno_py.training.load_config import Config
 
 def create_datasets(
     config: Config,
-    molecule_type: MD17MoleculeType | RMD17MoleculeType,
+    molecule_type: MD17MoleculeType | RMD17MoleculeType | MD61MoleculeType,
     max_nodes: int | None,
 ) -> tuple[MD17DynamicsDataset, MD17DynamicsDataset, MD17DynamicsDataset]:
     """Create train, test and validation Torch datasets.
@@ -89,7 +90,7 @@ def create_datasets(
 
 def create_dataloaders_single(
     config: Config,
-    molecule_type: MD17MoleculeType | RMD17MoleculeType,
+    molecule_type: MD17MoleculeType | RMD17MoleculeType | MD61MoleculeType,
 ) -> tuple[DataLoader[dict[str, torch.Tensor]], DataLoader[dict[str, torch.Tensor]], DataLoader[dict[str, torch.Tensor]]]:
     """Create train, test and validation Torch dataloaders.
 

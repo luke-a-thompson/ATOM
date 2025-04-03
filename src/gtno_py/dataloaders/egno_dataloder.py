@@ -7,7 +7,7 @@ import os
 from typing import final, override
 from pathlib import Path
 import torch.nn.functional as F
-from gtno_py.training.config_options import DataPartition, MD17Version, MD17MoleculeType, RMD17MoleculeType
+from gtno_py.training.config_options import DataPartition, MD17Version, MD17MoleculeType, RMD17MoleculeType, MD61MoleculeType
 
 
 class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
@@ -23,7 +23,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         data_dir: str,
         split_dir: str,
         md17_version: MD17Version,
-        molecule_type: MD17MoleculeType | RMD17MoleculeType,
+        molecule_type: MD17MoleculeType | RMD17MoleculeType | MD61MoleculeType,
         max_nodes: int | None,
         return_edge_data: bool,
         num_timesteps: int = 1,  # Number of timesteps to replicate
@@ -53,7 +53,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         """
         self.partition: DataPartition = partition
         self.md17_version: MD17Version = md17_version
-        self.molecule_type: MD17MoleculeType | RMD17MoleculeType = molecule_type
+        self.molecule_type: MD17MoleculeType | RMD17MoleculeType | MD61MoleculeType = molecule_type
         self.max_nodes: int | None = max_nodes
         self.delta_frame: int = delta_frame
         self.num_timesteps: int = num_timesteps
@@ -63,23 +63,30 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         self.radius_graph_threshold: float = radius_graph_threshold
         self.rrwp_length: int = rrwp_length
         self.normalize_z: bool = normalize_z
-        self.dft_imprecision_margin: int = 10_000
 
         match md17_version:
             case MD17Version.md17:
-                if not isinstance(molecule_type, MD17MoleculeType):
-                    raise ValueError(f"For MD17Version.md17, molecule_type must be MD17MoleculeType, got {molecule_type}")
                 full_dir = os.path.join(data_dir + "md17_npz/" + "md17_" + molecule_type + ".npz")
                 split_dir = os.path.join(split_dir + "md17_splits/" + "md17_" + molecule_type + "_split.pkl")
                 positions_col = "R"
                 charges_col = "z"
+                self.dft_imprecision_margin: int = 10_000
             case MD17Version.rmd17:
-                if not isinstance(molecule_type, RMD17MoleculeType):
-                    raise ValueError(f"For MD17Version.rmd17, molecule_type must be RMD17MoleculeType, got {molecule_type}")
                 full_dir = os.path.join(data_dir + "rmd17_npz/" + "rmd17_" + molecule_type + ".npz")
                 split_dir = os.path.join(split_dir + "rmd17_splits/" + "rmd17_" + molecule_type + "_split.pkl")
                 positions_col = "coords"
                 charges_col = "nuclear_charges"
+                self.dft_imprecision_margin: int = 10_000
+            case MD17Version.md61:
+                full_dir = os.path.join(data_dir + "md61_npz/" + "md61_" + molecule_type + ".npz")
+                split_dir = os.path.join(split_dir + "md61_splits/" + "md61_" + molecule_type + "_split.pkl")
+                positions_col = "coords"
+                charges_col = "nuclear_charges"
+                self.dft_imprecision_margin: int = 500
+                # Temp while dataset is small
+                train_par = 0.1
+                val_par = 0.4
+                test_par = 0.4
             case _:
                 raise ValueError(f"Invalid MD17 version: {md17_version}")
 
@@ -232,11 +239,13 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
             torch.Tensor: The replicated tensor.
         """
         # Add new time dimension
-        assert tensor.shape[0] == self.max_samples, f"Tensor shape: {tensor.shape}, max_samples: {self.max_samples}"
+        assert (
+            tensor.shape[0] == self.max_samples
+        ), f"Tensor shape: {tensor.shape}, max_samples: {self.max_samples}. Molecule type: {self.molecule_type} for split: {self.partition}"
         tensor_with_time = tensor.unsqueeze(1)
 
         # Expand along time dimension to num_timesteps
-        tensor_expanded = tensor_with_time.expand(-1, self.num_timesteps, *tensor.shape[1:])
+        tensor_expanded = tensor_with_time.expand(-1, self.num_timesteps, *tensor.shape[1:]).contiguous()
 
         return tensor_expanded
 
@@ -521,12 +530,12 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         # from the pre-replicated tensors. This recovers the T timesteps associated with the i-th sample.
         # i * self.num_timesteps : (i + 1) * self.num_timesteps - We want to be this many i * timesteps *frames* from the start, and capture the whole frame
         sample = {
-            "x_0": self.replicated_x_0[i],
-            "v_0": self.replicated_v_0[i],
-            "concatenated_features": self.replicated_concatenated_features[i],
-            "Z": self.replicated_z_0[i],
-            "x_t": self.x_t[i],
-            "v_t": self.v_t[i],
+            "x_0": self.replicated_x_0[i].contiguous(),
+            "v_0": self.replicated_v_0[i].contiguous(),
+            "concatenated_features": self.replicated_concatenated_features[i].contiguous(),
+            "Z": self.replicated_z_0[i].contiguous(),
+            "x_t": self.x_t[i].contiguous(),
+            "v_t": self.v_t[i].contiguous(),
         }
 
         # Remove the debugging assertion that was stopping execution
@@ -567,7 +576,7 @@ class MD17DynamicsDataset(MD17Dataset):
         data_dir: str,
         split_dir: str,
         md17_version: MD17Version,
-        molecule_type: MD17MoleculeType | RMD17MoleculeType,
+        molecule_type: MD17MoleculeType | RMD17MoleculeType | MD61MoleculeType,
         max_nodes: int | None,
         return_edge_data: bool,
         num_timesteps: int = 8,  # Number of timesteps for dynamics
@@ -612,10 +621,10 @@ class MD17DynamicsDataset(MD17Dataset):
         self.replicated_mole_idx: torch.Tensor = self._replicate_tensor(self.mole_idx)
 
         if self.x_t is not None:
-            self.x_t = torch.Tensor(self.x_t).transpose(1, 2)
+            self.x_t = torch.Tensor(self.x_t)
             self.x_t = self._pad_tensor(self.x_t)
         if self.v_t is not None:
-            self.v_t = torch.Tensor(self.v_t).transpose(1, 2)
+            self.v_t = torch.Tensor(self.v_t)
             self.v_t = self._pad_tensor(self.v_t)
 
         assert (
@@ -643,9 +652,9 @@ class MD17DynamicsDataset(MD17Dataset):
         num_timesteps = self.num_timesteps
 
         x_t_list = [self.x[split_times + delta_frame * i // num_timesteps] for i in range(1, num_timesteps + 1)]
-        x_t = np.stack(x_t_list, axis=2)
+        x_t = np.stack(x_t_list, axis=1)
         v_t_list = [self.v[split_times + delta_frame * i // num_timesteps] for i in range(1, num_timesteps + 1)]
-        v_t = np.stack(v_t_list, axis=2)
+        v_t = np.stack(v_t_list, axis=1)
         return x_t, v_t
 
 

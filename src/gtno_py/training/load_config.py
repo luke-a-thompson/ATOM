@@ -10,6 +10,7 @@ from gtno_py.training.config_options import (
     AttentionType,
     MD17MoleculeType,
     MD17Version,
+    MD61MoleculeType,
     ModelType,
     NormType,
     OptimizerType,
@@ -65,13 +66,13 @@ class DataloaderConfig(BaseModel):
     multitask: bool
     md17_version: MD17Version
     # Single-task dataloader parameters
-    molecule_type: MD17MoleculeType | RMD17MoleculeType | list[MD17MoleculeType | RMD17MoleculeType]
+    molecule_type: MD17MoleculeType | RMD17MoleculeType | MD61MoleculeType | list[MD17MoleculeType | RMD17MoleculeType | MD61MoleculeType]
     num_timesteps: int
 
     # Multitask dataloader parameters
-    train_molecules: list[MD17MoleculeType | RMD17MoleculeType] | None = None
-    validation_molecules: list[MD17MoleculeType | RMD17MoleculeType] | None = None
-    test_molecules: list[MD17MoleculeType | RMD17MoleculeType] | None = None
+    train_molecules: list[MD17MoleculeType | RMD17MoleculeType | MD61MoleculeType] | None = None
+    validation_molecules: list[MD17MoleculeType | RMD17MoleculeType | MD61MoleculeType] | None = None
+    test_molecules: list[MD17MoleculeType | RMD17MoleculeType | MD61MoleculeType] | None = None
 
     delta_T: int
     explicit_hydrogen: bool
@@ -123,23 +124,32 @@ class DataloaderConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate_md17_version(self) -> "DataloaderConfig":
-        md17_version = self.md17_version
-        molecule_type = self.molecule_type
+        """Validate that the molecule types match the MD17 version."""
 
-        if md17_version == MD17Version.md17:
-            if isinstance(molecule_type, list):
-                for mol in molecule_type:
-                    if not isinstance(mol, MD17MoleculeType):
-                        raise ValueError(f"When using MD17 version, all molecules must be MD17MoleculeType, got {mol}")
-            elif not isinstance(molecule_type, MD17MoleculeType):
-                raise ValueError(f"When using MD17 version, molecule_type must be MD17MoleculeType, got {molecule_type}")
-        elif md17_version == MD17Version.rmd17:
-            if isinstance(molecule_type, list):
-                for mol in molecule_type:
-                    if not isinstance(mol, RMD17MoleculeType):
-                        raise ValueError(f"When using RMD17 version, all molecules must be RMD17MoleculeType, got {mol}")
-            elif not isinstance(molecule_type, RMD17MoleculeType):
-                raise ValueError(f"When using RMD17 version, molecule_type must be RMD17MoleculeType, got {molecule_type}")
+        # Convert string molecules to appropriate enum type based on version
+        match self.md17_version:
+            case MD17Version.md17:
+                enum_type = MD17MoleculeType
+            case MD17Version.rmd17:
+                enum_type = RMD17MoleculeType
+            case MD17Version.md61:
+                enum_type = MD61MoleculeType
+            case _:
+                raise ValueError(f"Invalid MD17 version: {self.md17_version}")
+
+        # Convert single-task molecule types
+        if isinstance(self.molecule_type, list):
+            self.molecule_type = [enum_type(m) for m in self.molecule_type]
+        else:
+            self.molecule_type = enum_type(self.molecule_type)
+
+        # Convert multitask molecule lists
+        if self.train_molecules:
+            self.train_molecules = [enum_type(m) for m in self.train_molecules]
+        if self.validation_molecules:
+            self.validation_molecules = [enum_type(m) for m in self.validation_molecules]
+        if self.test_molecules:
+            self.test_molecules = [enum_type(m) for m in self.test_molecules]
 
         return self
 
@@ -204,6 +214,7 @@ class GTNOConfig(BaseModel):
     lifting_dim: int
     # Output parameters
     output_heads: int
+    delta_update: bool
     # Attention parameters
     heterogenous_attention_type: AttentionType
     use_rope: bool
