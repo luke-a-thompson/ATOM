@@ -57,7 +57,7 @@ def train_model(config: Config, model: nn.Module, molecule_type: MD17MoleculeTyp
             train_loader,
             scheduler,
         )
-        val_s2t_loss, _ = eval_epoch(config, model, val_loader)
+        val_s2t_loss, val_s2s_loss = eval_epoch(config, model, val_loader)
 
         # Log gate parameters and save to weights_dir if provided
         if config.benchmark.log_weights:
@@ -212,15 +212,18 @@ def eval_epoch(
 
             if config.dataloader.explicit_hydrogen and config.dataloader.explicit_hydrogen_gradients is False:
                 # Get atomic numbers Z from batch and create mask for heavy atoms (Z > 1)
-                heavy_atom_mask: torch.Tensor = batch["Z"][..., 0] > 1  # shape: [Batch, Time, Nodes]
-
-                # Apply mask along the nodes dimension
-                pred_heavy: torch.Tensor = pred_coords[heavy_atom_mask]  # shape: [Total_selected_nodes, 3]
-                target_heavy: torch.Tensor = target_coords[heavy_atom_mask]  # shape: [Total_selected_nodes, 3]
-
-                s2t_loss = F.mse_loss(pred_heavy, target_heavy)
-                s2s_loss = F.mse_loss(pred_heavy[:, -1, :, :], target_heavy[:, -1, :, :])
+                heavy_atom_mask_s2t: torch.Tensor = batch["Z"][..., 0] > 1  # shape: [Batch, Time, Nodes]
+                pred_heavy_s2t: torch.Tensor = pred_coords[heavy_atom_mask_s2t]  # shape: [Total_selected_nodes, 3]
+                target_heavy_s2t: torch.Tensor = target_coords[heavy_atom_mask_s2t]  # shape: [Total_selected_nodes, 3]
+                s2t_loss = F.mse_loss(pred_heavy_s2t, target_heavy_s2t)
                 total_s2t_loss += s2t_loss.item() * batch.batch_size[0]
+
+                pred_last_t = pred_coords[:, -1, :, :]  # [B, N, 3]
+                target_last_t = target_coords[:, -1, :, :]  # [B, N, 3]
+                heavy_atom_mask_s2s: torch.Tensor = batch["Z"][:, -1, :, 0] > 1  # [B, N]
+                pred_heavy_s2s: torch.Tensor = pred_last_t[heavy_atom_mask_s2s]  # [Total_selected_nodes, 3]
+                target_heavy_s2s: torch.Tensor = target_last_t[heavy_atom_mask_s2s]  # [Total_selected_nodes, 3]
+                s2s_loss = F.mse_loss(pred_heavy_s2s, target_heavy_s2s)
                 total_s2s_loss += s2s_loss.item() * batch.batch_size[0]
             else:
                 # For the full coordinates loss (shape: [batch, 8, 20, 4])
