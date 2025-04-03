@@ -124,8 +124,8 @@ def create_corrected_volatility_visualization(data_dir: Path) -> None:
             textcoords="offset points",
         )
 
-    plt.xlabel("Position Variance - Flying Away Metric")
-    plt.ylabel("Step Volatility - Jiggling Metric")
+    plt.xlabel("Center of Mass Drift (Å)")
+    plt.ylabel("Per-Step Internal Motion (Å)")
     plt.grid(True, alpha=0.3)
 
     # Add quadrant explanations
@@ -135,13 +135,13 @@ def create_corrected_volatility_visualization(data_dir: Path) -> None:
     plt.axhline(y=median_volatility, color="gray", linestyle="--", alpha=0.5)
     plt.axvline(x=median_variance, color="gray", linestyle="--", alpha=0.5)
 
-    plt.text(0.9, 0.9, "Flying Away & Jiggling", transform=plt.gca().transAxes, ha="right", va="top", bbox=dict(facecolor="white", alpha=0.7), fontsize=12)
+    plt.text(0.9, 0.9, "High Drift & Internal Motion", transform=plt.gca().transAxes, ha="right", va="top", bbox=dict(facecolor="white", alpha=0.7), fontsize=12)
 
-    plt.text(0.1, 0.9, "Jiggling in Place", transform=plt.gca().transAxes, ha="left", va="top", bbox=dict(facecolor="white", alpha=0.7), fontsize=12)
+    plt.text(0.1, 0.9, "High Internal Motion", transform=plt.gca().transAxes, ha="left", va="top", bbox=dict(facecolor="white", alpha=0.7), fontsize=12)
 
-    plt.text(0.1, 0.1, "Stable", transform=plt.gca().transAxes, ha="left", va="bottom", bbox=dict(facecolor="white", alpha=0.7), fontsize=12)
+    plt.text(0.1, 0.1, "Static", transform=plt.gca().transAxes, ha="left", va="bottom", bbox=dict(facecolor="white", alpha=0.7), fontsize=12)
 
-    plt.text(0.9, 0.1, "Flying Away Smoothly", transform=plt.gca().transAxes, ha="right", va="bottom", bbox=dict(facecolor="white", alpha=0.7), fontsize=12)
+    plt.text(0.9, 0.1, "Drifting from Origin", transform=plt.gca().transAxes, ha="right", va="bottom", bbox=dict(facecolor="white", alpha=0.7), fontsize=12)
 
     plt.tight_layout()
     plt.savefig("/home/luke/gtno_py/Z_paper_content/dataset/molecule_behavior_comparison.pdf", format="pdf")
