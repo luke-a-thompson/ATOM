@@ -118,11 +118,13 @@ class TemporalRoPEWithOffset(nn.Module):
 class SphericalHarmonicsAttentionBias(nn.Module):
     """
     Computes a bias for attention logits from the relative node coordinates.
-    For each pair of sequence elements, the module computes the relative difference,
-    encodes it using spherical harmonics up to a chosen maximum degree, and then maps
-    the concatenated coefficients through an MLP to produce a scalar bias per head.
+    For each pair of sequence elements (flattened over nodes and time), the module
+    computes the relative difference, encodes it using spherical harmonics up to a
+    chosen maximum degree, and then maps the concatenated coefficients through
+    an MLP to produce a scalar bias per head.
 
     Args:
+        num_timesteps (int): Number of timesteps T.
         max_degree (int): Maximum spherical harmonics degree (l) to compute (default: 1).
         num_heads (int): Number of attention heads.
         hidden_dim (int): Hidden dimension in the intermediate MLP.
@@ -149,19 +151,32 @@ class SphericalHarmonicsAttentionBias(nn.Module):
     def forward(self, coords: torch.Tensor) -> torch.Tensor:
         """
         Args:
-            coords: shape [B, seq_len, 3].
-                  ` seq_len = num_nodes * num_timesteps
+            coords: shape [B, T, N, 3].
                   ` B = batch size
+                  ` T = number of timesteps
+                  ` N = number of nodes
                   ` 3 = x, y, z coordinates
 
         Returns:
-            bias: shape [B, num_heads, seq_len, seq_len] tensor to be added to attention logits.
+            bias: shape [B, num_heads, S, S] tensor to be added to attention logits, where S = N * T.
         """
-        coords = coords.clone()[..., :3]
-        B, S, _ = coords.shape
-        coords = flatten_spatiotemporal(coords, self.num_timesteps)  # now shape [B, N*T, 3]
+        coords = coords.clone()[..., :3]  # Ensure we only have x,y,z and clone
+        B, T, N, _ = coords.shape
+        S = N * T  # Total sequence length after flattening time and nodes
+
+        # --- FIX START ---
+        # Flatten the time and node dimensions correctly
+        # Input coords is [B, T, N, 3], reshape to [B, N*T, 3]
+        coords = coords.view(B, S, 3)
+        # --- FIX END ---
+
+        # Re-extract shape after reshape just to be safe, although S is already calculated
+        B_check, S_check, _ = coords.shape
+        assert B == B_check and S == S_check, f"Shape mismatch after reshape: expected ({B},{S},3), got {coords.shape}"
+
         # Compute pairwise relative differences: r_ij = coords_i - coords_j.
         relative_distance: torch.Tensor = coords.unsqueeze(2) - coords.unsqueeze(1)  # [B, S, S, 3]
+
         # Compute the norm (magnitude) and normalized direction.
         norm: torch.Tensor = relative_distance.norm(dim=-1, keepdim=True)  # [B, S, S, 1]
         unit_rel = relative_distance / (norm + self.eps)  # [B, S, S, 3]
@@ -172,12 +187,16 @@ class SphericalHarmonicsAttentionBias(nn.Module):
             # o3.spherical_harmonics returns shape [B, S, S, 2l+1].
             Y_l = o3.spherical_harmonics(l, unit_rel, normalize=True)
             sh_features.append(Y_l)
+
         # Concatenate coefficients over l to form shape [B, S, S, num_coeff].
         sh_cat = torch.cat(sh_features, dim=-1)
+
         # Map the concatenated coefficients to a bias per head.
         bias: torch.Tensor = self.mlp(sh_cat)  # [B, S, S, num_heads]
+
         # Rearrange to [B, num_heads, S, S].
         bias = bias.permute(0, 3, 1, 2)
+
         return bias
 
 
@@ -246,7 +265,7 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
             self.spherical_harmonics = SphericalHarmonicsAttentionBias(num_timesteps=self.num_timesteps, max_degree=1, num_heads=self.num_heads, hidden_dim=16)
 
     @override
-    def forward(self, x_0: torch.Tensor, v_0: torch.Tensor | None, concatenated_features: torch.Tensor| None, q_data: torch.Tensor, mask: torch.Tensor | None) -> torch.Tensor:
+    def forward(self, x_0: torch.Tensor, v_0: torch.Tensor | None, concatenated_features: torch.Tensor | None, q_data: torch.Tensor, mask: torch.Tensor | None) -> torch.Tensor:
         """
         1. Flatten queries => [B, seq_q, d], then project to [B, heads, seq_q, d_head].
         2. For each heterogeneous feature, do:
