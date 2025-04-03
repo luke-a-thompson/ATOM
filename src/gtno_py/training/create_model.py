@@ -25,6 +25,7 @@ def initialize_model(config: Config) -> nn.Module:
                 num_heads=config.gtno_config.num_heads,
                 attention_type=config.gtno_config.heterogenous_attention_type,
                 output_heads=config.gtno_config.output_heads,
+                delta_update=config.gtno_config.delta_update,
                 num_timesteps=config.dataloader.num_timesteps,
                 use_rope=config.gtno_config.use_rope,
                 use_spherical_harmonics=config.gtno_config.use_spherical_harmonics,
