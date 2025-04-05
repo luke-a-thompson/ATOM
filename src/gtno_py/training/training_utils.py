@@ -69,8 +69,8 @@ def set_environment_variables(config: Config) -> None:
     Returns:
         None
     """
-    os.environ["TORCHDYNAMO_CACHE_DIR"] = "/home/luke/gtno_py/torch_compiler/dynamo_cache"
-    os.environ["TORCHINDUCTOR_CACHE_DIR"] = "/home/luke/gtno_py/torch_compiler/inductor_cache"
+    # os.environ["TORCHDYNAMO_CACHE_DIR"] = "/home/luke/gtno_py/torch_compiler/dynamo_cache"
+    # os.environ["TORCHINDUCTOR_CACHE_DIR"] = "/home/luke/gtno_py/torch_compiler/inductor_cache"
     assert os.access(Path("/home/luke/gtno_py/torch_compiler/trace"), os.W_OK), "Directory trace_dir is not writable."
     if config.benchmark.compile_trace:
         os.environ["TORCH_TRACE"] = "/home/luke/gtno_py/torch_compiler/trace"

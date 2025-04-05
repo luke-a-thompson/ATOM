@@ -84,10 +84,12 @@ def create_corrected_volatility_visualization(data_dir: Path) -> None:
 
         # Load data
         data = np.load(filepath)
-        if "R" not in data.files:
-            continue
+        # Check if "rmd_17" is in the stem of the data directory path
+        if "rmd17" in data_dir.stem:
+            arr: npt.NDArray[np.number] = data["coords"]
+        else:
+            arr: npt.NDArray[np.number] = data["R"]
 
-        arr: npt.NDArray[np.number] = data["R"]
         if arr.ndim != 3 or arr.shape[2] != 3:
             continue
 
@@ -111,12 +113,16 @@ def create_corrected_volatility_visualization(data_dir: Path) -> None:
     # Set x-axis to log scale
     plt.xscale("log")
 
+    if "rmd17" in data_dir.stem:
+        plt.xlim(0, 1e1)
+        plt.ylim(0, 1)
+
     # Add labels for each point
     for i, molecule in enumerate(molecules):
         plt.annotate(
             molecule.capitalize(),
             (position_variances[i], step_volatilities[i]),
-            fontsize=10,
+            fontsize=12,
             ha="center",
             va="bottom",
             fontweight="bold",
@@ -273,7 +279,7 @@ if __name__ == "__main__":
     # print_file_info(refresh_benzene_file)
 
     # Create corrected volatility visualization
-    create_corrected_volatility_visualization(orig_data_dir)
+    create_corrected_volatility_visualization(refresh_data_dir)
 
     # Analyze trajectory stability
     # analyze_trajectory_stability(orig_data_dir)

@@ -315,5 +315,5 @@ if __name__ == "__main__":
     set_matplotlib_style()
     # plot_learnable_attention_weights(Path("benchmark_runs/Paper_learned_denom_ethanol_06-Mar-2025_01-36-47/weights_run1"), "ethanol")
     # plot_lambda_value_residuals(Path("benchmark_runs/Paper_learned_denom_toluene_06-Mar-2025_02-29-46/weights_run1"), "ethanol")
-    # plot_ablations(save_path=Path("Z_paper_content/ablations/ablation_MD17.pdf"))
+    plot_ablations(save_path=Path("Z_paper_content/ablations/ablation_MD17.pdf"))
     # print_ablation_results()
