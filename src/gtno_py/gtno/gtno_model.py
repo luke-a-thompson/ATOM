@@ -62,7 +62,7 @@ class GTNOBlock(nn.Module):
             out_dim=lifting_dim,
             hidden_layers=2,
             activation=activation_fn,
-            dropout_p=0.0,
+            dropout_p=0.1,
         )
 
         self.attention: nn.Module
@@ -144,6 +144,7 @@ class GTNO(nn.Module):
         num_heads: int,
         attention_type: AttentionType,
         output_heads: int,
+        delta_update: bool,
         num_timesteps: int,
         use_rope: bool,
         use_spherical_harmonics: bool,
@@ -173,6 +174,7 @@ class GTNO(nn.Module):
         self.lifting_dim = lifting_dim
         self.rrwp_length = rrwp_length
         self.output_heads = output_heads
+        self.delta_update = delta_update
 
         concat_irreps_1, concat_irreps_2 = self._get_concat_feature_irreps()
         lifting_dim_irreps = self._get_lifting_dim_irreps()
@@ -220,11 +222,11 @@ class GTNO(nn.Module):
             self.weight_pred_gate_net = nn.Sequential(
                 MLP(
                     in_dim=lifting_dim,
-                    out_dim=self.output_heads,
                     hidden_dim=lifting_dim // 4,
+                    out_dim=self.output_heads,
                     hidden_layers=2,
                     activation=SwiGLU(lifting_dim // 4),
-                    dropout_p=0.0,
+                    dropout_p=0.1,
                 ),
                 nn.Softmax(dim=-1),
             )
@@ -279,7 +281,10 @@ class GTNO(nn.Module):
             # Single-head prediction
             final_pred_pos: torch.Tensor = self.projection_layer(lifted_x_0)
 
-        pred_pos: torch.Tensor = batch["x_0"][..., :3] + final_pred_pos  # Residual connection
+        if self.delta_update:
+            pred_pos = batch["x_0"][..., :3] + final_pred_pos
+        else:
+            pred_pos = final_pred_pos
 
         return pred_pos  # Outputting the positions (x, y, z) for N nodes over T timesteps. Batched.
 
