@@ -29,7 +29,7 @@ def initialize_model(config: Config) -> nn.Module:
                 num_timesteps=config.dataloader.num_timesteps,
                 use_rope=config.gtno_config.use_rope,
                 use_spherical_harmonics=config.gtno_config.use_spherical_harmonics,
-                use_equivariant_lifting=config.gtno_config.use_equivariant_lifting,
+                use_equivariant_lifting=config.gtno_config.equivariant_lifting_type,
                 rrwp_length=config.dataloader.rrwp_length,
                 value_residual_type=config.gtno_config.value_residual_type,
                 learnable_attention_denom=config.gtno_config.learnable_attention_denom,

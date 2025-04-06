@@ -3,7 +3,7 @@ import wandb
 from gtno_py.training import (
     Config,
     set_seeds,
-    parse_args,
+    parse_train_args,
     set_environment_variables,
     singletask_benchmark,
     multitask_benchmark,
@@ -12,7 +12,7 @@ from gtno_py.training import (
 
 
 def main() -> None:
-    args = parse_args()
+    args = parse_train_args()
     if args.config:
         config = Config.from_toml(args.config)
         _ = wandb.init(project="GTNO", name=config.benchmark.benchmark_name, config=dict(config), mode="disabled" if not config.wandb.use_wandb else "online")

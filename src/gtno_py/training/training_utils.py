@@ -11,7 +11,7 @@ import wandb
 from gtno_py.training.load_config import Config
 
 
-def parse_args() -> argparse.Namespace:
+def parse_train_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Train GTNO model with configuration file(s)")
     group = parser.add_mutually_exclusive_group(required=True)
     _ = group.add_argument(

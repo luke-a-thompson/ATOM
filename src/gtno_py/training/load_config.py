@@ -8,6 +8,7 @@ import torch
 from gtno_py.training.config_options import (
     FFNActivation,
     AttentionType,
+    EquivariantLiftingType,
     MD17MoleculeType,
     MD17Version,
     MD61MoleculeType,
@@ -221,7 +222,7 @@ class GTNOConfig(BaseModel):
     learnable_attention_denom: bool
     # Feature parameters
     use_spherical_harmonics: bool
-    use_equivariant_lifting: bool
+    equivariant_lifting_type: EquivariantLiftingType
     # Layer parameters
     norm: NormType
     activation: FFNActivation

@@ -2,7 +2,7 @@ from typing import final, override
 import torch
 import torch.nn as nn
 from gtno_py.gtno.activations import ReLU2, SwiGLU
-from gtno_py.training.config_options import FFNActivation, NormType, ValueResidualType, AttentionType
+from gtno_py.training.config_options import FFNActivation, NormType, ValueResidualType, AttentionType, EquivariantLiftingType
 from tensordict import TensorDict
 from gtno_py.gtno.attentions import QuadraticHeterogenousCrossAttention, QuadraticSelfAttention
 from gtno_py.gtno.mlps import MLP
@@ -148,7 +148,7 @@ class GTNO(nn.Module):
         num_timesteps: int,
         use_rope: bool,
         use_spherical_harmonics: bool,
-        use_equivariant_lifting: bool,
+        use_equivariant_lifting: EquivariantLiftingType,
         rrwp_length: int,
         value_residual_type: ValueResidualType,
         learnable_attention_denom: bool,
@@ -180,7 +180,7 @@ class GTNO(nn.Module):
         lifting_dim_irreps = self._get_lifting_dim_irreps()
 
         match use_equivariant_lifting:
-            case True:
+            case EquivariantLiftingType.EQUIVARIANT:
                 self.lifting_layers = nn.ModuleDict(
                     {
                         "x_0": o3.Linear("1x1o + 1x0e", lifting_dim_irreps),  # In: (x,y,z, ||x||)
@@ -188,7 +188,15 @@ class GTNO(nn.Module):
                         "concatenated_features": o3.FullyConnectedTensorProduct(concat_irreps_1, concat_irreps_2, lifting_dim_irreps),
                     }
                 )
-            case False:
+            case EquivariantLiftingType.NO_TP:
+                self.lifting_layers = nn.ModuleDict(
+                    {
+                        "x_0": o3.Linear("1x1o + 1x0e", lifting_dim_irreps),  # In: (x,y,z, ||x||)
+                        "v_0": o3.Linear("1x1o + 1x0e", lifting_dim_irreps),  # In: (vx,vy,vz, ||v||)
+                        "concatenated_features": o3.Linear(str(concat_irreps_1 + "+" + concat_irreps_2), lifting_dim_irreps),
+                    }
+                )
+            case EquivariantLiftingType.NONE:
                 self.lifting_layers = nn.ModuleDict(
                     {
                         "x_0": nn.Linear(4, lifting_dim),
@@ -257,7 +265,7 @@ class GTNO(nn.Module):
         # Lift the inputs
         lifted_x_0: torch.Tensor = self.lifting_layers["x_0"](x_0)
         lifted_v_0: torch.Tensor = self.lifting_layers["v_0"](v_0)
-        if self.use_equivariant_lifting:
+        if self.use_equivariant_lifting == EquivariantLiftingType.EQUIVARIANT:
             lifted_concat_features: torch.Tensor = self.lifting_layers["concatenated_features"](concat_features[..., :4], concat_features[..., 4:])
         else:
             lifted_concat_features: torch.Tensor = self.lifting_layers["concatenated_features"](concat_features)

@@ -56,7 +56,14 @@ def singletask_benchmark(config: Config) -> None:
             runs_progress_bar.set_description(f"Run {run+1}/{config.benchmark.runs}")
 
             # Pass the weights directory to main function
-            run_results.append(train_model(config, model, molecule, benchmark_dir=benchmark_dir, run_number=run))
+            single_run_results = train_model(
+                config,
+                model,
+                molecule,
+                benchmark_dir=benchmark_dir,
+                run_number=run,
+            )
+            run_results.append(single_run_results)
 
         multi_run_results = MultiRunResults(single_run_results=run_results, config=config)
 

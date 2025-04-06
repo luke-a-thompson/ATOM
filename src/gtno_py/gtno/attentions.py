@@ -3,7 +3,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from gtno_py.gtno.mlps import MLP
-from gtno_py.gtno.shape_utils import flatten_spatiotemporal
 from e3nn import o3
 
 

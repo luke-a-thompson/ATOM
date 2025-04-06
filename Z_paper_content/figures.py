@@ -7,6 +7,7 @@ from usyd_colors import get_palette
 import json
 from typing import Any
 import re
+from matplotlib.ticker import ScalarFormatter
 
 grey, red, blue, yellow, white = get_palette("primary").hex_colors()
 
@@ -250,70 +251,8 @@ def print_ablation_results() -> None:
     # Bottom border
     print("+" + "+".join("-" * (width + 2) for width in col_widths) + "+")
 
-
-def plot_ablations(save_path: Path | None = None) -> None:
-    """
-    Create horizontal bars using real benchmark data from benchmark_runs/Ablations.
-
-    Args:
-        save_path: Optional path to save the figure
-
-    Returns:
-        None
-    """
-    # Get colors from the palette
-    grey, red, blue, yellow, white = get_palette("primary").hex_colors()
-
-    # Get all results.json files from the ablations directory
-    ablation_dir = Path("benchmark_runs/Ablations")
-    results_files: list[Path] = list(ablation_dir.glob("**/results.json"))
-
-    # Collect data from results files
-    data_dict: dict[str, tuple[float, float]] = {}
-    for results_file in results_files:
-        with open(results_file, "r") as f:
-            data = json.load(f)
-            benchmark_name = data["config"]["benchmark"]["benchmark_name"]
-            # Convert benchmark name to display name
-            # Remove the "gtno_" prefix and convert to title case
-            display_name = benchmark_name.replace("gtno_", "").replace("_", " ").title()
-            data_dict[display_name] = (data["s2s_test_loss_mean"], data["s2s_test_loss_std"])
-
-    # Sort the dictionary by values (mean loss) in descending order
-    data_dict = dict(sorted(data_dict.items(), key=lambda x: x[1][0]))
-
-    # Extract categories and values
-    categories: list[str] = list(data_dict.keys())
-    values: npt.NDArray[np.float64] = np.array([v[0] for v in data_dict.values()])
-    std_devs: npt.NDArray[np.float64] = np.array([v[1] for v in data_dict.values()])
-
-    # Create figure and axis
-    fig, ax = plt.subplots(figsize=(5, 4))
-
-    # Create horizontal bars with error bars
-    bars = ax.barh(categories, values, xerr=std_devs, color=red, alpha=0.8, edgecolor=grey, linewidth=0)
-
-    # Remove top and right spines
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-
-    # Customize axis
-    ax.set_xlabel("Mean S2S MSE")
-    ax.set_ylabel("")
-
-    # Adjust layout
-    plt.tight_layout()
-
-    # Save if path provided
-    if save_path:
-        save_path.parent.mkdir(parents=True, exist_ok=True)
-        plt.savefig(save_path, format="pdf", dpi=300, bbox_inches="tight")
-        print(f"Figure saved as PDF to {save_path}")
-
-
 if __name__ == "__main__":
     set_matplotlib_style()
     # plot_learnable_attention_weights(Path("benchmark_runs/Paper_learned_denom_ethanol_06-Mar-2025_01-36-47/weights_run1"), "ethanol")
     # plot_lambda_value_residuals(Path("benchmark_runs/Paper_learned_denom_toluene_06-Mar-2025_02-29-46/weights_run1"), "ethanol")
-    plot_ablations(save_path=Path("Z_paper_content/ablations/ablation_MD17.pdf"))
     # print_ablation_results()

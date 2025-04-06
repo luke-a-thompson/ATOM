@@ -85,7 +85,14 @@ class ValueResidualType(StrEnum):
 @final
 class AttentionType(StrEnum):
     SELF = "self"
-    GHCA = "GHCA"
+    GHCA = "ghca"
+
+
+@final
+class EquivariantLiftingType(StrEnum):
+    NONE = "none"
+    EQUIVARIANT = "equivariant"
+    NO_TP = "no_tensor_product"
 
 
 @final
