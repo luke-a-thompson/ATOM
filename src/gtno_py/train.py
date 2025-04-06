@@ -16,7 +16,6 @@ def main() -> None:
     if args.config:
         config = Config.from_toml(args.config)
         _ = wandb.init(project="GTNO", name=config.benchmark.benchmark_name, config=dict(config), mode="disabled" if not config.wandb.use_wandb else "online")
-        set_seeds(config.training.seed)
         set_environment_variables(config)
 
         if config.dataloader.multitask:
@@ -27,7 +26,6 @@ def main() -> None:
         for config_path in get_config_files(args.configs):
             config = Config.from_toml(config_path)
             _ = wandb.init(project="GTNO", name=config.benchmark.benchmark_name, config=dict(config), mode="disabled" if not config.wandb.use_wandb else "online")
-            set_seeds(config.training.seed)
             set_environment_variables(config)
 
             if config.dataloader.multitask:

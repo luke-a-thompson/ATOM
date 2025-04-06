@@ -7,6 +7,7 @@ import wandb
 
 from gtno_py.training import (
     Config,
+    set_seeds,
     MD17MoleculeType,
     MultiRunResults,
     RMD17MoleculeType,
@@ -34,13 +35,6 @@ def singletask_benchmark(config: Config) -> None:
     else:
         molecules = [config.dataloader.molecule_type]
 
-    if config.benchmark.compile:
-        model = torch.compile(initialize_model(config).to(config.training.device), dynamic=True)
-    else:
-        model = initialize_model(config).to(config.training.device)
-    tqdm.write(f"Total params: {sum(p.numel() for p in model.parameters()):,}")
-    tqdm.write(f"Total trainable params: {sum(p.numel() for p in model.parameters() if p.requires_grad):,}")
-
     molecule_progress_bar: tqdm[MD17MoleculeType | RMD17MoleculeType] = tqdm(molecules, leave=False, unit="molecule", position=0)
     for molecule in molecule_progress_bar:
         molecule_progress_bar.set_description(f"Running {str(molecule)}")
@@ -53,7 +47,11 @@ def singletask_benchmark(config: Config) -> None:
 
         runs_progress_bar = tqdm(range(config.benchmark.runs), leave=False, unit="run", position=1)
         for run in runs_progress_bar:
+            set_seeds(config.training.seed + run)
             runs_progress_bar.set_description(f"Run {run+1}/{config.benchmark.runs}")
+            model = initialize_model(config).to(config.training.device)
+            if config.benchmark.compile:
+                model = torch.compile(model)
 
             # Pass the weights directory to main function
             single_run_results = train_model(
@@ -95,16 +93,11 @@ def singletask_benchmark(config: Config) -> None:
         tqdm.write(f"  Average Time per Run: {multi_run_results.mean_secs_per_run:.1f}x10^-2s")
         tqdm.write(f"  Average Time per Epoch: {multi_run_results.mean_secs_per_epoch:.1f}x10^-2s")
         tqdm.write(f"  Average Best Val Loss Epoch: {multi_run_results.mean_best_val_loss_epoch:.1f}")
+        tqdm.write(f"Total params: {sum(p.numel() for p in model.parameters()):,}")
+        tqdm.write(f"Total trainable params: {sum(p.numel() for p in model.parameters() if p.requires_grad):,}")
 
 
 def multitask_benchmark(config: Config) -> None:
-    if config.benchmark.compile:
-        model = torch.compile(initialize_model(config).to(config.training.device), dynamic=True)
-    else:
-        model = initialize_model(config).to(config.training.device)
-    tqdm.write(f"Total params: {sum(p.numel() for p in model.parameters()):,}")
-    tqdm.write(f"Total trainable params: {sum(p.numel() for p in model.parameters() if p.requires_grad):,}")
-
     # Create a directory for this molecule's benchmark
     timestamp = datetime.now().strftime("%d-%b-%Y_%H-%M-%S")
     benchmark_dir = Path(f"benchmark_runs/{config.benchmark.benchmark_name}_multitask_{timestamp}")
@@ -113,10 +106,21 @@ def multitask_benchmark(config: Config) -> None:
 
     runs_progress_bar = tqdm(range(config.benchmark.runs), leave=False, unit="run", position=1)
     for run in runs_progress_bar:
+        set_seeds(config.training.seed + run)
         runs_progress_bar.set_description(f"Run {run+1}/{config.benchmark.runs}")
+        model = initialize_model(config).to(config.training.device)
+        if config.benchmark.compile:
+            model = torch.compile(model)
 
         # Pass the weights directory to main function
-        run_results.append(train_model(config, model, None, benchmark_dir, run))
+        single_run_results = train_model(
+            config,
+            model,
+            None,
+            benchmark_dir,
+            run,
+        )
+        run_results.append(single_run_results)
 
     multi_run_results = MultiRunResults(single_run_results=run_results, config=config)
 
@@ -148,7 +152,5 @@ def multitask_benchmark(config: Config) -> None:
     tqdm.write(f"  Average Time per Run: {multi_run_results.mean_secs_per_run:.1f}s")
     tqdm.write(f"  Average Time per Epoch: {multi_run_results.mean_secs_per_epoch:.1f}s")
     tqdm.write(f"  Average Best Val Loss Epoch: {multi_run_results.mean_best_val_loss_epoch:.1f}")
-
-
-if __name__ == "__main__":
-    main()
+    tqdm.write(f"Total params: {sum(p.numel() for p in model.parameters()):,}")
+    tqdm.write(f"Total trainable params: {sum(p.numel() for p in model.parameters() if p.requires_grad):,}")
