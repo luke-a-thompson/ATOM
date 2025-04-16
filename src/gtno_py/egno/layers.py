@@ -246,7 +246,7 @@ class EGNN_Layer(nn.Module):
         tot_message = aggregate(message, row, x.shape[0], AggregationMode.SUM, None)  # [BN, K]
         node_message = torch.cat((h, tot_message), dim=-1)  # Shape [BN, K+K] matches
         if self.h_update:
-            h = self.node_net(node_message)  # [BN, K]
+            h = h + self.node_net(node_message)  # [BN, K], corrected EGNN residual
         return x, v, h
 
 

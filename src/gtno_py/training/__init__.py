@@ -1,7 +1,7 @@
 from .create_model import initialize_model
 from .create_optimisers import initialize_optimizer, initialize_scheduler
 from .create_dataloaders import create_dataloaders_single, create_dataloaders_multitask
-from .training_utils import reset_weights, set_seeds, add_brownian_noise, log_weights, parse_train_args, set_environment_variables, get_config_files
+from .training_utils import set_seeds, add_brownian_noise, log_weights, parse_train_args, set_environment_variables, get_config_files
 from .load_config import Config
 from .save_results import SingleRunResults, MultiRunResults
 from .config_options import MD17MoleculeType, RMD17MoleculeType
@@ -18,7 +18,6 @@ __all__ = [
     "create_dataloaders_single",
     "create_dataloaders_multitask",
     "set_seeds",
-    "reset_weights",
     "add_brownian_noise",
     "log_weights",
     "SingleRunResults",
