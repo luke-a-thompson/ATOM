@@ -9,13 +9,13 @@ from gtno_py.training.config_options import (
     FFNActivation,
     AttentionType,
     EquivariantLiftingType,
-    MD17MoleculeType,
     MD17Version,
+    MD17MoleculeType,
+    RMD17MoleculeType,
     MD61MoleculeType,
     ModelType,
     NormType,
     OptimizerType,
-    RMD17MoleculeType,
     SchedulerType,
     ValueResidualType,
 )
@@ -67,14 +67,14 @@ class DataloaderConfig(BaseModel):
     multitask: bool
     md17_version: MD17Version
     # Single-task dataloader parameters
-    molecule_type: MD17MoleculeType | RMD17MoleculeType | MD61MoleculeType | list[MD17MoleculeType | RMD17MoleculeType | MD61MoleculeType]
-    num_timesteps: int
+    molecule_type: MD17MoleculeType | RMD17MoleculeType | MD61MoleculeType
 
     # Multitask dataloader parameters
     train_molecules: list[MD17MoleculeType | RMD17MoleculeType | MD61MoleculeType] | None = None
     validation_molecules: list[MD17MoleculeType | RMD17MoleculeType | MD61MoleculeType] | None = None
     test_molecules: list[MD17MoleculeType | RMD17MoleculeType | MD61MoleculeType] | None = None
 
+    num_timesteps: int
     delta_T: int
     explicit_hydrogen: bool
     explicit_hydrogen_gradients: bool
@@ -88,21 +88,9 @@ class DataloaderConfig(BaseModel):
     force_regenerate: bool
 
     @model_validator(mode="after")
-    def validate_singletask(self) -> "DataloaderConfig":
-        if not self.multitask and self.molecule_type is None:
-            raise ValueError("If 'multitask' is False, 'molecule_type' must be specified.")
-
-        if self.multitask is True and not (self.train_molecules or self.validation_molecules or self.test_molecules):
-            raise ValueError(
-                "If 'multitask' is True, 'train_molecules', 'validation_molecules', and 'test_molecules' must be specified. They are only used for multitask dataloaders."
-            )
-        return self
-
-    @model_validator(mode="after")
     def validate_multitask(self) -> "DataloaderConfig":
         if self.multitask and (not self.train_molecules or not self.validation_molecules or not self.test_molecules):
             raise ValueError("If 'multitask' is True, 'train_molecules', 'validation_molecules', and 'test_molecules' must be specified.")
-
         return self
 
     @model_validator(mode="after")
