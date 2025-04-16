@@ -76,20 +76,6 @@ def set_environment_variables(config: Config) -> None:
         os.environ["TORCH_TRACE"] = "/home/luke/gtno_py/torch_compiler/trace"
 
 
-def reset_weights(model: nn.Module) -> None:
-    """Reinitialize model weights without recompiling.
-
-    Args:
-        model (nn.Module): The model to reset.
-
-    Returns:
-        None
-    """
-    for layer in model.modules():
-        if hasattr(layer, "reset_parameters"):  # Applies to layers like Linear, Conv, etc.
-            layer.reset_parameters()
-
-
 def log_weights(named_parameters: list[tuple[str, torch.Tensor]], epoch: int, save_dir: Path):
     """Log feature weights to wandb and/or save as numpy arrays.
 
