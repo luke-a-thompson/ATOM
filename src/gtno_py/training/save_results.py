@@ -64,8 +64,8 @@ class MultiRunResults(BaseModel):
         self.s2t_test_loss_max = max(result.s2t_test_loss for result in self.single_run_results)
         self.s2t_test_loss_min = min(result.s2t_test_loss for result in self.single_run_results)
 
-        self.mean_secs_per_run = sum(result.run_time for result in self.single_run_results) / len(self.single_run_results)
-        self.mean_secs_per_epoch = sum(result.seconds_per_epoch for result in self.single_run_results) / len(self.single_run_results)
+        self.mean_secs_per_run = sum(result.run_time for result in self.single_run_results if result.run_time is not None) / len(self.single_run_results)
+        self.mean_secs_per_epoch = sum(result.seconds_per_epoch for result in self.single_run_results if result.seconds_per_epoch is not None) / len(self.single_run_results)
 
         self.mean_best_val_loss_epoch = sum(result.best_val_loss_epoch for result in self.single_run_results) / len(self.single_run_results)
 
@@ -73,8 +73,8 @@ class MultiRunResults(BaseModel):
 
     @model_validator(mode="after")
     def compute_latex(self) -> "MultiRunResults":
-        if self.s2s_test_loss_mean is not None:
+        if self.s2s_test_loss_mean and self.s2s_test_loss_std:
             self.latex_s2s = f"\\({self.s2s_test_loss_mean*100:.2f}{{\\scriptstyle \\pm{self.s2s_test_loss_std*100:.2f}}}\\)"
-        if self.s2t_test_loss_mean is not None:
+        if self.s2t_test_loss_mean and self.s2t_test_loss_std:
             self.latex_s2t = f"\\({self.s2t_test_loss_mean*100:.2f}{{\\scriptstyle \\pm{self.s2t_test_loss_std*100:.2f}}}\\)"
         return self
