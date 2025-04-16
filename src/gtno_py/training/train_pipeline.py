@@ -10,10 +10,9 @@ from torch.utils.data import DataLoader
 from tqdm.std import tqdm
 import wandb
 
+from gtno_py.dataloaders.egno_dataloder import MD17DynamicsDataset
 from gtno_py.training import (
     Config,
-    MD17MoleculeType,
-    RMD17MoleculeType,
     SingleRunResults,
     add_brownian_noise,
     create_dataloaders_multitask,
@@ -21,19 +20,16 @@ from gtno_py.training import (
     initialize_optimizer,
     initialize_scheduler,
     log_weights,
-    reset_weights,
 )
 
 
-def train_model(config: Config, model: nn.Module, molecule_type: MD17MoleculeType | RMD17MoleculeType | None, benchmark_dir: Path, run_number: int) -> SingleRunResults:
+def train_model(config: Config, model: nn.Module, benchmark_dir: Path, run_number: int) -> SingleRunResults:
     """Full training pipeline."""
 
-    if config.dataloader.multitask and molecule_type is None:
+    if config.dataloader.multitask:
         train_loader, val_loader, test_loader = create_dataloaders_multitask(config)
-    elif molecule_type is not None:
-        train_loader, val_loader, test_loader = create_dataloaders_single(config, molecule_type)
     else:
-        raise ValueError("molecule_type must be provided for single-task dataloaders")
+        train_loader, val_loader, test_loader = create_dataloaders_single(config)
 
     optimizer = initialize_optimizer(config, model)
     scheduler = initialize_scheduler(config, optimizer)
@@ -80,7 +76,7 @@ def train_model(config: Config, model: nn.Module, molecule_type: MD17MoleculeTyp
                 "Train s2t loss": f"{train_s2t_loss*100:.2f}x10^-2",
                 "Val s2t loss": f"{val_s2t_loss*100:.2f}x10^-2",
                 "Best val s2t loss": f"{best_val_loss*100:.2f}x10^-2",
-                f"Current {config.optimizer.type} LR": f"{optimizer.param_groups[0]['lr']*100:.4f}x10^-2",
+                f"Current {config.optimizer.type} LR": f"{optimizer.param_groups[0]['lr']:.4f}",
             }
         )
     end_training_time = datetime.now()
@@ -88,8 +84,6 @@ def train_model(config: Config, model: nn.Module, molecule_type: MD17MoleculeTyp
     # Final evaluation
     _ = model.load_state_dict(torch.load(best_val_model, weights_only=True))
     s2t_test_loss, s2s_test_loss = eval_epoch(config, model, test_loader)
-
-    reset_weights(model)
 
     results = SingleRunResults(
         s2t_test_loss=s2t_test_loss,
@@ -107,7 +101,7 @@ def train_epoch(
     config: Config,
     model: nn.Module,
     optimizer: optim.Optimizer,
-    dataloader: DataLoader[dict[str, torch.Tensor]],
+    dataloader: DataLoader[dict[str, torch.Tensor]] | DataLoader[MD17DynamicsDataset],
     scheduler: optim.lr_scheduler._LRScheduler | None,
 ) -> float:
     """Single training epoch.
@@ -185,7 +179,7 @@ def train_epoch(
 def eval_epoch(
     config: Config,
     model: nn.Module,
-    loader: DataLoader[dict[str, torch.Tensor]],
+    loader: DataLoader[dict[str, torch.Tensor]] | DataLoader[MD17DynamicsDataset],
 ) -> tuple[float, float]:
     """Evaluation loop.
 
