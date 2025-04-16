@@ -54,7 +54,7 @@ def initialize_scheduler(config: Config, optimizer: torch.optim.Optimizer) -> to
         case SchedulerType.NONE:
             return None
         case SchedulerType.STEP:
-            return optim.lr_scheduler.StepLR(optimizer, step_size=250, gamma=0.5)
+            return optim.lr_scheduler.StepLR(optimizer, step_size=2500, gamma=0.5)
         case SchedulerType.COS_ANNEALING:
             raise NotImplementedError("Cosine annealing scheduler not implemented")
         case _:
