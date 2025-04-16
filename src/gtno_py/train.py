@@ -2,7 +2,6 @@ import wandb
 
 from gtno_py.training import (
     Config,
-    set_seeds,
     parse_train_args,
     set_environment_variables,
     singletask_benchmark,

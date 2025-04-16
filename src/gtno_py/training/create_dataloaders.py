@@ -16,7 +16,7 @@ from gtno_py.training.load_config import Config
 def create_datasets(
     config: Config,
     molecule_type: MD17MoleculeType | RMD17MoleculeType | MD61MoleculeType,
-    max_nodes: int | None,
+    max_nodes: int | None = None,
 ) -> tuple[MD17DynamicsDataset, MD17DynamicsDataset, MD17DynamicsDataset]:
     """Create train, test and validation Torch datasets.
 
@@ -31,8 +31,10 @@ def create_datasets(
     # If we are using a message passing model, we need to return the edge data
     if config.benchmark.model_type == ModelType.EGNO:
         return_edge_data = True
+        egno_mode = True
     else:
         return_edge_data = False
+        egno_mode = False
 
     train_dataset = MD17DynamicsDataset(
         partition=DataPartition.train,
@@ -49,6 +51,7 @@ def create_datasets(
         radius_graph_threshold=config.dataloader.radius_graph_threshold,
         rrwp_length=config.dataloader.rrwp_length,
         return_edge_data=return_edge_data,
+        egno_mode=egno_mode,
     )
 
     val_dataset = MD17DynamicsDataset(
@@ -66,6 +69,7 @@ def create_datasets(
         radius_graph_threshold=config.dataloader.radius_graph_threshold,
         rrwp_length=config.dataloader.rrwp_length,
         return_edge_data=return_edge_data,
+        egno_mode=egno_mode,
     )
 
     test_dataset = MD17DynamicsDataset(
@@ -83,6 +87,7 @@ def create_datasets(
         radius_graph_threshold=config.dataloader.radius_graph_threshold,
         rrwp_length=config.dataloader.rrwp_length,
         return_edge_data=return_edge_data,
+        egno_mode=egno_mode,
     )
 
     return train_dataset, val_dataset, test_dataset
@@ -90,7 +95,6 @@ def create_datasets(
 
 def create_dataloaders_single(
     config: Config,
-    molecule_type: MD17MoleculeType | RMD17MoleculeType | MD61MoleculeType,
 ) -> tuple[DataLoader[dict[str, torch.Tensor]], DataLoader[dict[str, torch.Tensor]], DataLoader[dict[str, torch.Tensor]]]:
     """Create train, test and validation Torch dataloaders.
 
@@ -101,7 +105,7 @@ def create_dataloaders_single(
     Returns:
         tuple[DataLoader[dict[str, torch.Tensor]], DataLoader[dict[str, torch.Tensor]], DataLoader[dict[str, torch.Tensor]]]: The train/val/test Torch dataloaders.
     """
-    train_dataset, val_dataset, test_dataset = create_datasets(config, molecule_type, max_nodes=None)
+    train_dataset, val_dataset, test_dataset = create_datasets(config, config.dataloader.molecule_type, max_nodes=None)
 
     train_loader = DataLoader(
         train_dataset,
@@ -136,31 +140,28 @@ def create_dataloaders_single(
 
 def create_dataloaders_multitask(
     config: Config,
-) -> tuple[DataLoader[dict[str, torch.Tensor]], DataLoader[dict[str, torch.Tensor]], DataLoader[dict[str, torch.Tensor]]]:
+) -> tuple[DataLoader[MD17DynamicsDataset], DataLoader[MD17DynamicsDataset], DataLoader[MD17DynamicsDataset]]:
     """Create train, test and validation Torch dataloaders for multiple molecule types and concatenate them into a single dataloader.
 
     Args:
         config (Config): The configuration file.
 
     Returns:
-        tuple[DataLoader[dict[str, torch.Tensor]], DataLoader[dict[str, torch.Tensor]], DataLoader[dict[str, torch.Tensor]]]: The train/val/test Torch dataloaders.
+        tuple[DataLoader[MD17DynamicsDataset], DataLoader[MD17DynamicsDataset], DataLoader[MD17DynamicsDataset]]: The train/val/test Torch dataloaders.
     """
     max_nodes = 0
     # We return a single dataset, so we can just take the num_nodes from that
     assert config.dataloader.train_molecules is not None
     assert config.dataloader.validation_molecules is not None
     assert config.dataloader.test_molecules is not None
-    for all_molecule_types in config.dataloader.train_molecules + config.dataloader.validation_molecules + config.dataloader.test_molecules:
-        max_nodes_finder, _, _ = create_datasets(config, all_molecule_types, max_nodes=None)
+    for molecule_type in config.dataloader.train_molecules + config.dataloader.validation_molecules + config.dataloader.test_molecules:
+        max_nodes_finder, _, _ = create_datasets(config, molecule_type, max_nodes=None)
         max_nodes = max(max_nodes, max_nodes_finder.num_nodes)
 
     tqdm.write(f"Inferred max_nodes across all molecules as: {max_nodes}")
-    train_loaders = []
-    val_loaders = []
-    test_loaders = []
-
-    if config.dataloader.train_molecules is None or config.dataloader.validation_molecules is None or config.dataloader.test_molecules is None:
-        raise ValueError("train_molecules, validation_molecules, and test_molecules must be specified for multitask dataloaders")
+    train_loaders: list[MD17DynamicsDataset] = []
+    val_loaders: list[MD17DynamicsDataset] = []
+    test_loaders: list[MD17DynamicsDataset] = []
 
     for train_molecule_type in config.dataloader.train_molecules:
         train_dataset, _, _ = create_datasets(config, train_molecule_type, max_nodes=max_nodes)
