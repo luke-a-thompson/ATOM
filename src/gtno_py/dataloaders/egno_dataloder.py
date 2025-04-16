@@ -31,6 +31,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         radius_graph_threshold: float = 1.6,
         rrwp_length: int = 8,
         normalize_z: bool = False,
+        egno_mode: bool = False,
         train_par: float = 0.1,
         val_par: float = 0.05,
         test_par: float = 0.05,
@@ -63,7 +64,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         self.radius_graph_threshold: float = radius_graph_threshold
         self.rrwp_length: int = rrwp_length
         self.normalize_z: bool = normalize_z
-
+        self.egno_mode: bool = egno_mode
         match md17_version:
             case MD17Version.md17:
                 full_dir = os.path.join(data_dir + "md17_npz/" + "md17_" + molecule_type + ".npz")
@@ -126,6 +127,9 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
             self.v = self.v[:, heavy_atom_mask, ...]
             self.z = self.z[heavy_atom_mask]
 
+        if egno_mode is True:
+            self.cfg = self._sample_cfg()
+
         self.process_data(self.split_times, self.x, self.v, self.z)
 
         # --- Precompute Replication ---
@@ -155,8 +159,10 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         self.num_nodes: int = z.shape[0]
 
         one_hop_adjacency, two_hop_adjacency = self._compute_adjacency_matrix(x, self.num_nodes, self.radius_graph_threshold)
-        if self.return_edge_data:
+        if self.return_edge_data and not self.egno_mode:
             self.edge_attr, self.edge_index = self._build_edge_attributes(one_hop_adjacency, two_hop_adjacency, z, x_0)
+        elif self.egno_mode:
+            self.edge_attr, self.edge_index = self._build_edge_attributes_with_cfg(one_hop_adjacency, two_hop_adjacency, z, x_0)
         if self.rrwp_length > 0:
             self.rrwp: torch.Tensor = self.calculate_rrwp(one_hop_adjacency, self.rrwp_length)
 
@@ -460,6 +466,130 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         edge_attr_tensor = torch.Tensor(np.array(edge_attr))
         return edge_attr_tensor, edge_index
 
+    def _build_edge_attributes_with_cfg(
+        self,
+        one_hop_adjacency: torch.Tensor,
+        two_hop_adjacency: torch.Tensor,
+        z: torch.Tensor,  # Use the processed z (potentially without H)
+        x_0: torch.Tensor,
+    ) -> tuple[torch.Tensor, tuple[torch.Tensor, torch.Tensor]]:
+        """
+        Args:
+            one_hop_adjacency: One-hop adjacency matrix
+            two_hop_adjacency: Two-hop adjacency matrix
+            z: Atom types (potentially filtered)
+            x_0: Atom positions (multiple frames; frame 0 is used for edge computation)
+
+        Returns:
+            edge_attr: Tensor of shape (num_edges, 4) where each row contains:
+                [source feature (z_i), target feature (z_j), edge type (1 or 2), stick_ind (0 or 1)].
+            edge_index: Tuple of two torch.Tensor (sources, targets).
+        """
+
+        n_node = z.shape[0]  # Use the potentially filtered number of nodes
+        edge_attr_list: list[list[float]] = []
+        source_indices: list[int] = []
+        target_indices: list[int] = []
+
+        # Convert sticks to a set of tuples for faster lookup
+        stick_set = set()
+        if "Stick" in self.cfg:
+            for stick in self.cfg["Stick"]:
+                # Add both orders to the set for easy checking
+                stick_set.add(tuple(sorted(stick)))
+
+        x_0_frame_one = x_0[0]  # use frame 0 for initial structure info
+        for i in range(n_node):
+            for j in range(n_node):
+                if i == j:
+                    continue
+
+                current_stick_ind = 0.0
+                # Check if this edge (i, j) is defined as a stick
+                if tuple(sorted((i, j))) in stick_set:
+                    current_stick_ind = 1.0
+
+                # Check one-hop connections
+                if one_hop_adjacency[i][j]:
+                    source_indices.append(i)
+                    target_indices.append(j)
+                    # edge_attr: [z_i, z_j, type=1.0, stick_ind]
+                    edge_attr_list.append([z[i].item(), z[j].item(), 1.0, current_stick_ind])
+                    if tuple(sorted((i, j))) in stick_set and not two_hop_adjacency[i, j]:
+                        # If it's a stick, it should *only* be one-hop according to original logic
+                        pass
+                    elif not tuple(sorted((i, j))) in stick_set and two_hop_adjacency[i, j]:
+                        # Should not be both 1-hop and 2-hop
+                        print(f"Warning: Edge ({i},{j}) is 1-hop but also 2-hop in adjacency matrix.")
+                    # Original code had asserts here checking mutual exclusivity, which might be too strict
+                    # depending on the graph definition. We'll omit them for now.
+
+                # Check two-hop connections (only add if not already added as one-hop)
+                elif two_hop_adjacency[i][j]:  # Use elif to ensure mutual exclusivity
+                    source_indices.append(i)
+                    target_indices.append(j)
+                    # edge_attr: [z_i, z_j, type=2.0, stick_ind=0.0] (sticks are usually 1-hop)
+                    # Assuming sticks won't be two-hop neighbours only.
+                    edge_attr_list.append([z[i].item(), z[j].item(), 2.0, 0.0])  # Stick ind is 0 for 2-hop
+
+        edge_index = (
+            torch.tensor(source_indices, dtype=torch.long),  # Use long for indices
+            torch.tensor(target_indices, dtype=torch.long),
+        )
+        # Ensure the final edge_attr has 4 features per edge
+        edge_attr_tensor = torch.tensor(np.array(edge_attr_list), dtype=torch.float)
+        assert edge_attr_tensor.shape[1] == 4, f"Edge attributes should have 4 features, but got shape {edge_attr_tensor.shape}"
+        return edge_attr_tensor, edge_index
+
+    def _sample_cfg(self) -> dict[str, list[tuple[int, int]] | list[list[int]]]:
+        """
+        Define rigid 'Stick' bonds based on molecule type, mimicking original implementation.
+        Indices here refer to the atoms *after* potential hydrogen removal.
+        """
+        cfg = {}
+        n_node = self.z.shape[0]  # Get number of nodes *after* potential H removal
+
+        # Define sticks based on the molecule type (Indices are 0-based)
+        # These definitions are copied from the original's sample_cfg
+        # IMPORTANT: These indices assume NO hydrogens if explicit_hydrogen=False
+        mol_type_str = str(self.molecule_type)  # Use string representation for matching
+        if mol_type_str == "benzene":  # Assuming 'benzene' corresponds to 'benzene_old'
+            cfg["Stick"] = [(0, 1), (2, 3), (4, 5)]
+        elif mol_type_str == "aspirin":
+            cfg["Stick"] = [(0, 2), (1, 3), (5, 6), (7, 10), (11, 12)]
+        elif mol_type_str == "ethanol":
+            cfg["Stick"] = [(0, 1)]
+        elif mol_type_str == "malonaldehyde":
+            cfg["Stick"] = [(1, 2)]
+        elif mol_type_str == "naphthalene":
+            cfg["Stick"] = [(0, 1), (2, 3), (4, 9), (5, 6), (7, 8)]
+        elif mol_type_str == "salicylic":
+            cfg["Stick"] = [(0, 9), (1, 2), (4, 5), (6, 7)]
+        elif mol_type_str == "toluene":
+            cfg["Stick"] = [(2, 3), (5, 6), (0, 1)]
+        elif mol_type_str == "uracil":
+            cfg["Stick"] = [(0, 1), (3, 4)]
+        else:
+            # Default: No sticks defined, maybe add a warning or error?
+            print(f"Warning: No specific 'Stick' configuration defined for molecule type: {self.molecule_type}. No stick indices will be used.")
+            cfg["Stick"] = []  # Ensure 'Stick' key exists even if empty
+
+        # Calculate 'Isolated' nodes (nodes not part of any stick)
+        cur_selected = []
+        if "Stick" in cfg:
+            for stick_pair in cfg["Stick"]:
+                cur_selected.extend(stick_pair)
+        cfg["Isolated"] = [[node_idx] for node_idx in range(n_node) if node_idx not in cur_selected]
+        if not cfg["Isolated"]:  # Remove if empty
+            cfg.pop("Isolated")
+
+        # Convert tuples/lists in cfg to numpy arrays like the original
+        # (Although we only use 'Stick' directly in _build_edge_attributes)
+        # cfg_np = {_key: np.array(value) for _key, value in cfg.items()}
+        # return cfg_np
+        # Let's keep it as list of tuples/lists for easier processing in _build_edge_attributes
+        return cfg
+
     def calculate_rrwp(self, adj: torch.Tensor, walk_length: int = 8) -> torch.Tensor:
         """
         Calculate random walk return probabilities (RRWP) for each node given an adjacency matrix.
@@ -589,6 +719,7 @@ class MD17DynamicsDataset(MD17Dataset):
         normalize_z: bool = False,
         seed: int = 100,
         force_regenerate: bool = False,
+        egno_mode: bool = False,
     ):
         super().__init__(
             partition=partition,
@@ -610,6 +741,7 @@ class MD17DynamicsDataset(MD17Dataset):
             rrwp_length=rrwp_length,
             radius_graph_threshold=radius_graph_threshold,
             normalize_z=normalize_z,
+            egno_mode=egno_mode,
         )
         self.x_t, self.v_t = self.get_dynamic_target_frames()
 

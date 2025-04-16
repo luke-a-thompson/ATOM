@@ -75,12 +75,15 @@ class EGNO(nn.Module):
         time_emb = time_emb.unsqueeze(1).repeat(1, B * N, 1).view(B * T * N, -1)  # [B*T*N, H_t]
         # X = position, h = node features (||x||, Z)
 
-        loc_mean: torch.Tensor = batch["x_0"][..., :3].mean(dim=2, keepdim=True).repeat(1, 1, N, 1)  # [B, T, N, 3]
-        loc_mean = loc_mean.view(B * T * N, -1)  # [B*T*N, 3]
+        initial_loc = batch["x_0"][:, 0, :, :3]  # Use time step 0 [B, N, 3]
+        loc_mean_per_batch = initial_loc.mean(dim=1, keepdim=True)  # [B, 1, 3]
+        loc_mean_repeated_nodes = loc_mean_per_batch.repeat(1, N, 1)  # [B, N, 3]
+        loc_mean = loc_mean_repeated_nodes.unsqueeze(1).repeat(1, T, 1, 1).view(B * T * N, 3)  # [B*T*N, 3]
 
         # Get x, v to shape [B*T*N, 3]
-        x: torch.Tensor = batch["x_0"][..., :3].view(B * T * N, -1)
-        v: torch.Tensor = batch["v_0"][..., :3].view(B * T * N, -1)
+        x: torch.Tensor = batch["x_0"][..., :3].reshape(B * T * N, -1)
+        v: torch.Tensor = batch["v_0"][..., :3].reshape(B * T * N, -1)
+
         h = batch["concatenated_features"][..., -2:]  # ||v||, Z
         h = h.view(B * T * N, -1)
         h = torch.cat((h, time_emb), dim=-1)  # [B * T * N, H]
@@ -106,6 +109,7 @@ class EGNO(nn.Module):
 
         for i in range(self.num_layers):
             if self.use_time_conv:
+
                 # To the shape for FFT and back
                 h = h.view(T, B * N, self.lifting_dim)
                 h = self.time_conv_modules[i](h)
@@ -118,7 +122,7 @@ class EGNO(nn.Module):
                 x = temp[..., 0].view(B * T * N, 3) + loc_mean  # Shape [B*T*N, 3] matches
                 v = temp[..., 1].view(B * T * N, 3)  # Shape [B*T*N, 3] matches
 
-            loc_pred, vel_pred, h = self.egnn.layers[i](x, h, edge_index, edge_attr, v)
+            loc_pred, vel_pred, h = self.egnn.layers[i](x.detach(), h, edge_index, edge_attr.detach(), v)
 
         if v is not None:
             return loc_pred.reshape(B, T, N, 3)
