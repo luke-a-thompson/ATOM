@@ -204,55 +204,171 @@ def plot_learnable_attention_weights(
     plt.show()
 
 
-def print_ablation_results() -> None:
+from typing import Literal
+
+
+def plot_invariance_results(invariance_to_plot: Literal["t", "p"]) -> None:
     """
-    Prints a nicely formatted table of ablation results from results.json files,
-    sorted by S2S loss value (highest to lowest).
+    Plot the results of the invariance ablation study.
+    Creates a line chart with shaded 2SD around the line using mean S2T loss and standard deviation.
+    Also plots the mean test all loss for the EGNO model from a separate directory.
+
+    Args:
+        invariance_to_plot: Either "t" for T-invariance or "p" for P-invariance (num_timesteps)
     """
     # Get all results.json files
-    ablation_dir = Path("benchmark_runs/Ablations")
-    results_files: list[Path] = list(ablation_dir.glob("**/results.json"))
+    figure_dir_name = "invariance_results"
+    if invariance_to_plot == "t":
+        invariance_dir = Path("benchmark_runs/t_invariance")
+        egno_dir = Path("benchmark_runs/t_invariance_egno")
+        x_label = "$ \\Delta t $ (fs)"
+        figure_file_name = "t_invariance_results.pdf"
+    elif invariance_to_plot == "p":
+        invariance_dir = Path("benchmark_runs/p_invariance")
+        egno_dir = Path("benchmark_runs/p_invariance_egno")
+        x_label = "Number of Timesteps (P)"
+        figure_file_name = "p_invariance_results.pdf"
 
-    # Collect all rows including headers
-    rows: list[list[str]] = [["Benchmark Name", "S2S Loss", "S2T Loss"]]
+    # Get results files for both models
+    s2t_results_files: list[Path] = list(invariance_dir.glob("**/results.json"))
+    egno_results_files: list[Path] = list(egno_dir.glob("*.json"))  # EGNO files are directly in the directory
 
-    # Get data from each file
-    data_rows: list[tuple[float, list[str]]] = []  # [(s2s_value, row_data)]
-    for results_file in results_files:
+    print(f"Found {len(s2t_results_files)} S2T results files and {len(egno_results_files)} EGNO results files")
+
+    # Extract parameter values and corresponding metrics for S2T model
+    s2t_param_values: list[int] = []
+    s2t_means: list[float] = []
+    s2t_stds: list[float] = []
+
+    for results_file in s2t_results_files:
         with open(results_file, "r") as f:
-            data: dict[str, Any] = json.load(f)
+            s2t_data: dict[str, Any] = json.load(f)
 
-            # Extract first number from latex string using regex
-            s2s_value = float(re.search(r"\d+\.\d+", data["latex_s2s"]).group())
+            # Extract parameter from the configuration
+            s2t_param_value: int = 0  # Default value
 
-            row = [data["config"]["benchmark"]["benchmark_name"], data["latex_s2s"], data["latex_s2t"]]
-            data_rows.append((s2s_value, row))
+            if invariance_to_plot == "t":
+                # For T-invariance, extract from benchmark name
+                benchmark_name = s2t_data["config"]["benchmark"]["benchmark_name"]
+                match = re.search(r"delta_t_(\d+)", benchmark_name)
+                if match:
+                    s2t_param_value = int(match.group(1))
+            else:  # p invariance (num_timesteps)
+                # For P-invariance, extract from dataloader configuration
+                s2t_param_value = s2t_data["config"]["dataloader"]["num_timesteps"]
 
-    # Sort by s2s_value (highest to lowest) and add to rows
-    data_rows.sort(key=lambda x: x[0], reverse=True)
-    rows.extend([row for _, row in data_rows])
+            # Add the parameter value and metrics
+            s2t_param_values.append(s2t_param_value)
+            s2t_means.append(s2t_data["s2t_test_loss_mean"])
+            s2t_stds.append(s2t_data["s2t_test_loss_std"])
 
-    # Calculate column widths
-    col_widths = [max(len(str(row[i])) for row in rows) for i in range(3)]
+    # Extract parameter values and corresponding metrics for EGNO model
+    egno_param_values: list[int] = []
+    egno_means: list[float] = []
+    egno_stds: list[float] = []
 
-    # Print formatted table
-    print("+" + "+".join("-" * (width + 2) for width in col_widths) + "+")
+    for results_file in egno_results_files:
+        with open(results_file, "r") as f:
+            egno_data: dict[str, Any] = json.load(f)
 
-    # Header
-    print("|" + "|".join(f" {rows[0][i]:<{col_widths[i]}} " for i in range(3)) + "|")
+            # Extract parameter from the file name for EGNO model
+            egno_param_value: int = 0  # Default value
 
-    # Separator
-    print("+" + "+".join("=" * (width + 2) for width in col_widths) + "+")
+            # Extract from file name like "aspirin_bigDelta_1000_results.json"
+            file_name = results_file.name
+            if invariance_to_plot == "t":
+                # For T-invariance, extract from file name
+                match = re.search(r"bigDelta_(\d+)", file_name)
+                if match:
+                    egno_param_value = int(match.group(1))
+            else:  # p invariance (num_timesteps)
+                # For P-invariance, extract from dataloader configuration
+                egno_param_value = egno_data["config"]["dataloader"]["num_timesteps"]
 
-    # Data rows
-    for row in rows[1:]:
-        print("|" + "|".join(f" {row[i]:<{col_widths[i]}} " for i in range(3)) + "|")
+            # Calculate mean and std from the runs
+            if "runs" in egno_data:
+                all_losses = [run["test_all_loss"] for run in egno_data["runs"]]
+                egno_mean = sum(all_losses) / len(all_losses)
 
-    # Bottom border
-    print("+" + "+".join("-" * (width + 2) for width in col_widths) + "+")
+                # Calculate standard deviation
+                variance = sum((x - egno_mean) ** 2 for x in all_losses) / len(all_losses)
+                egno_std = variance**0.5
+
+                # Add the parameter value and metrics
+                egno_param_values.append(egno_param_value)
+                egno_means.append(egno_mean)
+                egno_stds.append(egno_std)
+
+    # Sort by parameter values for S2T model
+    s2t_sorted_indices = np.argsort(s2t_param_values)
+    s2t_param_values = [s2t_param_values[i] for i in s2t_sorted_indices]
+    s2t_means = [s2t_means[i] for i in s2t_sorted_indices]
+    s2t_stds = [s2t_stds[i] for i in s2t_sorted_indices]
+
+    # Sort by parameter values for EGNO model
+    egno_sorted_indices = np.argsort(egno_param_values)
+    egno_param_values = [egno_param_values[i] for i in egno_sorted_indices]
+    egno_means = [egno_means[i] for i in egno_sorted_indices]
+    egno_stds = [egno_stds[i] for i in egno_sorted_indices]
+
+    print(f"S2T param values: {s2t_param_values}")
+    print(f"EGNO param values: {egno_param_values}")
+
+    # Scale values by 10^2 for display
+    s2t_means_scaled = [mean * 100 for mean in s2t_means]
+    s2t_stds_scaled = [std * 100 for std in s2t_stds]
+    egno_means_scaled = [mean * 100 for mean in egno_means]
+    egno_stds_scaled = [std * 100 for std in egno_stds]
+
+    # Create figure
+    fig, ax = plt.subplots(figsize=(6, 4))
+
+    # Plot the S2T mean line
+    ax.plot(s2t_param_values, s2t_means_scaled, "o-", color=blue, linewidth=2, markersize=8, label="ATOM")
+
+    # Calculate 2SD range for S2T
+    s2t_upper_bound = [mean + 2 * std for mean, std in zip(s2t_means_scaled, s2t_stds_scaled)]
+    s2t_lower_bound = [mean - 2 * std for mean, std in zip(s2t_means_scaled, s2t_stds_scaled)]
+
+    # Fill the area between the bounds for S2T
+    ax.fill_between(s2t_param_values, s2t_lower_bound, s2t_upper_bound, color=blue, alpha=0.2)
+
+    # Plot the EGNO mean line
+    if egno_param_values:  # Only plot if we have EGNO data
+        ax.plot(egno_param_values, egno_means_scaled, "s-", color=red, linewidth=2, markersize=8, label="EGNO")
+
+        # Calculate 2SD range for EGNO
+        egno_upper_bound = [mean + 2 * std for mean, std in zip(egno_means_scaled, egno_stds_scaled)]
+        egno_lower_bound = [mean - 2 * std for mean, std in zip(egno_means_scaled, egno_stds_scaled)]
+
+        # Fill the area between the bounds for EGNO
+        ax.fill_between(egno_param_values, egno_lower_bound, egno_upper_bound, color=red, alpha=0.2)
+
+    # Set x-axis to log scale
+    if invariance_to_plot == "t":
+        ax.set_xscale("log")
+
+    # Add labels and title
+    ax.set_xlabel(x_label, fontsize=14)
+    ax.set_ylabel("Mean S2T MSE ($\\times 10^{-2}$)", fontsize=14)
+
+    # Add legend
+    ax.legend(loc="best", fontsize=12)
+
+    # Ensure the directory exists
+    figure_dir = Path(f"Z_paper_content/{figure_dir_name}")
+    figure_dir.mkdir(parents=True, exist_ok=True)
+
+    # Save the figure
+    plt.tight_layout()
+    save_path = figure_dir / figure_file_name
+    plt.savefig(save_path, format="pdf", dpi=300, bbox_inches="tight")
+    print(f"Figure saved as PDF to {save_path}")
+
 
 if __name__ == "__main__":
     set_matplotlib_style()
     # plot_learnable_attention_weights(Path("benchmark_runs/Paper_learned_denom_ethanol_06-Mar-2025_01-36-47/weights_run1"), "ethanol")
     # plot_lambda_value_residuals(Path("benchmark_runs/Paper_learned_denom_toluene_06-Mar-2025_02-29-46/weights_run1"), "ethanol")
     # print_ablation_results()
+    plot_invariance_results("t")  # or "p" for P-invariance (num_timesteps)
