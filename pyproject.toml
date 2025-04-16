@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "gtno-py"
-version = "0.1.0"
+version = "0.1.1"
 description = ""
 authors = ["Luke Thompson <luke-a-thompson@outlook.com>"]
 readme = "README.md"
@@ -12,6 +12,7 @@ from = "src"
 
 [tool.poetry.scripts]
 train = "gtno_py.train:main"
+inference = "gtno_py.inference:main"
 
 [tool.poetry.dependencies]
 python = "^3.12"
@@ -31,7 +32,7 @@ pubchempy = "^1.0.4"
 rdkit = "^2024.9.6"
 tlparse = "^0.3.37"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
 types-tqdm = "^4.67.0.20241119"
 pandas-stubs = "^2.2.3.241126"
@@ -52,6 +53,9 @@ include = ["src"]
 exclude = ["**/__pycache__", "*/.mypy_cache", "**/.pytest_cache"]
 venvPath = "."
 venv = ".venv"
+useLibraryCodeForTypes = true
+reportMissingImports = true
+reportMissingTypeStubs = false
 
 [build-system]
 requires = ["poetry-core"]

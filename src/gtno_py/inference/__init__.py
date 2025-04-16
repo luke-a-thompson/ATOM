@@ -1,5 +1,5 @@
-from .inference_utils import parse_inference_args
+from .inference import main
 
 __all__ = [
-    "parse_inference_args",
+    "main",
 ]
