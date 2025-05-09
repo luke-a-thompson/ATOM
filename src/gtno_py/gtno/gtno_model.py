@@ -20,6 +20,7 @@ class GTNOBlock(nn.Module):
         attention_type: AttentionType,
         num_timesteps: int,
         use_rope: bool,
+        rope_base: float,
         use_spherical_harmonics: bool,
         value_residual_type: ValueResidualType,
         learnable_attention_denom: bool,
@@ -83,6 +84,7 @@ class GTNOBlock(nn.Module):
                     num_heads=num_heads,
                     num_timesteps=self.num_timesteps,
                     use_rope=use_rope,
+                    rope_base=rope_base,
                     use_spherical_harmonics=use_spherical_harmonics,
                     learnable_attention_denom=learnable_attention_denom,
                 )
@@ -147,6 +149,7 @@ class GTNO(nn.Module):
         delta_update: bool,
         num_timesteps: int,
         use_rope: bool,
+        rope_base: float,
         use_spherical_harmonics: bool,
         use_equivariant_lifting: EquivariantLiftingType,
         rrwp_length: int,
@@ -185,7 +188,8 @@ class GTNO(nn.Module):
                     {
                         "x_0": o3.Linear("1x1o + 1x0e", lifting_dim_irreps),  # In: (x,y,z, ||x||)
                         "v_0": o3.Linear("1x1o + 1x0e", lifting_dim_irreps),  # In: (vx,vy,vz, ||v||)
-                        "concatenated_features": o3.FullyConnectedTensorProduct(concat_irreps_1, concat_irreps_2, lifting_dim_irreps),
+                        "vz_0": o3.Linear("1x1o + 1x0e + 1x0e", lifting_dim_irreps),  # In: (vz, ||v||)
+                        "concatenated_features": o3.FullyConnectedTensorProduct(lifting_dim_irreps, lifting_dim_irreps, lifting_dim_irreps),
                     }
                 )
             case EquivariantLiftingType.NO_TP:
@@ -217,6 +221,7 @@ class GTNO(nn.Module):
                     attention_type,
                     num_timesteps,
                     use_rope,
+                    rope_base,
                     use_spherical_harmonics,
                     value_residual_type,
                     learnable_attention_denom,
@@ -266,7 +271,8 @@ class GTNO(nn.Module):
         lifted_x_0: torch.Tensor = self.lifting_layers["x_0"](x_0)
         lifted_v_0: torch.Tensor = self.lifting_layers["v_0"](v_0)
         if self.use_equivariant_lifting == EquivariantLiftingType.EQUIVARIANT:
-            lifted_concat_features: torch.Tensor = self.lifting_layers["concatenated_features"](concat_features[..., :4], concat_features[..., 4:])
+            lifted_vz_0: torch.Tensor = self.lifting_layers["vz_0"](concat_features[..., 4:])
+            lifted_concat_features: torch.Tensor = self.lifting_layers["concatenated_features"](lifted_x_0, lifted_vz_0)
         else:
             lifted_concat_features: torch.Tensor = self.lifting_layers["concatenated_features"](concat_features)
 
