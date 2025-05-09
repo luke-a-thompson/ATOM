@@ -225,7 +225,7 @@ def plot_invariance_results(invariance_to_plot: Literal["t", "p"]) -> None:
         figure_file_name = "t_invariance_results.pdf"
     elif invariance_to_plot == "p":
         invariance_dir = Path("benchmark_runs/p_invariance")
-        egno_dir = Path("benchmark_runs/p_invariance_egno")
+        egno_dir = Path("benchmark_runs/p_invariance_egno_fixedlr")
         x_label = "Number of Timesteps (P)"
         figure_file_name = "p_invariance_results.pdf"
 
@@ -283,7 +283,9 @@ def plot_invariance_results(invariance_to_plot: Literal["t", "p"]) -> None:
                     egno_param_value = int(match.group(1))
             else:  # p invariance (num_timesteps)
                 # For P-invariance, extract from dataloader configuration
-                egno_param_value = egno_data["config"]["dataloader"]["num_timesteps"]
+                match = re.search(r"num_timesteps_(\d+)", file_name)
+                if match:
+                    egno_param_value = int(match.group(1))
 
             # Calculate mean and std from the runs
             if "runs" in egno_data:
@@ -323,8 +325,8 @@ def plot_invariance_results(invariance_to_plot: Literal["t", "p"]) -> None:
     # Create figure
     fig, ax = plt.subplots(figsize=(6, 4))
 
-    # Plot the S2T mean line
-    ax.plot(s2t_param_values, s2t_means_scaled, "o-", color=blue, linewidth=2, markersize=8, label="ATOM")
+    # Plot the S2T mean line with circle markers
+    ax.plot(s2t_param_values, s2t_means_scaled, "-o", color=blue, linewidth=2, label="ATOM", markersize=6)
 
     # Calculate 2SD range for S2T
     s2t_upper_bound = [mean + 2 * std for mean, std in zip(s2t_means_scaled, s2t_stds_scaled)]
@@ -333,9 +335,9 @@ def plot_invariance_results(invariance_to_plot: Literal["t", "p"]) -> None:
     # Fill the area between the bounds for S2T
     ax.fill_between(s2t_param_values, s2t_lower_bound, s2t_upper_bound, color=blue, alpha=0.2)
 
-    # Plot the EGNO mean line
+    # Plot the EGNO mean line with square markers
     if egno_param_values:  # Only plot if we have EGNO data
-        ax.plot(egno_param_values, egno_means_scaled, "s-", color=red, linewidth=2, markersize=8, label="EGNO")
+        ax.plot(egno_param_values, egno_means_scaled, "-s", color=red, linewidth=2, label="EGNO", markersize=6)
 
         # Calculate 2SD range for EGNO
         egno_upper_bound = [mean + 2 * std for mean, std in zip(egno_means_scaled, egno_stds_scaled)]
@@ -371,4 +373,4 @@ if __name__ == "__main__":
     # plot_learnable_attention_weights(Path("benchmark_runs/Paper_learned_denom_ethanol_06-Mar-2025_01-36-47/weights_run1"), "ethanol")
     # plot_lambda_value_residuals(Path("benchmark_runs/Paper_learned_denom_toluene_06-Mar-2025_02-29-46/weights_run1"), "ethanol")
     # print_ablation_results()
-    plot_invariance_results("t")  # or "p" for P-invariance (num_timesteps)
+    plot_invariance_results("p")  # or "p" for P-invariance (num_timesteps)
