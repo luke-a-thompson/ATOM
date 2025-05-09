@@ -77,6 +77,10 @@ def plot_ablations(ablation_dir: Path, save_path: Path | None = None, error_bar_
             # Remove the "gtno_" prefix and convert to title case
             display_name = benchmark_name.replace("gtno_", "").replace("_", " ").title()
 
+            # Keep ROPE in all caps if it exists in the display name
+            if "Rope" in display_name:
+                display_name = display_name.replace("Rope", "T-RoPE")
+
             # Extract individual run results
             s2s_test_losses = [run["s2s_test_loss"] for run in data["single_run_results"]]
 
@@ -121,10 +125,10 @@ def plot_ablations(ablation_dir: Path, save_path: Path | None = None, error_bar_
     value_text = f"{highest_value:.2f}"
 
     # Position the text slightly to the right of the bar end
-    text_x_position = 10.15
+    text_x_position = 10.25
 
     # Add the text annotation
-    _ = ax.text(x=text_x_position, y=highest_category, s=value_text, va="center", ha="left", color=grey, fontsize=10, fontweight="bold")
+    _ = ax.text(x=text_x_position, y=highest_category, s=value_text, verticalalignment="center", ha="left", color=grey, fontsize=10, fontweight="bold")
 
     # Remove top and right spines
     ax.spines["top"].set_visible(False)
@@ -133,7 +137,7 @@ def plot_ablations(ablation_dir: Path, save_path: Path | None = None, error_bar_
     # Customize axis
     _ = ax.set_xlabel("Mean S2S MSE ($\\times 10^{-2}$)")
     _ = ax.set_ylabel("")
-    _ = ax.set_xlim(0, right=15)
+    _ = ax.set_xlim(0, right=12)
 
     # Hide y-axis labels (model names)
     # ax.set_yticks([])
@@ -152,7 +156,7 @@ def plot_ablations(ablation_dir: Path, save_path: Path | None = None, error_bar_
 
 
 if __name__ == "__main__":
-    ablation_dir = Path("benchmark_runs/t")
+    ablation_dir = Path("benchmark_runs/MD17_ablations")
     # Use percentile error bars by default
     set_matplotlib_style()
     plot_ablations(ablation_dir=ablation_dir, save_path=Path("Z_paper_content/ablations/ablation_MD17.pdf"), error_bar_type=ErrorBarType.PERCENTILE)
