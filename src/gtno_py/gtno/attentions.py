@@ -13,13 +13,16 @@ class TemporalRoPEWithOffset(nn.Module):
 
     ### Input:
     - tensor: [B, n_heads, seq_len, d_head], where:
-    - `seq_len = num_nodes * num_timesteps`
-    - `d_head` must be even.
+      - `seq_len = num_nodes * num_timesteps`
+      - `d_head` must be even.
+      - `B` = batch size
+      - `n_heads` = number of attention heads
 
     ### Process:
     1. Generate time indices such that groups of `num_nodes` share the same timestep.
     2. Compute cos/sin embeddings for `num_timesteps`, adjusted by per-head offsets.
     3. Apply RoPE by rotating even/odd tensor components using the cos/sin values.
+    4. Handle masking for padded nodes if a mask is provided.
 
     ### Output:
     - Rotated tensor of the same shape [B, n_heads, seq_len, d_head].
@@ -27,6 +30,7 @@ class TemporalRoPEWithOffset(nn.Module):
     ### Features:
     - Per-head phase offsets allow temporal alignment for each attention head.
     - Consistent rotations across nodes within the same timestep.
+    - Optional masking to avoid rotating padded nodes.
     """
 
     def __init__(self, num_timesteps: int, d_head: int, n_heads: int, base: float = 1000.0, learnable_offset: bool = False):
@@ -208,6 +212,7 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         num_heads: int,
         num_timesteps: int,
         use_rope: bool,
+        rope_base: float,
         use_spherical_harmonics: bool,
         learnable_attention_denom: bool = False,
         attention_dropout: float = 0.2,
@@ -217,8 +222,6 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         for each heterogeneous feature, then perform cross attention on queries
         generated from the q_data ("trunk").
 
-        - The code is unchanged except for rope_on logic.
-        - We do NOT alter your custom attention formula.
         - RoPE is optional; if rope_on=True, we apply it to Q and K in the last dimension.
 
         Args:
@@ -236,6 +239,7 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         self.lifting_dim = lifting_dim
         self.num_timesteps = num_timesteps
         self.use_rope = use_rope
+        self.rope_base = rope_base
         self.use_spherical_harmonics = use_spherical_harmonics
         self.d_head = self.lifting_dim // self.num_heads
 
@@ -258,7 +262,7 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         self.feature_weights = nn.Parameter(torch.randn(self.num_hetero_feats) * 0.1)
 
         if use_rope:
-            self.rope = TemporalRoPEWithOffset(num_timesteps=self.num_timesteps, d_head=self.d_head, n_heads=self.num_heads, base=1000.0, learnable_offset=False)
+            self.rope = TemporalRoPEWithOffset(num_timesteps=self.num_timesteps, d_head=self.d_head, n_heads=self.num_heads, base=self.rope_base, learnable_offset=False)
 
         if use_spherical_harmonics:
             self.spherical_harmonics = SphericalHarmonicsAttentionBias(num_timesteps=self.num_timesteps, max_degree=1, num_heads=self.num_heads, hidden_dim=16)
@@ -266,15 +270,29 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
     @override
     def forward(self, x_0: torch.Tensor, v_0: torch.Tensor | None, concatenated_features: torch.Tensor | None, q_data: torch.Tensor, mask: torch.Tensor | None) -> torch.Tensor:
         """
-        1. Flatten queries => [B, seq_q, d], then project to [B, heads, seq_q, d_head].
-        2. For each heterogeneous feature, do:
-           - Flatten => [B, seq_k, d],
-           - Project K => [B, heads, seq_k, d_head] and V => same shape,
-           - (optionally apply RoPE),
-           - Compute Q·K^T, softmax over seq_k, multiply by V,
-           - Gate and accumulate to `out_sum`.
-        3. Reshape the final heads => [B, seq_q, d], project, unflatten => [B*T, N, d].
-        4. Store result in batch["x_0"] and return.
+        Performs heterogeneous cross-attention with multiple feature types.
+
+        Args:
+            x_0: Position features of shape [B, T, N, d]
+            v_0: Velocity features of shape [B, T, N, d] or None
+            concatenated_features: Additional features of shape [B, T, N, d] or None
+            q_data: Query data of shape [B, T, N, d]
+            mask: Optional mask of shape [B, T, N, 1]
+
+        Process:
+            1. Flatten query data from [B, T, N, d] to [B, T*N, d]
+            2. Project query to [B, heads, T*N, d_head]
+            3. For each heterogeneous feature (x_0, v_0, concatenated_features):
+               - Project to K/V of shape [B, heads, T*N, d_head]
+               - Apply RoPE if enabled
+               - Compute attention scores Q·K^T / sqrt(d_head)
+               - Apply mask and spherical harmonics bias if enabled
+               - Compute attention weights and multiply by V
+               - Gate and accumulate to output
+            4. Reshape output to [B, T, N, d]
+
+        Returns:
+            Output tensor of shape [B, T, N, d]
         """
         # Flatten Q data: [B, T, N, d] -> [B, N * T (seq_q), d]
         B, T, N, d = q_data.shape
@@ -392,11 +410,27 @@ class QuadraticSelfAttention(nn.Module):
     @override
     def forward(self, tensor: torch.Tensor, mask: torch.Tensor | None) -> torch.Tensor:
         """
-        Conventional self-attention on an arbitrary input tensor (e.g., x_0 for position self-attention).
+        Performs self-attention on an input tensor with optional masking.
 
         Args:
-            x_0: shape [B, T, N, d]
-            mask: shape [B, T, N, 1]
+            tensor: Input tensor of shape [B, T, N, d]
+                  ` B = batch size
+                  ` T = number of timesteps
+                  ` N = number of nodes
+                  ` d = feature dimension
+            mask: Optional mask of shape [B, T, N, 1] to mask attention scores
+
+        Process:
+            1. Flatten input from [B, T, N, d] to [B, T*N, d]
+            2. Project to Q, K, V of shape [B, heads, T*N, d_head]
+            3. Apply RoPE to Q and K if enabled
+            4. Compute attention scores Q·K^T / sqrt(d_head)
+            5. Apply mask and spherical harmonics bias if enabled
+            6. Compute attention weights and multiply by V
+            7. Reshape output to [B, T, N, d]
+
+        Returns:
+            Output tensor of shape [B, T, N, d]
         """
         B, T, N, d = tensor.shape
 
