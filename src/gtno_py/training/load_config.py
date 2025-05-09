@@ -207,6 +207,7 @@ class GTNOConfig(BaseModel):
     # Attention parameters
     heterogenous_attention_type: AttentionType
     use_rope: bool
+    rope_base: float
     learnable_attention_denom: bool
     # Feature parameters
     use_spherical_harmonics: bool
@@ -220,6 +221,12 @@ class GTNOConfig(BaseModel):
     def validate_output_heads(self) -> "GTNOConfig":
         if self.output_heads < 1:
             raise ValueError("'output_heads' must be greater than 0.")
+        return self
+
+    @model_validator(mode="after")
+    def validate_rope_base(self) -> "GTNOConfig":
+        if self.rope_base <= 0.0:
+            raise ValueError("'rope_base' must be greater than 0.0.")
         return self
 
     @model_validator(mode="after")
