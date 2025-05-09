@@ -28,6 +28,7 @@ def initialize_model(config: Config) -> nn.Module:
                 delta_update=config.gtno_config.delta_update,
                 num_timesteps=config.dataloader.num_timesteps,
                 use_rope=config.gtno_config.use_rope,
+                rope_base=config.gtno_config.rope_base,
                 use_spherical_harmonics=config.gtno_config.use_spherical_harmonics,
                 use_equivariant_lifting=config.gtno_config.equivariant_lifting_type,
                 rrwp_length=config.dataloader.rrwp_length,
