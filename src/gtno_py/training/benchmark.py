@@ -8,9 +8,7 @@ import wandb
 from gtno_py.training import (
     Config,
     set_seeds,
-    MD17MoleculeType,
     MultiRunResults,
-    RMD17MoleculeType,
     SingleRunResults,
     initialize_model,
     train_model,
