@@ -7,7 +7,7 @@ import os
 from typing import final, override
 from pathlib import Path
 import torch.nn.functional as F
-from gtno_py.training.config_options import DataPartition, MD17Version, MD17MoleculeType, RMD17MoleculeType, MD61MoleculeType
+from gtno_py.training.config_options import DataPartition, MD17Version, MD17MoleculeType, RMD17MoleculeType, TG80MoleculeType
 
 
 class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
@@ -23,7 +23,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         data_dir: str,
         split_dir: str,
         md17_version: MD17Version,
-        molecule_type: MD17MoleculeType | RMD17MoleculeType | MD61MoleculeType,
+        molecule_type: MD17MoleculeType | RMD17MoleculeType | TG80MoleculeType,
         max_nodes: int | None,
         return_edge_data: bool,
         num_timesteps: int = 1,  # Number of timesteps to replicate
@@ -38,6 +38,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         seed: int = 100,
         force_regenerate: bool = False,
         verbose: bool = False,
+        max_edges: int | None = None,  # Maximum number of edges to pad to
     ):
         """
         Args:
@@ -54,7 +55,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         """
         self.partition: DataPartition = partition
         self.md17_version: MD17Version = md17_version
-        self.molecule_type: MD17MoleculeType | RMD17MoleculeType | MD61MoleculeType = molecule_type
+        self.molecule_type: MD17MoleculeType | RMD17MoleculeType | TG80MoleculeType = molecule_type
         self.max_nodes: int | None = max_nodes
         self.delta_frame: int = delta_frame
         self.num_timesteps: int = num_timesteps
@@ -65,6 +66,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         self.rrwp_length: int = rrwp_length
         self.normalize_z: bool = normalize_z
         self.egno_mode: bool = egno_mode
+        self.max_edges: int | None = max_edges
         match md17_version:
             case MD17Version.md17:
                 full_dir = os.path.join(data_dir + "md17_npz/" + "md17_" + molecule_type + ".npz")
@@ -78,14 +80,14 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
                 positions_col = "coords"
                 charges_col = "nuclear_charges"
                 self.dft_imprecision_margin: int = 10_000
-            case MD17Version.md61:
-                full_dir = os.path.join(data_dir + "md61_npz/" + "md61_" + molecule_type + ".npz")
-                split_dir = os.path.join(split_dir + "md61_splits/" + "md61_" + molecule_type + "_split.pkl")
+            case MD17Version.tg80:
+                full_dir = os.path.join(data_dir + "tg80_npz/" + "tg80_" + molecule_type + ".npz")
+                split_dir = os.path.join(split_dir + "tg80_splits/" + "tg80_" + molecule_type + "_split.pkl")
                 positions_col = "coords"
                 charges_col = "nuclear_charges"
                 self.dft_imprecision_margin: int = 500
                 # Temp while dataset is small
-                train_par = 0.1
+                train_par = 0.2
                 val_par = 0.4
                 test_par = 0.4
             case _:
@@ -163,6 +165,17 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
             self.edge_attr, self.edge_index = self._build_edge_attributes(one_hop_adjacency, two_hop_adjacency, z, x_0)
         elif self.egno_mode:
             self.edge_attr, self.edge_index = self._build_edge_attributes_with_cfg(one_hop_adjacency, two_hop_adjacency, z, x_0)
+        if self.max_edges is not None and self.egno_mode:
+            current_edges = self.edge_attr.shape[0]
+            if current_edges < self.max_edges:
+                pad_len = self.max_edges - current_edges
+                # Pad edge attributes with zeros
+                edge_attr_pad = torch.zeros(pad_len, self.edge_attr.shape[1], dtype=self.edge_attr.dtype)
+                self.edge_attr = torch.cat([self.edge_attr, edge_attr_pad], dim=0)
+                # Pad edge indices with zeros (valid self-loop indices)
+                source_pad = torch.zeros(pad_len, dtype=self.edge_index[0].dtype)
+                target_pad = torch.zeros(pad_len, dtype=self.edge_index[1].dtype)
+                self.edge_index = (torch.cat([self.edge_index[0], source_pad], dim=0), torch.cat([self.edge_index[1], target_pad], dim=0))
         if self.rrwp_length > 0:
             self.rrwp: torch.Tensor = self.calculate_rrwp(one_hop_adjacency, self.rrwp_length)
 
@@ -366,6 +379,8 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
 
         # Create and save split
         split = (train_idx, val_idx, test_idx)
+        # Ensure the directory exists
+        os.makedirs(split_dir.parent, exist_ok=True)
         with open(split_dir, "wb") as f:
             pkl.dump(split, f)
 
@@ -668,8 +683,6 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
             "v_t": self.v_t[i].contiguous(),
         }
 
-        # Remove the debugging assertion that was stopping execution
-
         if self.max_nodes is not None:
             mask = torch.cat(
                 [
@@ -679,12 +692,12 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
             )
 
             mask = mask.unsqueeze(0).expand(self.num_timesteps, -1).unsqueeze(-1).bool()
-            sample["padded_nodes_mask"] = mask
+            sample["padded_nodes_mask"] = mask.contiguous()
 
         if self.return_edge_data:
-            sample["edge_attr"] = self.edge_attr
-            sample["source_node_indices"] = self.edge_index[0]
-            sample["target_node_indices"] = self.edge_index[1]
+            sample["edge_attr"] = self.edge_attr.contiguous()
+            sample["source_node_indices"] = self.edge_index[0].contiguous()
+            sample["target_node_indices"] = self.edge_index[1].contiguous()
 
         return sample
 
@@ -706,7 +719,7 @@ class MD17DynamicsDataset(MD17Dataset):
         data_dir: str,
         split_dir: str,
         md17_version: MD17Version,
-        molecule_type: MD17MoleculeType | RMD17MoleculeType | MD61MoleculeType,
+        molecule_type: MD17MoleculeType | RMD17MoleculeType | TG80MoleculeType,
         max_nodes: int | None,
         return_edge_data: bool,
         num_timesteps: int = 8,  # Number of timesteps for dynamics
@@ -720,6 +733,7 @@ class MD17DynamicsDataset(MD17Dataset):
         seed: int = 100,
         force_regenerate: bool = False,
         egno_mode: bool = False,
+        max_edges: int | None = None,
     ):
         super().__init__(
             partition=partition,
@@ -730,8 +744,8 @@ class MD17DynamicsDataset(MD17Dataset):
             md17_version=md17_version,
             molecule_type=molecule_type,
             max_nodes=max_nodes,
-            num_timesteps=num_timesteps,  # Pass num_timesteps to base class for replication
             return_edge_data=return_edge_data,
+            num_timesteps=num_timesteps,  # Pass num_timesteps to base class for replication
             explicit_hydrogen=explicit_hydrogen,
             train_par=train_par,
             val_par=val_par,
@@ -742,6 +756,7 @@ class MD17DynamicsDataset(MD17Dataset):
             radius_graph_threshold=radius_graph_threshold,
             normalize_z=normalize_z,
             egno_mode=egno_mode,
+            max_edges=max_edges,
         )
         self.x_t, self.v_t = self.get_dynamic_target_frames()
 

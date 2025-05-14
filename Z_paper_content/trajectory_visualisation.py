@@ -19,14 +19,14 @@ ENDING_EDGE_ALPHA = 0.1
 # Load the MD17 uracil dataset
 
 
-def plot_trajectory(ax: plt.Axes, filename: Path, md_17_version: Literal["md17", "rmd17", "md61"]) -> set[tuple[int, str]]:
+def plot_trajectory(ax: plt.Axes, filename: Path, md_17_version: Literal["md17", "rmd17", "tg80"]) -> set[tuple[int, str]]:
     data: dict[str, npt.NDArray[np.number]] = np.load(filename)
     # Get only non-hydrogen atoms
     if md_17_version == "md17":
         mask: npt.NDArray[np.bool_] = data["z"] > 1
         filtered_R: npt.NDArray[np.float64] = data["R"][:, mask, :]
         filtered_z: npt.NDArray[np.int_] = data["z"][mask]  # Get the atomic numbers of filtered atoms
-    elif md_17_version == "rmd17" or md_17_version == "md61":
+    elif md_17_version == "rmd17" or md_17_version == "tg80":
         mask: npt.NDArray[np.bool_] = data["nuclear_charges"] > 1
         filtered_R: npt.NDArray[np.float64] = data["coords"][:, mask, :]
         filtered_z: npt.NDArray[np.int_] = data["nuclear_charges"][mask]  # Get the atomic numbers of filtered atoms
@@ -129,7 +129,7 @@ def plot_trajectory(ax: plt.Axes, filename: Path, md_17_version: Literal["md17",
     return unique_atom_types
 
 
-def create_tiled_figure(data_dir: Path, md_17_version: Literal["md17", "rmd17", "md61"], n_cols: int | None = None, n_rows: int | None = None) -> None:
+def create_tiled_figure(data_dir: Path, md_17_version: Literal["md17", "rmd17", "tg80"], n_cols: int | None = None, n_rows: int | None = None) -> None:
     # Get all NPZ files
     files: list[Path] = sorted(list(data_dir.glob("*.npz")))
     n_files: int = len(files)

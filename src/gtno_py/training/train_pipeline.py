@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 from tqdm.std import tqdm
 import wandb
 
-from gtno_py.dataloaders.egno_dataloder import MD17DynamicsDataset
+from gtno_py.dataloaders.atom_dataloader import MD17DynamicsDataset
 from gtno_py.training import (
     Config,
     SingleRunResults,

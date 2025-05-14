@@ -10,6 +10,7 @@ from tensordict import TensorDict
 from e3nn import o3
 
 from gtno_py.training import Config, initialize_model, create_dataloaders_single, create_dataloaders_multitask
+from gtno_py.inference.inference_utils import clean_state_dict_prefixes
 
 
 def parse_args() -> argparse.Namespace:
@@ -50,7 +51,7 @@ def setup_data() -> tuple[Config, torch.nn.Module, TensorDict]:
         _, _, test_loader = create_dataloaders_single(config)
 
     model = initialize_model(config).to(config.training.device)
-    _ = model.load_state_dict(model_state_dict)
+    _ = model.load_state_dict(clean_state_dict_prefixes(model_state_dict))
     _ = model.eval()
 
     # Get a single sample and convert to TensorDict

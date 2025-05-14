@@ -245,11 +245,18 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
 
         assert self.d_head % 2 == 0, "d_head must be even"
 
-        # Keys/Values for heterogeneous features
-        self.kv_projs = nn.ModuleList([nn.Linear(lifting_dim, 2 * lifting_dim) for _ in range(num_hetero_feats)])
-        # Query projection (applied to node embeddings)
-        self.query = nn.Linear(lifting_dim, lifting_dim)
+        from e3nn import o3
+        from gtno_py.gtno.gtno_model import get_lifting_dim_irreps
 
+        # lifting_dim_irreps = get_lifting_dim_irreps(self.lifting_dim)
+        # self.key = o3.Linear(lifting_dim_irreps, lifting_dim_irreps)
+        # self.value = o3.Linear(lifting_dim_irreps, lifting_dim_irreps)
+        # self.query = o3.Linear(lifting_dim_irreps, lifting_dim_irreps)
+        # self.out_proj = o3.Linear(lifting_dim_irreps, lifting_dim_irreps)
+
+        self.key = nn.Linear(lifting_dim, lifting_dim)
+        self.value = nn.Linear(lifting_dim, lifting_dim)
+        self.query = nn.Linear(lifting_dim, lifting_dim)
         self.out_proj = nn.Linear(lifting_dim, lifting_dim)
         self.attention_dropout = nn.Dropout(attention_dropout)
 
@@ -334,8 +341,8 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
             assert h_feat.shape[-1] == self.lifting_dim, f"Expected {self.lifting_dim}, got {h_feat.shape[-1]}"
 
             # Project K and V => [B, heads, seq_k, d_head]
-            kv: torch.Tensor = self.kv_projs[i](h_feat)
-            k_proj, v_proj = torch.chunk(kv, 2, dim=-1)
+            k_proj: torch.Tensor = self.key(h_feat)
+            v_proj: torch.Tensor = self.value(h_feat)
             k_proj = k_proj.view(B, N * T, self.num_heads, self.d_head).permute(0, 2, 1, 3)
             v_proj = v_proj.view(B, N * T, self.num_heads, self.d_head).permute(0, 2, 1, 3)
 

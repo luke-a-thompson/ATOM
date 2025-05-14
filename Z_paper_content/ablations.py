@@ -6,6 +6,7 @@ import numpy as np
 import numpy.typing as npt
 import matplotlib.pyplot as plt
 from matplotlib.ticker import ScalarFormatter
+from scipy import stats
 from usyd_colors import get_palette
 from figures import set_matplotlib_style
 
@@ -48,6 +49,51 @@ def calculate_std_dev_bounds(values: list[float]) -> tuple[float, float]:
     return (2.0 * std_dev, 2.0 * std_dev)  # Symmetric bounds
 
 
+def perform_welch_tests(data_dict: dict[str, list[float]]) -> dict[str, tuple[float, float, float, float, float]]:
+    """
+    Perform Welch's t-test between the default model and all other models with Holm-Bonferroni corrections.
+
+    Args:
+        data_dict: Dictionary mapping model names to lists of test losses
+
+    Returns:
+        Dictionary mapping model names to tuples of (mean difference, std_dev, unadjusted p-value, adjusted p-value)
+    """
+    # Get the default model data
+    default_data = data_dict["gtno_Baseline"]
+    default_std = float(np.std(default_data))
+
+    # Perform t-tests against all other models
+    results: dict[str, tuple[float, float, float, float]] = {}
+    p_values: list[tuple[str, float]] = []
+
+    for model_name, model_data in data_dict.items():
+        if model_name == "gtno_Baseline":
+            continue
+
+        # Calculate mean difference (other - default)
+        mean_diff = float(np.mean(model_data) - np.mean(default_data))
+        model_std = float(np.std(model_data))
+
+        # Perform Welch's t-test
+        t_stat, p_val = stats.ttest_ind(model_data, default_data, equal_var=False)
+        p_val = float(p_val)
+        p_values.append((model_name, p_val))
+        results[model_name] = (mean_diff, model_std, p_val, p_val)  # Will update adjusted p-value later
+
+    # Apply Holm-Bonferroni correction
+    p_values.sort(key=lambda x: x[1])  # Sort by p-value
+    n_tests = len(p_values)
+
+    for i, (model_name, p_val) in enumerate(p_values):
+        # Calculate adjusted p-value
+        adjusted_p = p_val * (n_tests - i)
+        mean_diff, model_std = results[model_name][0], results[model_name][1]
+        results[model_name] = (mean_diff, model_std, p_val, adjusted_p)
+
+    return results
+
+
 def plot_ablations(ablation_dir: Path, save_path: Path | None = None, error_bar_type: ErrorBarType = ErrorBarType.PERCENTILE) -> None:
     """
     Create horizontal bars using real benchmark data from benchmark_runs/Ablations.
@@ -68,40 +114,51 @@ def plot_ablations(ablation_dir: Path, save_path: Path | None = None, error_bar_
     results_files: list[Path] = list(ablation_dir.glob("**/results.json"))
 
     # Collect data from results files
-    data_dict: dict[str, tuple[float, float, float]] = {}
+    data_dict: dict[str, list[float]] = {}
     for results_file in results_files:
         with open(results_file, "r") as f:
             data = json.load(f)
             benchmark_name = data["config"]["benchmark"]["benchmark_name"]
-            # Convert benchmark name to display name
-            # Remove the "gtno_" prefix and convert to title case
-            display_name = benchmark_name.replace("gtno_", "").replace("_", " ").title()
-
-            # Keep ROPE in all caps if it exists in the display name
-            if "Rope" in display_name:
-                display_name = display_name.replace("Rope", "T-RoPE")
 
             # Extract individual run results
             s2s_test_losses = [run["s2s_test_loss"] for run in data["single_run_results"]]
+            data_dict[benchmark_name] = s2s_test_losses
 
-            # Calculate mean and error bounds
-            mean_loss = float(np.mean(s2s_test_losses))
+    # Perform Welch's t-tests with Holm-Bonferroni corrections
+    test_results = perform_welch_tests(data_dict)
 
-            if error_bar_type == ErrorBarType.PERCENTILE:
-                lower_bound, upper_bound = calculate_asymmetric_variance(s2s_test_losses)
-            else:  # STANDARD_DEVIATION
-                lower_bound, upper_bound = calculate_std_dev_bounds(s2s_test_losses)
+    # Sort results by mean difference
+    sorted_results = sorted(test_results.items(), key=lambda x: x[1][0])
 
-            data_dict[display_name] = (mean_loss, lower_bound, upper_bound)
+    # Print results table
+    print("\nWelch's t-test results (compared to Baseline model):")
+    print("Model\t\t\tMean Difference\t\tStd Dev\t\tUnadjusted p-value\tAdjusted p-value")
+    print("-" * 100)
+    for model_name, (mean_diff, std_dev, p_val, adj_p_val) in sorted_results:
+        # Convert model name to display format
+        display_name = model_name.replace("gtno_", "").replace("_", " ").title()
+        if "Rope" in display_name:
+            display_name = display_name.replace("Rope", "T-RoPE")
+        print(f"{display_name:<20} {mean_diff:>10.4f}\t\t{std_dev:>8.4f}\t\t{p_val:>10.4f}\t\t{adj_p_val:>10.4f}")
+
+    # Calculate means and error bounds for plotting
+    plot_data: dict[str, tuple[float, float, float]] = {}
+    for model_name, losses in data_dict.items():
+        mean_loss = float(np.mean(losses))
+        if error_bar_type == ErrorBarType.PERCENTILE:
+            lower_bound, upper_bound = calculate_asymmetric_variance(losses)
+        else:  # STANDARD_DEVIATION
+            lower_bound, upper_bound = calculate_std_dev_bounds(losses)
+        plot_data[model_name] = (mean_loss, lower_bound, upper_bound)
 
     # Sort the dictionary by values (mean loss) in descending order
-    data_dict = dict(sorted(data_dict.items(), key=lambda x: x[1][0]))
+    plot_data = dict(sorted(plot_data.items(), key=lambda x: x[1][0]))
 
     # Extract categories and values
-    categories: list[str] = list(data_dict.keys())
-    values: npt.NDArray[np.float64] = np.array([v[0] for v in data_dict.values()])
-    lower_bounds: npt.NDArray[np.float64] = np.array([v[1] for v in data_dict.values()])
-    upper_bounds: npt.NDArray[np.float64] = np.array([v[2] for v in data_dict.values()])
+    categories: list[str] = list(plot_data.keys())
+    values: npt.NDArray[np.float64] = np.array([v[0] for v in plot_data.values()])
+    lower_bounds: npt.NDArray[np.float64] = np.array([v[1] for v in plot_data.values()])
+    upper_bounds: npt.NDArray[np.float64] = np.array([v[2] for v in plot_data.values()])
 
     # Scale values by 10^-2
     values = values * 100

@@ -12,7 +12,7 @@ from gtno_py.training.config_options import (
     MD17Version,
     MD17MoleculeType,
     RMD17MoleculeType,
-    MD61MoleculeType,
+    TG80MoleculeType,
     ModelType,
     NormType,
     OptimizerType,
@@ -67,12 +67,12 @@ class DataloaderConfig(BaseModel):
     multitask: bool
     md17_version: MD17Version
     # Single-task dataloader parameters
-    molecule_type: MD17MoleculeType | RMD17MoleculeType | MD61MoleculeType
+    molecule_type: MD17MoleculeType | RMD17MoleculeType | TG80MoleculeType | None = None
 
     # Multitask dataloader parameters
-    train_molecules: list[MD17MoleculeType | RMD17MoleculeType | MD61MoleculeType] | None = None
-    validation_molecules: list[MD17MoleculeType | RMD17MoleculeType | MD61MoleculeType] | None = None
-    test_molecules: list[MD17MoleculeType | RMD17MoleculeType | MD61MoleculeType] | None = None
+    train_molecules: list[MD17MoleculeType | RMD17MoleculeType | TG80MoleculeType] | None = None
+    validation_molecules: list[MD17MoleculeType | RMD17MoleculeType | TG80MoleculeType] | None = None
+    test_molecules: list[MD17MoleculeType | RMD17MoleculeType | TG80MoleculeType] | None = None
 
     num_timesteps: int
     delta_T: int
@@ -121,24 +121,25 @@ class DataloaderConfig(BaseModel):
                 enum_type = MD17MoleculeType
             case MD17Version.rmd17:
                 enum_type = RMD17MoleculeType
-            case MD17Version.md61:
-                enum_type = MD61MoleculeType
+            case MD17Version.tg80:
+                enum_type = TG80MoleculeType
             case _:
                 raise ValueError(f"Invalid MD17 version: {self.md17_version}")
 
         # Convert single-task molecule types
-        if isinstance(self.molecule_type, list):
-            self.molecule_type = [enum_type(m) for m in self.molecule_type]
-        else:
-            self.molecule_type = enum_type(self.molecule_type)
+        if not self.multitask and self.molecule_type is not None:
+            if isinstance(self.molecule_type, list):
+                self.molecule_type = [enum_type(mol) for mol in self.molecule_type]
+            else:
+                self.molecule_type = enum_type(self.molecule_type)
 
         # Convert multitask molecule lists
         if self.train_molecules:
-            self.train_molecules = [enum_type(m) for m in self.train_molecules]
+            self.train_molecules = [enum_type(mol) for mol in self.train_molecules]
         if self.validation_molecules:
-            self.validation_molecules = [enum_type(m) for m in self.validation_molecules]
+            self.validation_molecules = [enum_type(mol) for mol in self.validation_molecules]
         if self.test_molecules:
-            self.test_molecules = [enum_type(m) for m in self.test_molecules]
+            self.test_molecules = [enum_type(mol) for mol in self.test_molecules]
 
         return self
 
@@ -285,7 +286,10 @@ class Config(BaseModel):
         Returns:
             Config: Validated configuration object
         """
-        with open(path, "rb") as f:
-            config_dict = tomllib.load(f)
+        try:
+            with open(path, "rb") as f:
+                config_dict = tomllib.load(f)
+        except IsADirectoryError:
+            raise ValueError(f"Path '{path}' is a directory, not a file. Use --config <path> if you want to run multiple configurations.")
 
         return cls(**config_dict)

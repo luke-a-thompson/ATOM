@@ -5,7 +5,7 @@ from gtno_py.gtno.activations import ReLU2, SwiGLU
 from gtno_py.training.config_options import FFNActivation, NormType, ValueResidualType, AttentionType, EquivariantLiftingType
 from tensordict import TensorDict
 from gtno_py.gtno.attentions import QuadraticHeterogenousCrossAttention, QuadraticSelfAttention
-from gtno_py.gtno.mlps import MLP
+from gtno_py.gtno.mlps import MLP, EquivariantMLP
 from e3nn import o3
 
 
@@ -56,6 +56,16 @@ class GTNOBlock(nn.Module):
                 activation_fn = SwiGLU(input_dim=lifting_dim)
             case _:
                 raise ValueError(f"Invalid activation function: {activation}, select from one of {FFNActivation.__members__.keys()}")
+
+        # lifting_dim_irreps = get_lifting_dim_irreps(lifting_dim)
+        # self.ffn = EquivariantMLP(
+        #     in_irreps=lifting_dim_irreps,
+        #     hidden_irreps=lifting_dim_irreps,
+        #     out_irreps=lifting_dim_irreps,
+        #     hidden_layers=2,
+        #     activation=activation_fn,
+        #     dropout_p=0.1,
+        # )
 
         self.ffn = MLP(
             in_dim=lifting_dim,
@@ -180,7 +190,12 @@ class GTNO(nn.Module):
         self.delta_update = delta_update
 
         concat_irreps_1, concat_irreps_2 = self._get_concat_feature_irreps()
-        lifting_dim_irreps = self._get_lifting_dim_irreps()
+        lifting_dim_irreps = get_lifting_dim_irreps(lifting_dim)
+
+        if self.rrwp_length > 0:
+            vz_irreps = f"1x1o + 1x0e + 1x0e + {self.rrwp_length}x0e"
+        else:
+            vz_irreps = "1x1o + 1x0e + 1x0e"
 
         match use_equivariant_lifting:
             case EquivariantLiftingType.EQUIVARIANT:
@@ -188,7 +203,7 @@ class GTNO(nn.Module):
                     {
                         "x_0": o3.Linear("1x1o + 1x0e", lifting_dim_irreps),  # In: (x,y,z, ||x||)
                         "v_0": o3.Linear("1x1o + 1x0e", lifting_dim_irreps),  # In: (vx,vy,vz, ||v||)
-                        "vz_0": o3.Linear("1x1o + 1x0e + 1x0e", lifting_dim_irreps),  # In: (vz, ||v||)
+                        "vz_0": o3.Linear(vz_irreps, lifting_dim_irreps),  # In: (vx, vy, vz, ||v||, Z). If rrwp_length > 0, then (vx, vy, vz, ||v||, Z, rrwp_length)
                         "concatenated_features": o3.FullyConnectedTensorProduct(lifting_dim_irreps, lifting_dim_irreps, lifting_dim_irreps),
                     }
                 )
@@ -310,16 +325,6 @@ class GTNO(nn.Module):
                 if module.bias is not None:
                     _ = nn.init.zeros_(module.bias)
 
-    def _get_lifting_dim_irreps(self) -> str:
-        """
-        Returns the irreps for the lifting dimension.
-        """
-        vector_lifting_dim_irreps: int = self.lifting_dim // 3
-        scalar_lifting_dim_irreps: int = self.lifting_dim - vector_lifting_dim_irreps * 3  # Remainder
-
-        lifting_dim_irreps: str = f"{vector_lifting_dim_irreps}x1o + {scalar_lifting_dim_irreps}x0e"
-        return lifting_dim_irreps
-
     def _get_concat_feature_irreps(self) -> tuple[str, str]:
         """
         Returns the irreps for the concatenated features.
@@ -332,3 +337,14 @@ class GTNO(nn.Module):
             concat_irreps_2_rrwp: str = concat_irreps_2
 
         return concat_irreps_1, concat_irreps_2_rrwp
+
+
+def get_lifting_dim_irreps(lifting_dim: int) -> str:
+    """
+    Returns the irreps for the lifting dimension.
+    """
+    vector_lifting_dim_irreps: int = lifting_dim // 3
+    scalar_lifting_dim_irreps: int = lifting_dim - vector_lifting_dim_irreps * 3  # Remainder
+
+    lifting_dim_irreps: str = f"{vector_lifting_dim_irreps}x1o + {scalar_lifting_dim_irreps}x0e"
+    return lifting_dim_irreps

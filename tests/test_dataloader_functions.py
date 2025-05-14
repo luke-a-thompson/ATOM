@@ -1,5 +1,5 @@
 import torch
-from gtno_py.dataloaders.egno_dataloder import MD17DynamicsDataset, DataPartition, MD17MoleculeType, MD17Version
+from gtno_py.dataloaders.atom_dataloader import MD17DynamicsDataset, DataPartition, MD17MoleculeType, MD17Version
 from torch.utils.data import DataLoader
 
 device = "cuda"
@@ -39,6 +39,7 @@ class TestMD17DynamicsDataset:
             split_dir="data/",
             molecule_type=MD17MoleculeType.aspirin,
             max_nodes=13,
+            return_edge_data=False,
         )
 
         train_loader = DataLoader(
@@ -96,6 +97,7 @@ class TestMD17DynamicsDataset:
             split_dir="data/",
             molecule_type=MD17MoleculeType.benzene,
             max_nodes=6,
+            return_edge_data=False,
         )
 
         train_loader = DataLoader(
@@ -137,6 +139,7 @@ class TestMD17DynamicsDataset:
             molecule_type=MD17MoleculeType.aspirin,
             force_regenerate=True,
             max_nodes=13,
+            return_edge_data=False,
         )
 
         # Create a simple input tensor with shape (max_samples, 10, 4)
@@ -194,6 +197,7 @@ class TestMD17DynamicsDataset:
             molecule_type=MD17MoleculeType.aspirin,
             force_regenerate=True,
             max_nodes=max_nodes,
+            return_edge_data=False,
         )
 
         # Create a test tensor with shape (batch_size, num_nodes, feature_dim)
@@ -237,6 +241,7 @@ class TestMD17DynamicsDataset:
             molecule_type=MD17MoleculeType.benzene,  # Benzene has 6 carbon atoms (or 12 with hydrogens)
             force_regenerate=False,
             max_nodes=max_nodes,
+            return_edge_data=False,
         )
 
         # Get a sample from the dataset

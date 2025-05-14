@@ -1,6 +1,6 @@
 from torch.utils.data import DataLoader
 import numpy as np
-from gtno_py.dataloaders.egno_dataloder import MD17Dataset, MD17DynamicsDataset, MD17MoleculeType, MD17Version, DataPartition
+from gtno_py.dataloaders.atom_dataloader import MD17Dataset, MD17DynamicsDataset, MD17MoleculeType, MD17Version, DataPartition
 
 if __name__ == "__main__":
     import time
@@ -18,6 +18,7 @@ if __name__ == "__main__":
         force_regenerate=True,
         num_timesteps=1,  # Set num_timesteps for replication
         max_nodes=6,
+        return_edge_data=False,
     )
     dataloader_static = DataLoader(dataset_static, batch_size=100, shuffle=True)
     # print("MD17Dataset Output Shapes:")
@@ -43,6 +44,7 @@ if __name__ == "__main__":
         force_regenerate=True,
         num_timesteps=8,  # Set num_timesteps for replication
         max_nodes=7,
+        return_edge_data=False,
     )
 
     dataloader_dynamic = DataLoader(dataset_dynamic, batch_size=100, shuffle=True)

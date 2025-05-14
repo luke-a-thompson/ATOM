@@ -13,7 +13,7 @@ class DataPartition(StrEnum):
 class MD17Version(StrEnum):
     md17 = "md17"
     rmd17 = "rmd17"
-    md61 = "md61"
+    tg80 = "tg80"
 
 
 @final
@@ -42,9 +42,56 @@ class RMD17MoleculeType(StrEnum):
 
 
 @final
-class MD61MoleculeType(StrEnum):
-    thymine = "thymine"  # currently RMD17
-    uracil = "uracil"
+class TG80MoleculeType(StrEnum):
+    acetonitrile = "acetonitrile"
+    acetamide = "acetamide"
+    acetaldehyde = "acetaldehyde"
+    aniline = "aniline"
+    anthracene = "anthracene"
+    benzaldehyde = "benzaldehyde"
+    benzene = "benzene"
+    benzene2 = "benzene2"
+    benzoicacid = "benzoicacid"  # Test
+    benzothiophene = "benzothiophene"
+    benzylamine = "benzylamine"
+    biphenyl = "biphenyl"
+    butane = "butane"
+    butadiene = "1.3-butadiene"
+    butanone = "2-butanone"
+    butanol = "butanol"
+    butylamine = "butylamine"
+    chlorobenzene = "chlorobenzene"
+    coumarin = "coumarin"
+    cyclohexadiene = "1.3-cyclohexadiene"
+    cyclohexane = "cyclohexane"
+    cyclohexanol = "cyclohexanol"
+    dichloroethane = "1.2-dichloroethane"
+    ethanethiol = "ethanethiol"
+    ethylene = "ethylene"
+    ethylamine = "ethylamine"
+    formaldehyde = "formaldehyde"
+    formamide = "formamide"
+    furan = "furan"
+    furfural = "furfural"  # Test
+    heptanol = "heptanol"
+    indole = "indole"
+    isopropanol = "isopropanol"
+    malondialdehyde1 = "malondialdehyde1"
+    malonicacid = "malonicacid"
+    methanol = "methanol"
+    naphthalene = "naphthalene"
+    nitrobenzene = "nitrobenzene"
+    oxalicacid = "oxalicacid"
+    pentanol = "pentanol"
+    p_cresol = "p-cresol"
+    quinoline = "quinoline"
+    salicylicacid2 = "salicylicacid2"
+    succinicacid = "succinicacid"
+    trimethylamine = "trimethylamine"
+    tropane2 = "tropane2"
+    tropane3 = "tropane3"
+    uracil = "uracil"  # MD17, test
+    uracil1 = "uracil1"
 
 
 @final
