@@ -3,7 +3,7 @@ use_wandb = false
 
 [benchmark]
 model_type = "EGNO"
-benchmark_name = "egno_tg80_multitask_muon_fold4"
+benchmark_name = "egno_tg80_multitask_muon_fold1"
 compile = true
 compile_trace = false
 runs = 3
@@ -20,62 +20,68 @@ num_timesteps = 8
 
 # Multitask dataloader parameters
 train_molecules = [
-    "ethanethiol",
-    "succinicacid",
-    "cyclohexanol",
-    "methanol",
-    "biphenyl",
-    "butanol",
-    "butane",
-    "pentanol",
-    "ethylene",
-    "1.2-dichloroethane",
-    "benzylamine",
-    "butylamine",
-    "salicylicacid2",
-    "furfural",
-    "chlorobenzene",
+    "isopropanol",
     "benzoicacid",
-    "naphthalene",
-    "aniline",
-    "cyclohexane",
-    "uracil1",
-    "acetamide",
-    "tropane3",
-    "malonicacid",
-    "trimethylamine",
-    "benzothiophene",
-    "malondialdehyde1",
-    "p-cresol",
-    "2-butanone",
-    "tropane2",
-    "nitrobenzene",
-    "acetaldehyde",
+    "cyclohexanol",
     "ethylamine",
+    "heptanol",
+    "butanol",
+    "butylamine",
+    "benzaldehyde",
+    "formamide",
     "anthracene",
+    "butane",
+    "p-cresol",
+    "ethanethiol",
+    "oxalicacid",
+    "indole",
+    "aniline",
+    "biphenyl",
+    "1.2-dichloroethane",
+    "malonicacid",
+    "salicylicacid2",
+    "malondialdehyde1",
+    "ethylene",
+    "furfural",
+    "acetamide",
+    "quinoline",
+    "furan",
+    "methanol",
+    "tropane2",
+    "benzene",
+    "tropane3",
+    "pentanol",
+    "cyclohexanone",
+    "formaldehyde",
+    "benzothiophene",
+    "succinicacid",
+    "propane",
+    "chlorobenzene",
+    "acetaldehyde",
 ]
 
 validation_molecules = [
-    "quinoline",
-    "benzene",
-    "isopropanol",
-    "furan",
-    "indole",
+    "benzylamine",
+    "nitrobenzene",
+    "uracil1",
+    "1.3-butadiene",
+    "trimethylamine",
+    "acetonitrile",
+    "naphthalene",
     "coumarin",
-    "oxalicacid",
-    "heptanol",
 ]
 
 test_molecules = [
-    "1.3-butadiene",
-    "benzene2",
-    "acetonitrile",
-    "formaldehyde",
-    "formamide",
+    "2-butanone",
+    "cyclopropane",
+    "propylene",
     "uracil",
+    "benzene2",
+    "cyclohexane",
+    "chloroform",
     "1.3-cyclohexadiene",
-    "benzaldehyde",
 ]
+
 
 # Other dataloader parameters
 explicit_hydrogen = false
@@ -94,7 +100,7 @@ device = "cuda"
 seed = 42
 batch_size = 192
 epochs = 250
-use_amp = true
+use_amp = false
 amp_dtype = "bfloat16"
 max_grad_norm = 1.0
 learned_label_noise = false

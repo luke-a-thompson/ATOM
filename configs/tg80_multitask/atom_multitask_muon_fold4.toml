@@ -20,62 +20,68 @@ num_timesteps = 8
 
 # Multitask dataloader parameters
 train_molecules = [
-    "ethanethiol",
-    "succinicacid",
-    "cyclohexanol",
+    "benzylamine",
+    "benzene2",
+    "1.3-butadiene",
     "methanol",
+    "coumarin",
+    "chloroform",
+    "cyclopropane",
+    "pentanol",
+    "succinicacid",
+    "ethylamine",
+    "salicylicacid2",
     "biphenyl",
     "butanol",
+    "cyclohexanol",
     "butane",
-    "pentanol",
-    "ethylene",
-    "1.2-dichloroethane",
-    "benzylamine",
-    "butylamine",
-    "salicylicacid2",
-    "furfural",
-    "chlorobenzene",
-    "benzoicacid",
-    "naphthalene",
-    "aniline",
+    "benzaldehyde",
     "cyclohexane",
+    "quinoline",
+    "chlorobenzene",
+    "isopropanol",
+    "benzoicacid",
+    "oxalicacid",
+    "aniline",
+    "1.3-cyclohexadiene",
     "uracil1",
     "acetamide",
     "tropane3",
-    "malonicacid",
+    "indole",
     "trimethylamine",
     "benzothiophene",
-    "malondialdehyde1",
-    "p-cresol",
+    "heptanol",
+    "nitrobenzene",
     "2-butanone",
     "tropane2",
-    "nitrobenzene",
+    "malonicacid",
     "acetaldehyde",
-    "ethylamine",
+    "1.2-dichloroethane",
     "anthracene",
 ]
 
 validation_molecules = [
-    "quinoline",
-    "benzene",
-    "isopropanol",
     "furan",
-    "indole",
-    "coumarin",
-    "oxalicacid",
-    "heptanol",
+    "propylene",
+    "propane",
+    "cyclohexanone",
+    "ethanethiol",
+    "ethylene",
+    "formamide",
+    "formaldehyde",
 ]
 
 test_molecules = [
-    "1.3-butadiene",
-    "benzene2",
+    "malondialdehyde1",
+    "furfural",
     "acetonitrile",
-    "formaldehyde",
-    "formamide",
+    "benzene",
+    "naphthalene",
+    "p-cresol",
     "uracil",
-    "1.3-cyclohexadiene",
-    "benzaldehyde",
+    "butylamine",
 ]
+
 
 # Other dataloader parameters
 explicit_hydrogen = false
@@ -94,7 +100,7 @@ device = "cuda"
 seed = 42
 batch_size = 192
 epochs = 250
-use_amp = true
+use_amp = false
 amp_dtype = "bfloat16"
 max_grad_norm = 1.0
 learned_label_noise = false

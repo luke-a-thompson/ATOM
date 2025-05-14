@@ -20,62 +20,69 @@ num_timesteps = 8
 
 # Multitask dataloader parameters
 train_molecules = [
-    "uracil1",
-    "quinoline",
-    "uracil",
-    "formamide",
-    "malonicacid",
-    "malondialdehyde1",
-    "1.3-butadiene",
-    "1.2-dichloroethane",
-    "ethylene",
-    "benzene",
-    "isopropanol",
-    "ethanethiol",
-    "furan",
-    "ethylamine",
-    "tropane3",
-    "benzoicacid",
     "p-cresol",
+    "methanol",
+    "formaldehyde",
+    "aniline",
+    "cyclohexanone",
+    "biphenyl",
+    "malondialdehyde1",
+    "benzylamine",
+    "trimethylamine",
+    "uracil",
+    "quinoline",
+    "cyclohexanol",
+    "tropane3",
+    "heptanol",
+    "naphthalene",
+    "malonicacid",
+    "ethylene",
+    "1.3-butadiene",
+    "benzothiophene",
+    "uracil1",
+    "benzoicacid",
+    "propylene",
     "acetaldehyde",
     "succinicacid",
-    "nitrobenzene",
-    "coumarin",
+    "pentanol",
+    "chlorobenzene",
     "benzene2",
     "acetonitrile",
-    "heptanol",
+    "formamide",
     "anthracene",
     "acetamide",
-    "cyclohexanol",
-    "1.3-cyclohexadiene",
+    "cyclohexane",
+    "coumarin",
     "benzaldehyde",
     "butylamine",
-    "indole",
-    "formaldehyde",
-    "chlorobenzene",
+    "furan",
+    "ethanethiol",
+    "chloroform",
 ]
 
 validation_molecules = [
-    "furfural",
-    "tropane2",
-    "butane",
-    "biphenyl",
-    "2-butanone",
-    "naphthalene",
+    "ethylamine",
     "butanol",
-    "trimethylamine",
+    "furfural",
+    "salicylicacid2",
+    "benzene",
+    "butane",
+    "cyclopropane",
+    "1.3-cyclohexadiene",
 ]
 
 test_molecules = [
-    "pentanol",
-    "methanol",
-    "cyclohexane",
-    "aniline",
-    "benzylamine",
-    "salicylicacid2",
+    "indole",
     "oxalicacid",
-    "benzothiophene",
+    "nitrobenzene",
+    "2-butanone",
+    "1.2-dichloroethane",
+    "isopropanol",
+    "propane",
+    "tropane2",
 ]
+
+
 
 # Other dataloader parameters
 explicit_hydrogen = false
@@ -94,7 +101,7 @@ device = "cuda"
 seed = 42
 batch_size = 192
 epochs = 250
-use_amp = true
+use_amp = false
 amp_dtype = "bfloat16"
 max_grad_norm = 1.0
 learned_label_noise = false

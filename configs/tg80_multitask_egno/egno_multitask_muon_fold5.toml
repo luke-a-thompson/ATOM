@@ -20,62 +20,68 @@ num_timesteps = 8
 
 # Multitask dataloader parameters
 train_molecules = [
-    "tropane2",
+    "methanol",
     "uracil1",
+    "benzylamine",
+    "coumarin",
+    "salicylicacid2",
+    "nitrobenzene",
+    "chloroform",
+    "pentanol",
+    "trimethylamine",
     "2-butanone",
     "biphenyl",
-    "salicylicacid2",
-    "p-cresol",
-    "indole",
-    "benzene2",
-    "1.3-butadiene",
-    "coumarin",
-    "benzylamine",
+    "ethylamine",
     "succinicacid",
-    "malondialdehyde1",
-    "chlorobenzene",
-    "ethanethiol",
-    "heptanol",
+    "tropane2",
+    "benzene2",
+    "tropane3",
+    "1.3-cyclohexadiene",
+    "malonicacid",
+    "indole",
+    "formamide",
     "quinoline",
     "acetonitrile",
     "benzene",
     "acetamide",
-    "formaldehyde",
+    "ethanethiol",
     "acetaldehyde",
-    "ethylamine",
-    "ethylene",
-    "isopropanol",
-    "butylamine",
-    "cyclohexanol",
     "naphthalene",
-    "furfural",
-    "methanol",
-    "formamide",
-    "anthracene",
     "1.2-dichloroethane",
+    "cyclopropane",
+    "furfural",
+    "butylamine",
+    "cyclohexane",
+    "malondialdehyde1",
+    "formaldehyde",
+    "isopropanol",
+    "ethylene",
+    "anthracene",
+    "cyclohexanol",
 ]
 
 validation_molecules = [
-    "aniline",
-    "benzoicacid",
-    "butane",
-    "benzothiophene",
+    "cyclohexanone",
     "benzaldehyde",
     "oxalicacid",
-    "butanol",
-    "1.3-cyclohexadiene",
+    "heptanol",
+    "propylene",
+    "1.3-butadiene",
+    "butane",
+    "propane",
 ]
 
 test_molecules = [
-    "nitrobenzene",
-    "uracil",
-    "trimethylamine",
-    "cyclohexane",
+    "benzoicacid",
+    "butanol",
+    "p-cresol",
+    "chlorobenzene",
     "furan",
-    "tropane3",
-    "malonicacid",
-    "pentanol",
+    "aniline",
+    "uracil",
+    "benzothiophene",
 ]
+
 
 # Other dataloader parameters
 explicit_hydrogen = false
@@ -94,7 +100,7 @@ device = "cuda"
 seed = 42
 batch_size = 192
 epochs = 250
-use_amp = true
+use_amp = false
 amp_dtype = "bfloat16"
 max_grad_norm = 1.0
 learned_label_noise = false

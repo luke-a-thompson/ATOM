@@ -3,7 +3,7 @@ use_wandb = false
 
 [benchmark]
 model_type = "EGNO"
-benchmark_name = "egno_tg80_multitask_muon_fold2"
+benchmark_name = "egno_tg80_multitask_muon_fold4"
 compile = true
 compile_trace = false
 runs = 3
@@ -20,62 +20,68 @@ num_timesteps = 8
 
 # Multitask dataloader parameters
 train_molecules = [
-    "aniline",
-    "benzaldehyde",
-    "benzothiophene",
-    "ethylamine",
-    "acetaldehyde",
-    "succinicacid",
-    "uracil",
-    "cyclohexanol",
-    "heptanol",
-    "salicylicacid2",
-    "furan",
-    "p-cresol",
-    "butane",
-    "cyclohexane",
-    "1.2-dichloroethane",
-    "1.3-cyclohexadiene",
-    "isopropanol",
     "benzylamine",
-    "benzene",
-    "acetonitrile",
-    "naphthalene",
-    "tropane2",
-    "quinoline",
-    "acetamide",
-    "coumarin",
-    "2-butanone",
-    "ethylene",
-    "biphenyl",
     "benzene2",
+    "1.3-butadiene",
+    "methanol",
+    "coumarin",
+    "chloroform",
+    "cyclopropane",
+    "pentanol",
+    "succinicacid",
+    "ethylamine",
+    "salicylicacid2",
+    "biphenyl",
+    "butanol",
+    "cyclohexanol",
+    "butane",
+    "benzaldehyde",
+    "cyclohexane",
+    "quinoline",
+    "chlorobenzene",
+    "isopropanol",
+    "benzoicacid",
+    "oxalicacid",
+    "aniline",
+    "1.3-cyclohexadiene",
+    "uracil1",
+    "acetamide",
+    "tropane3",
+    "indole",
     "trimethylamine",
+    "benzothiophene",
+    "heptanol",
+    "nitrobenzene",
+    "2-butanone",
+    "tropane2",
     "malonicacid",
-    "malondialdehyde1",
-    "formaldehyde",
+    "acetaldehyde",
+    "1.2-dichloroethane",
+    "anthracene",
 ]
 
 validation_molecules = [
-    "methanol",
-    "uracil1",
-    "1.3-butadiene",
-    "chlorobenzene",
-    "anthracene",
-    "pentanol",
+    "furan",
+    "propylene",
+    "propane",
+    "cyclohexanone",
+    "ethanethiol",
+    "ethylene",
     "formamide",
-    "furfural",
+    "formaldehyde",
 ]
 
 test_molecules = [
-    "indole",
-    "butanol",
-    "nitrobenzene",
-    "oxalicacid",
-    "tropane3",
-    "benzoicacid",
+    "malondialdehyde1",
+    "furfural",
+    "acetonitrile",
+    "benzene",
+    "naphthalene",
+    "p-cresol",
+    "uracil",
     "butylamine",
-    "ethanethiol",
 ]
+
 
 # Other dataloader parameters
 explicit_hydrogen = false
@@ -94,7 +100,7 @@ device = "cuda"
 seed = 42
 batch_size = 192
 epochs = 250
-use_amp = true
+use_amp = false
 amp_dtype = "bfloat16"
 max_grad_norm = 1.0
 learned_label_noise = false
