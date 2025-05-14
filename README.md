@@ -43,6 +43,11 @@ For example, to evaluate the performance when Δt = 3000, run:
 poetry run inference --model benchmark_runs/t_invariance/delta_t_3000_aspirin_13-Apr-2025_01-46-23/run_3/best_val_model.pth --config configs/t_invariance/3000.toml
 ```
 
+To test equivariance run:
+```
+python tests/test_equivariance.py --config configs/md17_paper/md_aspirin.toml --model benchmark_runs/paper_md17_singletask_12-May-2025_23-33-44/run_1/best_val_model.pth
+```
+
 ## Pre-trained Models
 
 You can download pretrained models here:

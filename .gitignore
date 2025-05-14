@@ -19,3 +19,4 @@ __pycache__/
 /torch_compiler
 /benchmark_runs
 /configs
+/data_raw
