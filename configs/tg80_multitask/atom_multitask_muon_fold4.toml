@@ -25,7 +25,6 @@ train_molecules = [
     "1.3-butadiene",
     "methanol",
     "coumarin",
-    "chloroform",
     "cyclopropane",
     "pentanol",
     "succinicacid",

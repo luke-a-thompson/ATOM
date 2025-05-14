@@ -72,7 +72,7 @@ validation_molecules = [
 ]
 
 test_molecules = [
-    "chloroform",
+    "indole",
     "p-cresol",
     "uracil",
     "butanol",

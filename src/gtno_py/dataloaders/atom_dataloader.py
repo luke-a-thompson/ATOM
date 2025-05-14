@@ -397,7 +397,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         Args:
             x: Atom positions of shape (time_steps, num_atoms, 3)
             num_atoms: Number of atoms
-            threshold: Distance threshold for considering atoms as connected
+            threshold: Initial distance threshold for considering atoms as connected
                 Recommended 1.6 due to atomic distances
 
         Returns:
@@ -419,6 +419,18 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
 
         # Set diagonal to zero (no self-loops)
         one_hop_edges.fill_diagonal_(0)
+
+        # If no edges are found, gradually increase threshold until we get edges
+        current_threshold = threshold
+        while one_hop_edges.sum() == 0 and current_threshold < 10.0:  # Cap at 10.0 to prevent infinite loop
+            current_threshold *= 1.5
+            one_hop_edges = (distances < current_threshold).int()
+            one_hop_edges.fill_diagonal_(0)
+
+        if one_hop_edges.sum() == 0:
+            raise ValueError(
+                f"Could not find any edges even with threshold {current_threshold}. This suggests the molecule data may be corrupted.  Molecule type: {self.molecule_type}"
+            )
 
         # Compute two-hop connections
         two_hop_edges: torch.Tensor = (one_hop_edges @ one_hop_edges).clamp(max=1)

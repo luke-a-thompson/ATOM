@@ -57,7 +57,6 @@ train_molecules = [
     "butylamine",
     "furan",
     "ethanethiol",
-    "chloroform",
 ]
 
 validation_molecules = [

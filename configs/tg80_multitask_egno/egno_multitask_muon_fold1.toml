@@ -78,7 +78,7 @@ test_molecules = [
     "uracil",
     "benzene2",
     "cyclohexane",
-    "chloroform",
+    "biphenyl",
     "1.3-cyclohexadiene",
 ]
 

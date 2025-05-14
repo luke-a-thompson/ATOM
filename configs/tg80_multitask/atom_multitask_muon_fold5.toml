@@ -26,7 +26,6 @@ train_molecules = [
     "coumarin",
     "salicylicacid2",
     "nitrobenzene",
-    "chloroform",
     "pentanol",
     "trimethylamine",
     "2-butanone",

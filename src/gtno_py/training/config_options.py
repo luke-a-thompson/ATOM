@@ -60,7 +60,6 @@ class TG80MoleculeType(StrEnum):
     butanone = "2-butanone"
     butanol = "butanol"
     butylamine = "butylamine"
-    chloroform = "chloroform"
     chlorobenzene = "chlorobenzene"
     coumarin = "coumarin"
     cyclohexadiene = "1.3-cyclohexadiene"
