@@ -127,6 +127,8 @@ def train_epoch(
         _ = batch.pop("v_t")
         mask: torch.Tensor | None = batch.get("padded_nodes_mask", None)
 
+        optimizer.zero_grad()
+
         if config.training.label_noise_std > 0.0:
             batch["x_0"], batch["v_0"], batch["concatenated_features"] = add_brownian_noise(
                 batch["x_0"],
@@ -171,8 +173,6 @@ def train_epoch(
 
         scaler.step(optimizer)
         scaler.update()
-
-        optimizer.zero_grad()
 
         if scheduler and not isinstance(scheduler, optim.lr_scheduler.ReduceLROnPlateau):
             scheduler.step()
