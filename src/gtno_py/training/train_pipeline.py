@@ -9,6 +9,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from tqdm.std import tqdm
 import wandb
+from torch.amp import autocast
 
 from gtno_py.dataloaders.atom_dataloader import MD17DynamicsDataset
 from gtno_py.training import (
@@ -138,6 +139,7 @@ def train_epoch(
             )
 
         optimizer.zero_grad()
+
         pred_coords: torch.Tensor = model(batch)
 
         # Calculate MSE loss
