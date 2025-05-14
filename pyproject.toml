@@ -31,6 +31,7 @@ usyd-colors = "^0.1.0"
 pubchempy = "^1.0.4"
 rdkit = "^2024.9.6"
 tlparse = "^0.3.37"
+statsmodels = "^0.14.4"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
