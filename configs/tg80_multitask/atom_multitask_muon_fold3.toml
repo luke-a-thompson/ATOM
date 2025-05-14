@@ -6,7 +6,7 @@ model_type = "GTNO"
 benchmark_name = "atom_tg80_multitask_muon_fold3"
 compile = true
 compile_trace = false
-runs = 3
+runs = 1
 log_weights = false
 
 [dataloader]

@@ -6,7 +6,7 @@ model_type = "EGNO"
 benchmark_name = "egno_tg80_multitask_muon_fold1"
 compile = true
 compile_trace = false
-runs = 3
+runs = 1
 log_weights = false
 
 [dataloader]
@@ -99,7 +99,7 @@ force_regenerate = true
 device = "cuda"
 seed = 42
 batch_size = 192
-epochs = 250
+epochs = 2
 use_amp = false
 amp_dtype = "bfloat16"
 max_grad_norm = 1.0
