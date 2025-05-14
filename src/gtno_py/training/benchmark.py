@@ -115,7 +115,7 @@ def multitask_benchmark(config: Config) -> None:
     multi_run_results_json = multi_run_results.model_dump_json(
         indent=2,
         exclude={
-            "config": {"training": {"device"}, "dataloader": {"molecule_type"}},
+            "config": {"training": {"device", "use_amp", "amp_dtype"}, "dataloader": {"molecule_type"}},
             "single_run_results": {"__all__": {"device"}},
         },
     )
