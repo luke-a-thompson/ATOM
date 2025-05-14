@@ -9,7 +9,8 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from tqdm.std import tqdm
 import wandb
-from torch.amp import autocast
+from torch import autocast
+from torch.amp import GradScaler
 
 from gtno_py.dataloaders.atom_dataloader import MD17DynamicsDataset
 from gtno_py.training import (
@@ -43,17 +44,12 @@ def train_model(config: Config, model: nn.Module, benchmark_dir: Path, run_numbe
     # Training loop
     best_val_loss = float("inf")
     best_val_loss_epoch = 0
+    scaler = GradScaler(enabled=config.training.use_amp)
 
     start_training_time = datetime.now()
     progress_bar = tqdm(range(config.training.epochs), desc="Training", leave=False, unit="epoch", position=2)
     for epoch in progress_bar:
-        train_s2t_loss = train_epoch(
-            config,
-            model,
-            optimizer,
-            train_loader,
-            scheduler,
-        )
+        train_s2t_loss = train_epoch(config, model, optimizer, train_loader, scheduler, scaler)
         val_s2t_loss, val_s2s_loss = eval_epoch(config, model, val_loader)
 
         # Log gate parameters and save to weights_dir if provided
@@ -104,6 +100,7 @@ def train_epoch(
     optimizer: optim.Optimizer,
     dataloader: DataLoader[dict[str, torch.Tensor]] | DataLoader[MD17DynamicsDataset],
     scheduler: optim.lr_scheduler._LRScheduler | None,
+    scaler: GradScaler,
 ) -> float:
     """Single training epoch.
 
@@ -138,39 +135,44 @@ def train_epoch(
                 config.training.label_noise_std,
             )
 
-        optimizer.zero_grad()
+        with autocast(device_type=str(config.training.device), dtype=config.training.amp_dtype, enabled=config.training.use_amp):
+            pred_coords: torch.Tensor = model(batch)
 
-        pred_coords: torch.Tensor = model(batch)
+            # Calculate MSE loss
+            assert pred_coords.shape == target_coords.shape, f"{pred_coords.shape} != {target_coords.shape}"
 
-        # Calculate MSE loss
-        assert pred_coords.shape == target_coords.shape, f"{pred_coords.shape} != {target_coords.shape}"
+            # Do not compute gradients for heavy atoms if explicit_hydrogen is True and explicit_hydrogen_gradients is False
+            if config.dataloader.explicit_hydrogen and config.dataloader.explicit_hydrogen_gradients is False:
+                heavy_atom_mask: torch.Tensor = batch["Z"][..., 0] > 1  # shape: [Batch, Time, Nodes]
 
-        # Do not compute gradients for heavy atoms if explicit_hydrogen is True and explicit_hydrogen_gradients is False
-        if config.dataloader.explicit_hydrogen and config.dataloader.explicit_hydrogen_gradients is False:
-            heavy_atom_mask: torch.Tensor = batch["Z"][..., 0] > 1  # shape: [Batch, Time, Nodes]
+                # Apply mask along the nodes dimension
+                pred_heavy: torch.Tensor = pred_coords[heavy_atom_mask]  # shape: [Total_selected_nodes, 3]
+                target_heavy: torch.Tensor = target_coords[heavy_atom_mask]  # shape: [Total_selected_nodes, 3]
 
-            # Apply mask along the nodes dimension
-            pred_heavy: torch.Tensor = pred_coords[heavy_atom_mask]  # shape: [Total_selected_nodes, 3]
-            target_heavy: torch.Tensor = target_coords[heavy_atom_mask]  # shape: [Total_selected_nodes, 3]
-
-            loss = F.mse_loss(pred_heavy, target_heavy)
-        # Compute gradients for all atoms (heavy and hydrogen)
-        else:
-            # Compute element‐wise MSE loss without reduction.
-            loss_raw = F.mse_loss(pred_coords, target_coords, reduction="none")
-            # Mask is [B,T,N,H]
-            # Apply mask and compute average loss over valid nodes.
-            if mask is not None:
-                mask_expanded = mask.expand_as(loss_raw)
-                loss = (loss_raw * mask_expanded).sum() / mask_expanded.sum()
+                loss = F.mse_loss(pred_heavy, target_heavy)
+            # Compute gradients for all atoms (heavy and hydrogen)
             else:
-                loss = loss_raw.mean()
+                # Compute element‐wise MSE loss without reduction.
+                loss_raw = F.mse_loss(pred_coords, target_coords, reduction="none")
+                # Mask is [B,T,N,H]
+                # Apply mask and compute average loss over valid nodes.
+                if mask is not None:
+                    mask_expanded = mask.expand_as(loss_raw)
+                    loss = (loss_raw * mask_expanded).sum() / mask_expanded.sum()
+                else:
+                    loss = loss_raw.mean()
 
         total_s2t_loss += loss.item() * batch.batch_size[0]
 
-        _ = loss.backward()
-        _ = torch.nn.utils.clip_grad_norm_(model.parameters(), config.training.max_grad_norm)
-        optimizer.step()
+        _ = scaler.scale(loss).backward()
+
+        scaler.unscale_(optimizer)
+        torch.nn.utils.clip_grad_norm_(model.parameters(), config.training.max_grad_norm)
+
+        scaler.step(optimizer)
+        scaler.update()
+
+        optimizer.zero_grad()
 
         if scheduler and not isinstance(scheduler, optim.lr_scheduler.ReduceLROnPlateau):
             scheduler.step()

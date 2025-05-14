@@ -154,6 +154,8 @@ class DataloaderConfig(BaseModel):
 
 class TrainingConfig(BaseModel):
     device: torch.device
+    use_amp: bool
+    amp_dtype: torch.dtype
     seed: int
     batch_size: int
     epochs: int
@@ -164,10 +166,28 @@ class TrainingConfig(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
+    @model_validator(mode="before")
+    @classmethod
+    def convert_dtype_to_torch_dtype(cls, values: dict[str, object]) -> dict[str, object]:
+        dtype_value = values.get("amp_dtype")
+        if dtype_value is not None:
+            if isinstance(dtype_value, str):
+                try:
+                    values["amp_dtype"] = getattr(torch, dtype_value)
+                except AttributeError:
+                    raise ValueError(f"Invalid dtype name: {dtype_value}. Must be a valid torch dtype like 'float16' or 'bfloat16'")
+        return values
+
     @model_validator(mode="after")
     def validate_brownian_noise_std(self) -> "TrainingConfig":
         if self.label_noise_std < 0.0:
             raise ValueError("'brownian_noise_std' must be 0.0 or greater.")
+        return self
+
+    @model_validator(mode="after")
+    def validate_amp_dtype(self) -> "TrainingConfig":
+        if self.use_amp and self.amp_dtype not in [torch.float16, torch.bfloat16]:
+            raise ValueError("'amp_dtype' must be 'float16' or 'bfloat16' if 'use_amp' is True.")
         return self
 
     @model_validator(mode="before")
