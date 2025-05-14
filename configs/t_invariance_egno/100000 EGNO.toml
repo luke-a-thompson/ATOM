@@ -2,20 +2,21 @@
 use_wandb = false
 
 [benchmark]
-model_type = "GTNO"
-compile = false
+model_type = "EGNO"
+benchmark_name = "delta_t_100000"
+compile = true
 compile_trace = false
-runs = 1
+runs = 3
 log_weights = false
 
 [dataloader]
 multitask = false
-delta_T = 3000
+delta_T = 100000
 md17_version = "md17"
 num_timesteps = 8
 
 # Single-task dataloader parameters
-molecule_type = "benzene"  # Iterates through single-task learning on these molecules
+molecule_type = "aspirin"  # Iterates through single-task learning on these molecules
 
 # Multitask dataloader parameters
 train_molecules = ["aspirin", "benzene", "ethanol", "toluene", "uracil", "salicylic", "malonaldehyde"]
@@ -41,7 +42,7 @@ batch_size = 100
 epochs = 1000
 max_grad_norm = 1.0
 learned_label_noise = false
-label_noise_std = 0.2
+label_noise_std = 0.1
 
 [optimizer]
 type = "adamw"
@@ -60,13 +61,14 @@ num_heads = 8
 lifting_dim = 128
 # Output parameters
 output_heads = 1
+delta_update = false
 # Attention parameters
-heterogenous_attention_type = "GHCA"
+heterogenous_attention_type = "ghca"
 use_rope = true
 learnable_attention_denom = false
 # Feature parameters
 use_spherical_harmonics = false
-use_equivariant_lifting = true
+equivariant_lifting_type = "equivariant"
 # Layer parameters
 norm = "rms"
 activation = "swiglu"

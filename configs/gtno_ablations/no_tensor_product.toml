@@ -3,7 +3,7 @@ use_wandb = false
 
 [benchmark]
 model_type = "GTNO"
-benchmark_name = "gtno_std_att_no_rope"
+benchmark_name = "gtno_no_tensor_product"
 compile = true
 compile_trace = false
 runs = 3
@@ -63,12 +63,12 @@ lifting_dim = 128
 output_heads = 1
 delta_update = false
 # Attention parameters
-heterogenous_attention_type = "self"
-use_rope = false
+heterogenous_attention_type = "ghca"
+use_rope = true
 learnable_attention_denom = false
 # Feature parameters
 use_spherical_harmonics = false
-equivariant_lifting_type = "equivariant"
+equivariant_lifting_type = "no_tensor_product"
 # Layer parameters
 norm = "rms"
 activation = "swiglu"

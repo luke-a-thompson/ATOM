@@ -3,7 +3,7 @@ use_wandb = false
 
 [benchmark]
 model_type = "GTNO"
-benchmark_name = "gtno_std_att_no_rope"
+benchmark_name = "gtno_delta_update"
 compile = true
 compile_trace = false
 runs = 3
@@ -61,10 +61,10 @@ num_heads = 8
 lifting_dim = 128
 # Output parameters
 output_heads = 1
-delta_update = false
+delta_update = true
 # Attention parameters
-heterogenous_attention_type = "self"
-use_rope = false
+heterogenous_attention_type = "ghca"
+use_rope = true
 learnable_attention_denom = false
 # Feature parameters
 use_spherical_harmonics = false

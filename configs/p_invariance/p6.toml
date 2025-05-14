@@ -3,7 +3,7 @@ use_wandb = false
 
 [benchmark]
 model_type = "GTNO"
-benchmark_name = "gtno_std_att_no_rope"
+benchmark_name = "p6"
 compile = true
 compile_trace = false
 runs = 3
@@ -13,10 +13,10 @@ log_weights = false
 multitask = false
 delta_T = 3000
 md17_version = "md17"
-num_timesteps = 8
+num_timesteps = 6
 
 # Single-task dataloader parameters
-molecule_type = "malonaldehyde"  # Iterates through single-task learning on these molecules
+molecule_type = "aspirin"  # Iterates through single-task learning on these molecules
 
 # Multitask dataloader parameters
 train_molecules = ["aspirin", "benzene", "ethanol", "toluene", "uracil", "salicylic", "malonaldehyde"]
@@ -63,8 +63,8 @@ lifting_dim = 128
 output_heads = 1
 delta_update = false
 # Attention parameters
-heterogenous_attention_type = "self"
-use_rope = false
+heterogenous_attention_type = "ghca"
+use_rope = true
 learnable_attention_denom = false
 # Feature parameters
 use_spherical_harmonics = false

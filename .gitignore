@@ -18,5 +18,5 @@ __pycache__/
 *.drawio*
 /torch_compiler
 /benchmark_runs
-/configs
+/configs/old
 /data_raw
