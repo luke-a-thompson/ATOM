@@ -118,10 +118,10 @@ type = "none"
 [gtno_config]
 # Architecture parameters
 num_layers = 5
-num_heads = 1
+num_heads = 8
 lifting_dim = 128
 # Output parameters
-output_heads = 8
+output_heads = 1
 delta_update = false
 # Attention parameters
 heterogenous_attention_type = "ghca"
