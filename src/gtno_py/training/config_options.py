@@ -88,7 +88,7 @@ class TG80MoleculeType(StrEnum):
     isopropanol = "isopropanol"
     malondialdehyde1 = "malondialdehyde1"
     malonicacid = "malonicacid"
-    malonaldehyde2 = "malonaldehyde2"  # NEW
+    malondialdehyde2 = "malondialdehyde2"  # NEW
     methanol = "methanol"
     naphthalene = "naphthalene"
     nitrobenzene = "nitrobenzene"
