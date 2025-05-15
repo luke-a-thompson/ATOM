@@ -3,7 +3,7 @@ use_wandb = false
 
 [benchmark]
 model_type = "GTNO"
-benchmark_name = "Pretrained ATOM"
+benchmark_name = "Pretrained ATOM5"
 compile = true
 compile_trace = false
 runs = 1
@@ -13,7 +13,7 @@ log_weights = false
 multitask = true
 delta_T = 10_000
 md17_version = "tg80"
-num_timesteps = 12
+num_timesteps = 128
 
 # Single-task dataloader parameters
 # molecule_type = "aspirin"  # Iterates through single-task learning on these molecules
