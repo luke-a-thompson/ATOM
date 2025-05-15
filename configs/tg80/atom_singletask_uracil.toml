@@ -2,83 +2,83 @@
 use_wandb = false
 
 [benchmark]
-model_type = "EGNO"
-benchmark_name = "egno_tg80_multitask_muon_fold5"
+model_type = "GTNO"
+benchmark_name = "atom_tg80_singletask_muon_uracil"
 compile = true
 compile_trace = false
-runs = 1
+runs = 3
 log_weights = false
 
 [dataloader]
-multitask = true
+multitask = false
 delta_T = 10_000
 md17_version = "tg80"
 num_timesteps = 8
 
 # Single-task dataloader parameters
-# molecule_type = "aspirin"  # Iterates through single-task learning on these molecules
+molecule_type = "uracil"  # Iterates through single-task learning on these molecules
 
 # Multitask dataloader parameters
 train_molecules = [
-    "methanol",
-    "uracil1",
-    "benzylamine",
-    "coumarin",
-    "salicylicacid2",
-    "nitrobenzene",
-    "pentanol",
-    "trimethylamine",
-    "2-butanone",
-    "biphenyl",
-    "ethylamine",
-    "succinicacid",
-    "tropane2",
-    "benzene2",
-    "tropane3",
-    "1.3-cyclohexadiene",
-    "malonicacid",
-    "indole",
-    "formamide",
-    "quinoline",
-    "acetonitrile",
-    "benzene",
-    "acetamide",
-    "ethanethiol",
-    "acetaldehyde",
-    "naphthalene",
-    "1.2-dichloroethane",
-    "cyclopropane",
-    "furfural",
-    "butylamine",
-    "cyclohexane",
-    "malondialdehyde1",
-    "formaldehyde",
     "isopropanol",
-    "ethylene",
-    "anthracene",
+    "benzoicacid",
     "cyclohexanol",
+    "ethylamine",
+    "heptanol",
+    "butanol",
+    "butylamine",
+    "benzaldehyde",
+    "formamide",
+    "anthracene",
+    "butane",
+    "p-cresol",
+    "ethanethiol",
+    "oxalicacid",
+    "indole",
+    "aniline",
+    "1.2-dichloroethane",
+    "malonicacid",
+    "salicylicacid2",
+    "malondialdehyde1",
+    "ethylene",
+    "furfural",
+    "acetamide",
+    "quinoline",
+    "furan",
+    "methanol",
+    "tropane2",
+    "benzene",
+    "tropane3",
+    "pentanol",
+    "cyclohexanone",
+    "formaldehyde",
+    "benzothiophene",
+    "succinicacid",
+    "propane",
+    "chlorobenzene",
+    "acetaldehyde",
 ]
 
 validation_molecules = [
-    "cyclohexanone",
-    "benzaldehyde",
-    "oxalicacid",
-    "heptanol",
-    "propylene",
+    "benzylamine",
+    "nitrobenzene",
+    "uracil1",
     "1.3-butadiene",
-    "butane",
-    "propane",
+    "trimethylamine",
+    "acetonitrile",
+    "naphthalene",
+    "coumarin",
 ]
 
 test_molecules = [
-    "benzoicacid",
-    "butanol",
-    "p-cresol",
-    "chlorobenzene",
-    "furan",
-    "aniline",
+    "2-butanone",
+    "cyclopropane",
+    "propylene",
     "uracil",
-    "benzothiophene",
+    "benzene2",
+    "cyclohexane",
+    "biphenyl",
+    "1.3-cyclohexadiene",
 ]
 
 
@@ -86,7 +86,7 @@ test_molecules = [
 explicit_hydrogen = false
 explicit_hydrogen_gradients = false
 radius_graph_threshold = 1.6
-rrwp_length = 8  # 0 for no RRWPs
+rrwp_length = 0  # 0 for no RRWPs
 normalize_z = false
 persistent_workers = true
 num_workers = 6
@@ -98,7 +98,7 @@ force_regenerate = true
 device = "cuda"
 seed = 42
 batch_size = 192
-epochs = 250
+epochs = 1000
 use_amp = false
 amp_dtype = "bfloat16"
 max_grad_norm = 1.0
@@ -118,7 +118,7 @@ type = "none"
 [gtno_config]
 # Architecture parameters
 num_layers = 5
-num_heads = 8
+num_heads = 1
 lifting_dim = 128
 # Output parameters
 output_heads = 8

@@ -60,7 +60,7 @@ def perform_welch_tests(data_dict: dict[str, list[float]]) -> dict[str, tuple[fl
         Dictionary mapping model names to tuples of (mean difference, std_dev, unadjusted p-value, adjusted p-value)
     """
     # Get the default model data
-    default_data = data_dict["gtno_Baseline"]
+    default_data = data_dict["Baseline"]
     default_std = float(np.std(default_data))
 
     # Perform t-tests against all other models
@@ -68,7 +68,7 @@ def perform_welch_tests(data_dict: dict[str, list[float]]) -> dict[str, tuple[fl
     p_values: list[tuple[str, float]] = []
 
     for model_name, model_data in data_dict.items():
-        if model_name == "gtno_Baseline":
+        if model_name == "Baseline":
             continue
 
         # Calculate mean difference (other - default)
@@ -166,7 +166,7 @@ def plot_ablations(ablation_dir: Path, save_path: Path | None = None, error_bar_
     upper_bounds = upper_bounds * 100
 
     # Create figure and axis
-    fig, ax = plt.subplots(figsize=(5, 4))
+    fig, ax = plt.subplots(figsize=(5, 3))
 
     # Create horizontal bars with error bars
     bars = ax.barh(categories, values, color=red, alpha=0.8, edgecolor=grey, linewidth=0)

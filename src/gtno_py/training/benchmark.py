@@ -57,7 +57,7 @@ def singletask_benchmark(config: Config) -> None:
         indent=2,
         exclude={
             # We don't care about multitask options when our model is single task
-            "config": {"training": {"device"}, "dataloader": {"train_molecules", "validation_molecules", "test_molecules"}},
+            "config": {"training": {"device", "use_amp", "amp_dtype"}, "dataloader": {"train_molecules", "validation_molecules", "test_molecules"}},
             "single_run_results": {"__all__": {"device"}},
         },
     )

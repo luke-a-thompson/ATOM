@@ -3,7 +3,7 @@ use_wandb = false
 
 [benchmark]
 model_type = "EGNO"
-benchmark_name = "egno_tg80_multitask_muon_fold5"
+benchmark_name = "egno_tg80_multitask_muon_fold2"
 compile = true
 compile_trace = false
 runs = 1
@@ -20,65 +20,66 @@ num_timesteps = 8
 
 # Multitask dataloader parameters
 train_molecules = [
-    "methanol",
-    "uracil1",
-    "benzylamine",
-    "coumarin",
-    "salicylicacid2",
-    "nitrobenzene",
-    "pentanol",
-    "trimethylamine",
-    "2-butanone",
-    "biphenyl",
-    "ethylamine",
-    "succinicacid",
     "tropane2",
-    "benzene2",
-    "tropane3",
-    "1.3-cyclohexadiene",
-    "malonicacid",
-    "indole",
-    "formamide",
-    "quinoline",
-    "acetonitrile",
-    "benzene",
-    "acetamide",
-    "ethanethiol",
-    "acetaldehyde",
-    "naphthalene",
-    "1.2-dichloroethane",
-    "cyclopropane",
-    "furfural",
-    "butylamine",
+    "ethylamine",
     "cyclohexane",
-    "malondialdehyde1",
-    "formaldehyde",
-    "isopropanol",
-    "ethylene",
+    "formamide",
+    "benzoicacid",
+    "tropane3",
+    "propylene",
+    "acetaldehyde",
+    "butylamine",
+    "aniline",
+    "benzaldehyde",
+    "oxalicacid",
+    "benzothiophene",
+    "uracil1",
+    "methanol",
     "anthracene",
     "cyclohexanol",
+    "1.3-cyclohexadiene",
+    "1.2-dichloroethane",
+    "salicylicacid2",
+    "coumarin",
+    "furfural",
+    "benzylamine",
+    "benzene",
+    "acetonitrile",
+    "malondialdehyde1",
+    "trimethylamine",
+    "quinoline",
+    "acetamide",
+    "chlorobenzene",
+    "2-butanone",
+    "cyclopropane",
+    "biphenyl",
+    "benzene2",
+    "propane",
+    "indole",
+    "heptanol",
+    "ethanethiol",
 ]
 
 validation_molecules = [
     "cyclohexanone",
-    "benzaldehyde",
-    "oxalicacid",
-    "heptanol",
-    "propylene",
-    "1.3-butadiene",
+    "ethylene",
+    "malonicacid",
     "butane",
-    "propane",
+    "pentanol",
+    "isopropanol",
+    "naphthalene",
+    "succinicacid",
 ]
 
 test_molecules = [
-    "benzoicacid",
-    "butanol",
+    "indole",
     "p-cresol",
-    "chlorobenzene",
-    "furan",
-    "aniline",
     "uracil",
-    "benzothiophene",
+    "butanol",
+    "nitrobenzene",
+    "1.3-butadiene",
+    "formaldehyde",
+    "furan",
 ]
 
 
@@ -96,7 +97,7 @@ force_regenerate = true
 
 [training]
 device = "cuda"
-seed = 42
+seed = 43
 batch_size = 192
 epochs = 250
 use_amp = false

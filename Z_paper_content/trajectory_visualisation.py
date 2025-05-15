@@ -134,70 +134,104 @@ def create_tiled_figure(data_dir: Path, md_17_version: Literal["md17", "rmd17", 
     files: list[Path] = sorted(list(data_dir.glob("*.npz")))
     n_files: int = len(files)
 
-    # Calculate grid dimensions (trying to make it as square as possible)
-    if n_cols is None or n_rows is None:
-        n_cols: int = int(np.ceil(np.sqrt(n_files)))
-        n_rows: int = int(np.ceil(n_files / n_cols))
-
-    # Create a large figure with subplots
-    fig = plt.figure(figsize=(8 * n_cols, 6 * n_rows))  # Reduced from 10,8 to 8,6
+    # For tg80, use 6x4 grid per figure
+    if md_17_version == "tg80":
+        n_cols = 4
+        n_rows = 6
+        plots_per_figure = n_cols * n_rows
+        n_figures = (n_files + plots_per_figure - 1) // plots_per_figure  # Ceiling division
+    # Calculate grid dimensions for other datasets
+    elif n_cols is None or n_rows is None:
+        n_cols = int(np.ceil(np.sqrt(n_files)))
+        n_rows = int(np.ceil(n_files / n_cols))
+        plots_per_figure = n_cols * n_rows
+        n_figures = 1
+    else:
+        # Ensure we have enough space for all files
+        while n_cols * n_rows < n_files:
+            n_rows += 1
+        plots_per_figure = n_cols * n_rows
+        n_figures = 1
 
     # Keep track of all unique atom types across all plots
     all_atom_types: set[tuple[int, str]] = set()
 
-    # Plot each trajectory in its own subplot
-    for idx, file in enumerate(files):
-        ax = fig.add_subplot(n_rows, n_cols, idx + 1, projection="3d")
-        unique_atoms = plot_trajectory(ax, file, md_17_version)
-        all_atom_types.update(unique_atoms)
-        molecule_name: str = file.stem.strip(f"{md_17_version}_").title()  # Capitalize molecule name
-        # Move title below plot and make it smaller
-        ax.set_title(f"{molecule_name}", pad=-15, y=-0.1)
+    # Process files in batches for each figure
+    for fig_idx in range(n_figures):
+        start_idx = fig_idx * plots_per_figure
+        end_idx = min((fig_idx + 1) * plots_per_figure, n_files)
+        current_files = files[start_idx:end_idx]
 
-    # Create the common legend
-    color_map = {
-        6: "gray",  # Carbon - gray
-        7: "blue",  # Nitrogen - blue
-        8: "red",  # Oxygen - red
-        9: "green",  # Fluorine - green
-        16: "yellow",  # Sulfur - yellow
-    }
+        # For the last figure, crop rows if not full (tg80 only)
+        if md_17_version == "tg80" and fig_idx == n_figures - 1:
+            n_rows_this_fig = int(np.ceil(len(current_files) / n_cols))
+        else:
+            n_rows_this_fig = n_rows
 
-    legend_elements: list[Line2D] = []
-    for z_num, element in sorted(all_atom_types):
-        atom_color = color_map.get(z_num, "purple")
-        legend_elements.append(
-            Line2D(
-                [0],
-                [0],
-                marker="o",
-                color="w",
-                markerfacecolor=atom_color,
-                markeredgecolor="black",
-                markersize=10,
-                label=f"{element} (Z={int(z_num)})",
+        # Create a figure for this batch
+        fig = plt.figure(figsize=(5 * n_cols, 5 * n_rows_this_fig))
+
+        # Plot each trajectory in its own subplot
+        for idx, file in enumerate(current_files):
+            ax = fig.add_subplot(n_rows_this_fig, n_cols, idx + 1, projection="3d")
+            unique_atoms = plot_trajectory(ax, file, md_17_version)
+            all_atom_types.update(unique_atoms)
+            molecule_name: str = file.stem.strip(f"{md_17_version}_").title()  # Capitalize molecule name
+            # Move title below plot and make it larger
+            ax.set_title(f"{molecule_name}", pad=-15, y=-0.1, fontsize=18)
+
+        # Create the common legend
+        color_map = {
+            6: "gray",  # Carbon - gray
+            7: "blue",  # Nitrogen - blue
+            8: "red",  # Oxygen - red
+            9: "green",  # Fluorine - green
+            16: "yellow",  # Sulfur - yellow
+        }
+
+        legend_elements: list[Line2D] = []
+        for z_num, element in sorted(all_atom_types):
+            atom_color = color_map.get(z_num, "purple")
+            legend_elements.append(
+                Line2D(
+                    [0],
+                    [0],
+                    marker="o",
+                    color="w",
+                    markerfacecolor=atom_color,
+                    markeredgecolor="black",
+                    markersize=10,
+                    label=f"{element} (Z={int(z_num)})",
+                )
             )
+
+        # Add a single legend at the bottom
+        _ = fig.legend(
+            handles=legend_elements,
+            loc="center",
+            bbox_to_anchor=(0.5, 0.02),
+            ncol=len(legend_elements),
+            frameon=True,
+            fancybox=True,
         )
 
-    # Add a single legend at the bottom
-    _ = fig.legend(
-        handles=legend_elements,
-        loc="center",
-        bbox_to_anchor=(0.5, 0.02),
-        ncol=len(legend_elements),
-        frameon=True,
-        fancybox=True,
-    )
+        # Adjust the layout with much tighter horizontal spacing
+        plt.tight_layout(h_pad=0.5, w_pad=0.05)  # Much less horizontal and vertical padding between subplots
+        # Add just enough space at the bottom for the legend and reduce horizontal spacing
+        plt.subplots_adjust(bottom=0.08, wspace=0.05)  # Reduced bottom margin and horizontal spacing
 
-    # Adjust the layout with tighter spacing
-    plt.tight_layout(h_pad=1.0, w_pad=1.0)  # Reduce padding between subplots
-    # Add just enough space at the bottom for the legend
-    plt.subplots_adjust(bottom=0.08, hspace=0.3)  # Reduced bottom margin and horizontal spacing
-
-    plt.savefig(f"Z_paper_content/trajectories/{md_17_version}_combined_trajectories.pdf", bbox_inches="tight")
+        # Save each figure with a unique name
+        suffix = f"_{fig_idx + 1}" if n_figures > 1 else ""
+        plt.savefig(f"Z_paper_content/trajectories/{md_17_version}_combined_trajectories{suffix}.pdf", bbox_inches="tight")
+        plt.close()
 
 
 if __name__ == "__main__":
-    data_dir: Path = Path("data/rmd17_npz")
     set_matplotlib_style()
-    create_tiled_figure(data_dir, "rmd17", 2, 4)
+    md17_dir: Path = Path("data/md17_npz")
+    rmd17_dir: Path = Path("data/rmd17_npz")
+    tg80_dir: Path = Path("data/tg80_npz")
+
+    create_tiled_figure(md17_dir, "md17", 2, 4)
+    create_tiled_figure(tg80_dir, "tg80", 2, 4)
+    create_tiled_figure(rmd17_dir, "rmd17", 2, 4)
