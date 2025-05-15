@@ -13,7 +13,7 @@ log_weights = false
 multitask = true
 delta_T = 10_000
 md17_version = "tg80"
-num_timesteps = 128
+num_timesteps = 12
 
 # Single-task dataloader parameters
 # molecule_type = "aspirin"  # Iterates through single-task learning on these molecules
@@ -28,7 +28,7 @@ train_molecules = [
     "1.4-dioxane", # NEW
     "hexanol", # NEW
     "imidazole", # NEW
-    "malonaldehyde2", # NEW
+    "malondialdehyde2", # NEW
     "p-xylene", # NEW
     "toluene", # NEW
     "isopropanol",
