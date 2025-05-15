@@ -43,11 +43,13 @@ class RMD17MoleculeType(StrEnum):
 
 @final
 class TG80MoleculeType(StrEnum):
+    aceticacid = "aceticacid"  # NEW
     acetonitrile = "acetonitrile"
     acetamide = "acetamide"
     acetaldehyde = "acetaldehyde"
     aniline = "aniline"
     anthracene = "anthracene"
+    aspirin = "aspirin"  # NEW
     benzaldehyde = "benzaldehyde"
     benzene = "benzene"
     benzene2 = "benzene2"
@@ -61,13 +63,17 @@ class TG80MoleculeType(StrEnum):
     butanol = "butanol"
     butylamine = "butylamine"
     chlorobenzene = "chlorobenzene"
+    citricacid = "citricacid"  # NEW
     coumarin = "coumarin"
+    cyclobutane = "cyclobutane"  # NEW
     cyclohexadiene = "1.3-cyclohexadiene"
     cyclohexane = "cyclohexane"
     cyclohexanol = "cyclohexanol"
     cyclohexanone = "cyclohexanone"
     cyclopropane = "cyclopropane"
+    cyclopentanone = "cyclopentanone"  # NEW
     dichloroethane = "1.2-dichloroethane"
+    dioxane = "1.4-dioxane"  # NEW
     ethanethiol = "ethanethiol"
     ethylene = "ethylene"
     ethylamine = "ethylamine"
@@ -76,10 +82,13 @@ class TG80MoleculeType(StrEnum):
     furan = "furan"
     furfural = "furfural"  # Test
     heptanol = "heptanol"
+    hexanol = "hexanol"  # NEW
     indole = "indole"
+    imidazole = "imidazole"  # NEW
     isopropanol = "isopropanol"
     malondialdehyde1 = "malondialdehyde1"
     malonicacid = "malonicacid"
+    malonaldehyde2 = "malonaldehyde2"  # NEW
     methanol = "methanol"
     naphthalene = "naphthalene"
     nitrobenzene = "nitrobenzene"
@@ -89,9 +98,11 @@ class TG80MoleculeType(StrEnum):
     propane = "propane"
     propylene = "propylene"
     quinoline = "quinoline"
+    pxylene = "p-xylene"  # NEW
     salicylicacid2 = "salicylicacid2"
     succinicacid = "succinicacid"
     trimethylamine = "trimethylamine"
+    toluene = "toluene"  # NEW
     tropane2 = "tropane2"
     tropane3 = "tropane3"
     uracil = "uracil"  # MD17, test

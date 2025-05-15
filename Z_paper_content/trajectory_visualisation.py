@@ -209,21 +209,81 @@ def create_tiled_figure(data_dir: Path, md_17_version: Literal["md17", "rmd17", 
         _ = fig.legend(
             handles=legend_elements,
             loc="center",
-            bbox_to_anchor=(0.5, 0.02),
+            bbox_to_anchor=(0.5, -0.05),
             ncol=len(legend_elements),
             frameon=True,
             fancybox=True,
         )
 
         # Adjust the layout with much tighter horizontal spacing
-        plt.tight_layout(h_pad=0.5, w_pad=0.05)  # Much less horizontal and vertical padding between subplots
-        # Add just enough space at the bottom for the legend and reduce horizontal spacing
-        plt.subplots_adjust(bottom=0.08, wspace=0.05)  # Reduced bottom margin and horizontal spacing
+        plt.tight_layout(h_pad=0.5, w_pad=0.05)
+        plt.subplots_adjust(bottom=0.15)
 
         # Save each figure with a unique name
         suffix = f"_{fig_idx + 1}" if n_figures > 1 else ""
         plt.savefig(f"Z_paper_content/trajectories/{md_17_version}_combined_trajectories{suffix}.pdf", bbox_inches="tight")
         plt.close()
+
+
+def create_uracil_comparison() -> None:
+    """Create a 1x3 visualization of uracil from each dataset."""
+    # Create figure with 1 row and 3 columns
+    fig = plt.figure(figsize=(15, 5))
+
+    # Define the directories and versions
+    dirs_and_versions: list[tuple[Path, Literal["md17", "rmd17", "tg80"]]] = [(Path("data/md17_npz"), "md17"), (Path("data/rmd17_npz"), "rmd17"), (Path("data/tg80_npz"), "tg80")]
+
+    # Plot uracil from each dataset
+    for idx, (data_dir, version) in enumerate(dirs_and_versions):
+        ax = fig.add_subplot(1, 3, idx + 1, projection="3d")
+        file = data_dir / f"{version}_uracil.npz"
+        unique_atoms = plot_trajectory(ax, file, version)
+
+        # Add title
+        ax.set_title(f"{version.upper()} Uracil", pad=-15, y=-0.1, fontsize=18)
+
+    # Create the common legend
+    color_map = {
+        6: "gray",  # Carbon - gray
+        7: "blue",  # Nitrogen - blue
+        8: "red",  # Oxygen - red
+        9: "green",  # Fluorine - green
+        16: "yellow",  # Sulfur - yellow
+    }
+
+    legend_elements: list[Line2D] = []
+    for z_num, element in sorted(unique_atoms):
+        atom_color = color_map.get(z_num, "purple")
+        legend_elements.append(
+            Line2D(
+                [0],
+                [0],
+                marker="o",
+                color="w",
+                markerfacecolor=atom_color,
+                markeredgecolor="black",
+                markersize=10,
+                label=f"{element} (Z={int(z_num)})",
+            )
+        )
+
+    # Add a single legend at the bottom
+    _ = fig.legend(
+        handles=legend_elements,
+        loc="center",
+        bbox_to_anchor=(0.5, -0.05),
+        ncol=len(legend_elements),
+        frameon=True,
+        fancybox=True,
+    )
+
+    # Adjust the layout
+    plt.tight_layout(h_pad=0.5, w_pad=0.05)
+    plt.subplots_adjust(bottom=0.15)
+
+    # Save the figure
+    plt.savefig(f"Z_paper_content/trajectories/uracil_comparison.pdf", bbox_inches="tight")
+    plt.close()
 
 
 if __name__ == "__main__":
@@ -232,6 +292,9 @@ if __name__ == "__main__":
     rmd17_dir: Path = Path("data/rmd17_npz")
     tg80_dir: Path = Path("data/tg80_npz")
 
-    create_tiled_figure(md17_dir, "md17", 2, 4)
-    create_tiled_figure(tg80_dir, "tg80", 2, 4)
-    create_tiled_figure(rmd17_dir, "rmd17", 2, 4)
+    # create_tiled_figure(md17_dir, "md17", 2, 4)
+    # create_tiled_figure(tg80_dir, "tg80", 2, 4)
+    # create_tiled_figure(rmd17_dir, "rmd17", 2, 4)
+
+    # Create uracil comparison
+    create_uracil_comparison()

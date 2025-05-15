@@ -11,7 +11,7 @@ def get_fold_number(path: str) -> int:
 
 
 def analyze_folds(base_dir: str) -> dict[int, dict[str, dict[str, float | int]]]:
-    """Analyze results across folds and return statistics."""
+    """Analyze results across folds and return statistics from all individual runs."""
     results_by_fold: dict[int, dict[str, list[float]]] = defaultdict(lambda: {"s2s": [], "s2t": []})
 
     # Walk through all directories
@@ -27,37 +27,69 @@ def analyze_folds(base_dir: str) -> dict[int, dict[str, dict[str, float | int]]]
 
         with open(results_path, "r") as f:
             results = json.load(f)
-            # Get both s2s and s2t test losses
-            if "s2s_test_loss_mean" in results:
-                results_by_fold[fold_num]["s2s"].append(results["s2s_test_loss_mean"])
-            if "s2t_test_loss_mean" in results:
-                results_by_fold[fold_num]["s2t"].append(results["s2t_test_loss_mean"])
+            # Extract all individual run losses from 'single_run_results'
+            if "single_run_results" in results:
+                for run in results["single_run_results"]:
+                    if "s2s_test_loss" in run:
+                        results_by_fold[fold_num]["s2s"].append(run["s2s_test_loss"])
+                    if "s2t_test_loss" in run:
+                        results_by_fold[fold_num]["s2t"].append(run["s2t_test_loss"])
 
     # Calculate statistics
-    stats = {}
+    stats: dict[int, dict[str, dict[str, float | int]]] = {}
     for fold_num, metrics in results_by_fold.items():
         stats[fold_num] = {
-            "s2s": {"mean": np.mean(metrics["s2s"]), "std": np.std(metrics["s2s"]), "n_runs": len(metrics["s2s"])},
-            "s2t": {"mean": np.mean(metrics["s2t"]), "std": np.std(metrics["s2t"]), "n_runs": len(metrics["s2t"])},
+            "s2s": {
+                "mean": float(np.mean(metrics["s2s"])) if metrics["s2s"] else float("nan"),
+                "std": float(np.std(metrics["s2s"])) if metrics["s2s"] else float("nan"),
+                "n_runs": len(metrics["s2s"]),
+            },
+            "s2t": {
+                "mean": float(np.mean(metrics["s2t"])) if metrics["s2t"] else float("nan"),
+                "std": float(np.std(metrics["s2t"])) if metrics["s2t"] else float("nan"),
+                "n_runs": len(metrics["s2t"]),
+            },
         }
 
     return stats
 
 
 if __name__ == "__main__":
-    base_dir = "benchmark_runs/tg80_egno_mt"
-    stats = analyze_folds(base_dir)
+    egno_dir = "benchmark_runs/tg80_egno_mt"
+    atom_dir = "benchmark_runs/tg80_atom_mt"
+    egno_stats = analyze_folds(egno_dir)
+    atom_stats = analyze_folds(atom_dir)
 
-    print("\nResults by fold:")
+    print("\nResults by fold (EGNO above ATOM, then % diff):")
     print("-" * 70)
-    for fold_num in sorted(stats.keys()):
+    common_folds = sorted(set(egno_stats.keys()) & set(atom_stats.keys()))
+    for fold_num in common_folds:
         print(f"Fold {fold_num}:")
-        print(f"  S2S Test Loss:")
-        print(f"    Mean: {stats[fold_num]['s2s']['mean']:.4f}")
-        print(f"    Std:  {stats[fold_num]['s2s']['std']:.4f}")
-        print(f"    N runs: {stats[fold_num]['s2s']['n_runs']}")
-        print(f"  S2T Test Loss:")
-        print(f"    Mean: {stats[fold_num]['s2t']['mean']:.4f}")
-        print(f"    Std:  {stats[fold_num]['s2t']['std']:.4f}")
-        print(f"    N runs: {stats[fold_num]['s2t']['n_runs']}")
+        # EGNO
+        print(f"  EGNO S2S Test Loss (x10^-2):")
+        print(f"    Mean: {egno_stats[fold_num]['s2s']['mean'] * 100:.2f}")
+        print(f"    2 Std:  {egno_stats[fold_num]['s2s']['std'] * 2 * 100:.2f}")
+        print(f"    N runs: {egno_stats[fold_num]['s2s']['n_runs']}")
+        print(f"  EGNO S2T Test Loss (x10^-2):")
+        print(f"    Mean: {egno_stats[fold_num]['s2t']['mean'] * 100:.2f}")
+        print(f"    2 Std:  {egno_stats[fold_num]['s2t']['std'] * 2 * 100:.2f}")
+        print(f"    N runs: {egno_stats[fold_num]['s2t']['n_runs']}")
+        # ATOM
+        print(f"  ATOM S2S Test Loss (x10^-2):")
+        print(f"    Mean: {atom_stats[fold_num]['s2s']['mean'] * 100:.2f}")
+        print(f"    2 Std:  {atom_stats[fold_num]['s2s']['std'] * 2 * 100:.2f}")
+        print(f"    N runs: {atom_stats[fold_num]['s2s']['n_runs']}")
+        print(f"  ATOM S2T Test Loss (x10^-2):")
+        print(f"    Mean: {atom_stats[fold_num]['s2t']['mean'] * 100:.2f}")
+        print(f"    2 Std:  {atom_stats[fold_num]['s2t']['std'] * 2 * 100:.2f}")
+        print(f"    N runs: {atom_stats[fold_num]['s2t']['n_runs']}")
+        # % diff
+        s2s_atom = atom_stats[fold_num]["s2s"]["mean"]
+        s2s_egno = egno_stats[fold_num]["s2s"]["mean"]
+        s2t_atom = atom_stats[fold_num]["s2t"]["mean"]
+        s2t_egno = egno_stats[fold_num]["s2t"]["mean"]
+        s2s_pct = ((s2s_egno - s2s_atom) / s2s_atom * 100) if s2s_atom != 0 else float("nan")
+        s2t_pct = ((s2t_egno - s2t_atom) / s2t_atom * 100) if s2t_atom != 0 else float("nan")
+        print(f"  % Diff S2S Mean: {s2s_pct:.2f}%")
+        print(f"  % Diff S2T Mean: {s2t_pct:.2f}%")
         print("-" * 70)
