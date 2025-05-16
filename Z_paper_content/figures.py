@@ -211,7 +211,7 @@ def plot_invariance_results(invariance_to_plot: Literal["t", "p"]) -> None:
     """
     Plot the results of the invariance ablation study.
     Creates a line chart with shaded 2SD around the line using mean S2T loss and standard deviation.
-    Also plots the mean test all loss for the EGNO model from a separate directory.
+    Also plots the mean test all loss for both EGNO models from separate directories.
 
     Args:
         invariance_to_plot: Either "t" for T-invariance or "p" for P-invariance (num_timesteps)
@@ -221,19 +221,22 @@ def plot_invariance_results(invariance_to_plot: Literal["t", "p"]) -> None:
     if invariance_to_plot == "t":
         invariance_dir = Path("benchmark_runs/t_invariance")
         egno_dir = Path("benchmark_runs/t_invariance_egno")
+        egno_dir_no_temporal = Path("benchmark_runs/t_invariance_no_temporal")
         x_label = "$ \\Delta t $ (fs)"
         figure_file_name = "t_invariance_results.pdf"
-    elif invariance_to_plot == "p":
+    else:  # p invariance
         invariance_dir = Path("benchmark_runs/p_invariance")
         egno_dir = Path("benchmark_runs/p_invariance_egno_fixedlr")
+        egno_dir_no_temporal = None  # Not used for p invariance
         x_label = "Number of Timesteps (P)"
         figure_file_name = "p_invariance_results.pdf"
 
-    # Get results files for both models
+    # Get results files for all models
     s2t_results_files: list[Path] = list(invariance_dir.glob("**/results.json"))
-    egno_results_files: list[Path] = list(egno_dir.glob("*.json"))  # EGNO files are directly in the directory
+    egno_results_files: list[Path] = list(egno_dir.glob("*.json"))
+    egno_no_temporal_files: list[Path] = list(egno_dir_no_temporal.glob("*.json")) if egno_dir_no_temporal else []
 
-    print(f"Found {len(s2t_results_files)} S2T results files and {len(egno_results_files)} EGNO results files")
+    print(f"Found {len(s2t_results_files)} S2T results files, {len(egno_results_files)} EGNO results files, and {len(egno_no_temporal_files)} EGNO no temporal files")
 
     # Extract parameter values and corresponding metrics for S2T model
     s2t_param_values: list[int] = []
@@ -262,65 +265,83 @@ def plot_invariance_results(invariance_to_plot: Literal["t", "p"]) -> None:
             s2t_means.append(s2t_data["s2t_test_loss_mean"])
             s2t_stds.append(s2t_data["s2t_test_loss_std"])
 
-    # Extract parameter values and corresponding metrics for EGNO model
-    egno_param_values: list[int] = []
-    egno_means: list[float] = []
-    egno_stds: list[float] = []
+    # Function to process EGNO results
+    def process_egno_files(results_files: list[Path]) -> tuple[list[int], list[float], list[float]]:
+        param_values: list[int] = []
+        means: list[float] = []
+        stds: list[float] = []
 
-    for results_file in egno_results_files:
-        with open(results_file, "r") as f:
-            egno_data: dict[str, Any] = json.load(f)
+        for results_file in results_files:
+            with open(results_file, "r") as f:
+                data: dict[str, Any] = json.load(f)
+                param_value: int = 0
 
-            # Extract parameter from the file name for EGNO model
-            egno_param_value: int = 0  # Default value
+                # Extract from file name
+                file_name = results_file.name
+                if invariance_to_plot == "t":
+                    # Check if this is a no temporal file
+                    if "notempconv" in file_name:
+                        match = re.search(r"delta_frame_(\d+)_notempconv", file_name)
+                    else:
+                        match = re.search(r"bigDelta_(\d+)", file_name)
+                    if match:
+                        param_value = int(match.group(1))
+                else:  # p invariance
+                    match = re.search(r"num_timesteps_(\d+)", file_name)
+                    if match:
+                        param_value = int(match.group(1))
 
-            # Extract from file name like "aspirin_bigDelta_1000_results.json"
-            file_name = results_file.name
-            if invariance_to_plot == "t":
-                # For T-invariance, extract from file name
-                match = re.search(r"bigDelta_(\d+)", file_name)
-                if match:
-                    egno_param_value = int(match.group(1))
-            else:  # p invariance (num_timesteps)
-                # For P-invariance, extract from dataloader configuration
-                match = re.search(r"num_timesteps_(\d+)", file_name)
-                if match:
-                    egno_param_value = int(match.group(1))
+                if "runs" in data:
+                    all_losses = [run["test_all_loss"] for run in data["runs"]]
+                    mean = sum(all_losses) / len(all_losses)
+                    variance = sum((x - mean) ** 2 for x in all_losses) / len(all_losses)
+                    std = variance**0.5
 
-            # Calculate mean and std from the runs
-            if "runs" in egno_data:
-                all_losses = [run["test_all_loss"] for run in egno_data["runs"]]
-                egno_mean = sum(all_losses) / len(all_losses)
+                    param_values.append(param_value)
+                    means.append(mean)
+                    stds.append(std)
 
-                # Calculate standard deviation
-                variance = sum((x - egno_mean) ** 2 for x in all_losses) / len(all_losses)
-                egno_std = variance**0.5
+        return param_values, means, stds
 
-                # Add the parameter value and metrics
-                egno_param_values.append(egno_param_value)
-                egno_means.append(egno_mean)
-                egno_stds.append(egno_std)
+    # Process EGNO results
+    egno_param_values, egno_means, egno_stds = process_egno_files(egno_results_files)
 
-    # Sort by parameter values for S2T model
-    s2t_sorted_indices = np.argsort(s2t_param_values)
-    s2t_param_values = [s2t_param_values[i] for i in s2t_sorted_indices]
-    s2t_means = [s2t_means[i] for i in s2t_sorted_indices]
-    s2t_stds = [s2t_stds[i] for i in s2t_sorted_indices]
+    # Initialize no temporal variables
+    egno_no_temporal_param_values: list[int] = []
+    egno_no_temporal_means: list[float] = []
+    egno_no_temporal_stds: list[float] = []
 
-    # Sort by parameter values for EGNO model
-    egno_sorted_indices = np.argsort(egno_param_values)
-    egno_param_values = [egno_param_values[i] for i in egno_sorted_indices]
-    egno_means = [egno_means[i] for i in egno_sorted_indices]
-    egno_stds = [egno_stds[i] for i in egno_sorted_indices]
+    if invariance_to_plot == "t" and egno_no_temporal_files:
+        egno_no_temporal_param_values, egno_no_temporal_means, egno_no_temporal_stds = process_egno_files(egno_no_temporal_files)
+
+    # Sort all results by parameter values
+    def sort_results(param_values: list[int], means: list[float], stds: list[float]) -> tuple[list[int], list[float], list[float]]:
+        sorted_indices = np.argsort(param_values)
+        return ([param_values[i] for i in sorted_indices], [means[i] for i in sorted_indices], [stds[i] for i in sorted_indices])
+
+    s2t_param_values, s2t_means, s2t_stds = sort_results(s2t_param_values, s2t_means, s2t_stds)
+    egno_param_values, egno_means, egno_stds = sort_results(egno_param_values, egno_means, egno_stds)
+    if invariance_to_plot == "t" and egno_no_temporal_param_values:
+        egno_no_temporal_param_values, egno_no_temporal_means, egno_no_temporal_stds = sort_results(egno_no_temporal_param_values, egno_no_temporal_means, egno_no_temporal_stds)
 
     print(f"S2T param values: {s2t_param_values}")
     print(f"EGNO param values: {egno_param_values}")
+    if invariance_to_plot == "t":
+        print(f"EGNO no temporal param values: {egno_no_temporal_param_values}")
 
     # Scale values by 10^2 for display
-    s2t_means_scaled = [mean * 100 for mean in s2t_means]
-    s2t_stds_scaled = [std * 100 for std in s2t_stds]
-    egno_means_scaled = [mean * 100 for mean in egno_means]
-    egno_stds_scaled = [std * 100 for std in egno_stds]
+    def scale_values(means: list[float], stds: list[float]) -> tuple[list[float], list[float]]:
+        return [mean * 100 for mean in means], [std * 100 for std in stds]
+
+    s2t_means_scaled, s2t_stds_scaled = scale_values(s2t_means, s2t_stds)
+    egno_means_scaled, egno_stds_scaled = scale_values(egno_means, egno_stds)
+
+    # Initialize scaled variables for no temporal case
+    egno_no_temporal_means_scaled: list[float] = []
+    egno_no_temporal_stds_scaled: list[float] = []
+
+    if invariance_to_plot == "t" and egno_no_temporal_param_values:
+        egno_no_temporal_means_scaled, egno_no_temporal_stds_scaled = scale_values(egno_no_temporal_means, egno_no_temporal_stds)
 
     # Create figure
     fig, ax = plt.subplots(figsize=(6, 4))
@@ -328,25 +349,26 @@ def plot_invariance_results(invariance_to_plot: Literal["t", "p"]) -> None:
     # Plot the S2T mean line with circle markers
     ax.plot(s2t_param_values, s2t_means_scaled, "-o", color=blue, linewidth=2, label="ATOM", markersize=6)
 
-    # Calculate 2SD range for S2T
+    # Calculate and plot 2SD range for S2T
     s2t_upper_bound = [mean + 2 * std for mean, std in zip(s2t_means_scaled, s2t_stds_scaled)]
     s2t_lower_bound = [mean - 2 * std for mean, std in zip(s2t_means_scaled, s2t_stds_scaled)]
-
-    # Fill the area between the bounds for S2T
     ax.fill_between(s2t_param_values, s2t_lower_bound, s2t_upper_bound, color=blue, alpha=0.2)
 
-    # Plot the EGNO mean line with square markers
-    if egno_param_values:  # Only plot if we have EGNO data
+    # Plot EGNO results if available
+    if egno_param_values:
         ax.plot(egno_param_values, egno_means_scaled, "-s", color=red, linewidth=2, label="EGNO", markersize=6)
-
-        # Calculate 2SD range for EGNO
         egno_upper_bound = [mean + 2 * std for mean, std in zip(egno_means_scaled, egno_stds_scaled)]
         egno_lower_bound = [mean - 2 * std for mean, std in zip(egno_means_scaled, egno_stds_scaled)]
-
-        # Fill the area between the bounds for EGNO
         ax.fill_between(egno_param_values, egno_lower_bound, egno_upper_bound, color=red, alpha=0.2)
 
-    # Set x-axis to log scale
+    # Plot EGNO no temporal results if available
+    if invariance_to_plot == "t" and egno_no_temporal_param_values:
+        ax.plot(egno_no_temporal_param_values, egno_no_temporal_means_scaled, "-^", color=yellow, linewidth=2, label="EGNN", markersize=6)
+        egno_no_temporal_upper_bound = [mean + 2 * std for mean, std in zip(egno_no_temporal_means_scaled, egno_no_temporal_stds_scaled)]
+        egno_no_temporal_lower_bound = [mean - 2 * std for mean, std in zip(egno_no_temporal_means_scaled, egno_no_temporal_stds_scaled)]
+        ax.fill_between(egno_no_temporal_param_values, egno_no_temporal_lower_bound, egno_no_temporal_upper_bound, color=yellow, alpha=0.2)
+
+    # Set x-axis to log scale for t-invariance
     if invariance_to_plot == "t":
         ax.set_xscale("log")
 
@@ -373,4 +395,4 @@ if __name__ == "__main__":
     # plot_learnable_attention_weights(Path("benchmark_runs/Paper_learned_denom_ethanol_06-Mar-2025_01-36-47/weights_run1"), "ethanol")
     # plot_lambda_value_residuals(Path("benchmark_runs/Paper_learned_denom_toluene_06-Mar-2025_02-29-46/weights_run1"), "ethanol")
     # print_ablation_results()
-    plot_invariance_results("p")  # or "p" for P-invariance (num_timesteps)
+    plot_invariance_results("t")  # or "p" for P-invariance (num_timesteps)

@@ -55,7 +55,6 @@ train_molecules = [
     "biphenyl",
     "benzene2",
     "propane",
-    "indole",
     "heptanol",
     "ethanethiol",
 ]
