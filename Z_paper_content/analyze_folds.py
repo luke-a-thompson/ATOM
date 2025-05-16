@@ -63,6 +63,12 @@ if __name__ == "__main__":
     print("\nResults by fold (EGNO above ATOM, then % diff):")
     print("-" * 70)
     common_folds = sorted(set(egno_stats.keys()) & set(atom_stats.keys()))
+
+    total_s2s_improvement: float = 0.0
+    total_s2t_improvement: float = 0.0
+    s2s_fold_count_for_average: int = 0
+    s2t_fold_count_for_average: int = 0
+
     for fold_num in common_folds:
         print(f"Fold {fold_num}:")
         # EGNO
@@ -88,8 +94,33 @@ if __name__ == "__main__":
         s2s_egno = egno_stats[fold_num]["s2s"]["mean"]
         s2t_atom = atom_stats[fold_num]["s2t"]["mean"]
         s2t_egno = egno_stats[fold_num]["s2t"]["mean"]
-        s2s_pct = ((s2s_egno - s2s_atom) / s2s_atom * 100) if s2s_atom != 0 else float("nan")
-        s2t_pct = ((s2t_egno - s2t_atom) / s2t_atom * 100) if s2t_atom != 0 else float("nan")
-        print(f"  % Diff S2S Mean: {s2s_pct:.2f}%")
-        print(f"  % Diff S2T Mean: {s2t_pct:.2f}%")
+
+        # For overall average improvement (ATOM vs EGNO baseline)
+        s2s_improvement_current_fold = ((s2s_egno - s2s_atom) / s2s_egno * 100) if s2s_egno != 0 and not (np.isnan(s2s_atom) or np.isnan(s2s_egno)) else float("nan")
+        s2t_improvement_current_fold = ((s2t_egno - s2t_atom) / s2t_egno * 100) if s2t_egno != 0 and not (np.isnan(s2t_atom) or np.isnan(s2t_egno)) else float("nan")
+
+        if not np.isnan(s2s_improvement_current_fold):
+            total_s2s_improvement += s2s_improvement_current_fold
+            s2s_fold_count_for_average += 1
+
+        if not np.isnan(s2t_improvement_current_fold):
+            total_s2t_improvement += s2t_improvement_current_fold
+            s2t_fold_count_for_average += 1
+
+        # For per-fold absolute % diff display
+        s2s_pct_abs = abs(((s2s_egno - s2s_atom) / s2s_egno) * 100) if s2s_egno != 0 and not (np.isnan(s2s_atom) or np.isnan(s2s_egno)) else float("nan")
+        s2t_pct_abs = abs(((s2t_egno - s2t_atom) / s2t_egno) * 100) if s2t_egno != 0 and not (np.isnan(s2t_atom) or np.isnan(s2t_egno)) else float("nan")
+
+        print(f"  % Diff S2S Mean (Abs): {s2s_pct_abs:.2f}%")
+        print(f"  % Diff S2T Mean (Abs): {s2t_pct_abs:.2f}%")
         print("-" * 70)
+
+    # Calculate and print mean improvements across folds
+    mean_s2s_improvement = (total_s2s_improvement / s2s_fold_count_for_average) if s2s_fold_count_for_average > 0 else float("nan")
+    mean_s2t_improvement = (total_s2t_improvement / s2t_fold_count_for_average) if s2t_fold_count_for_average > 0 else float("nan")
+
+    print("\nOverall Mean Improvement (ATOM vs EGNO baseline):")
+    print("-" * 70)
+    print(f"Mean S2S Improvement: {mean_s2s_improvement:.2f}% (over {s2s_fold_count_for_average} folds)")
+    print(f"Mean S2T Improvement: {mean_s2t_improvement:.2f}% (over {s2t_fold_count_for_average} folds)")
+    print("-" * 70)
