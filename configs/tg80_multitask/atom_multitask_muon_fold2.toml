@@ -2,7 +2,7 @@
 use_wandb = false
 
 [benchmark]
-model_type = "GTNO"
+model_type = "atom"
 benchmark_name = "atom_tg80_multitask_muon_fold2"
 compile = true
 compile_trace = false
@@ -12,7 +12,7 @@ log_weights = false
 [dataloader]
 multitask = true
 delta_T = 10_000
-md17_version = "tg80"
+dataset = "tg80"
 num_timesteps = 8
 
 # Single-task dataloader parameters
@@ -115,7 +115,7 @@ adam_eps = 1e-10
 [scheduler]
 type = "none"
 
-[gtno_config]
+[atom_config]
 # Architecture parameters
 num_layers = 5
 num_heads = 8

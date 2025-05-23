@@ -1,5 +1,5 @@
 import torch
-from gtno_py.gtno.attentions import TemporalRoPEWithOffset
+from atom.atom.attentions import TemporalRoPEWithOffset
 
 device = "cuda"
 

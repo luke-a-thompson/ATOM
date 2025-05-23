@@ -2,8 +2,8 @@
 use_wandb = false
 
 [benchmark]
-model_type = "GTNO"
-benchmark_name = "gtno_no_noise"
+model_type = "atom"
+benchmark_name = "atom_no_noise"
 compile = true
 compile_trace = false
 runs = 3
@@ -12,7 +12,7 @@ log_weights = false
 [dataloader]
 multitask = false
 delta_T = 3000
-md17_version = "md17"
+dataset = "md17"
 num_timesteps = 8
 
 # Single-task dataloader parameters
@@ -54,7 +54,7 @@ adam_eps = 1e-10
 [scheduler]
 type = "none"
 
-[gtno_config]
+[atom_config]
 # Architecture parameters
 num_layers = 5
 num_heads = 8

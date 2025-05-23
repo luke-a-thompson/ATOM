@@ -87,7 +87,7 @@ def plot_lambda_value_residuals(weights_dir: Path, figure_file_name: str, figure
     ax.spines["right"].set_visible(False)
 
     # Add title and labels
-    ax.set_xlabel("Training Step")
+    ax.set_xlabel("Epoch")
     ax.set_ylabel("Lambda Values")
 
     # Add legend
@@ -173,7 +173,7 @@ def plot_learnable_attention_weights(
     ax.spines["right"].set_visible(False)
 
     # Add title and labels
-    ax.set_xlabel("Training Step")
+    ax.set_xlabel("Epoch")
     ax.set_ylabel("Attention Denominator")
 
     # Set the x-tick positions and labels
@@ -391,8 +391,10 @@ def plot_invariance_results(invariance_to_plot: Literal["t", "p"]) -> None:
 
 
 if __name__ == "__main__":
-    set_matplotlib_style()
-    # plot_learnable_attention_weights(Path("benchmark_runs/Paper_learned_denom_ethanol_06-Mar-2025_01-36-47/weights_run1"), "ethanol")
-    # plot_lambda_value_residuals(Path("benchmark_runs/Paper_learned_denom_toluene_06-Mar-2025_02-29-46/weights_run1"), "ethanol")
+    set_matplotlib_style(font_size=18)
+    plot_learnable_attention_weights(Path("benchmark_runs/denom_aspirin_md17_22-May-2025_17-09-23/run_1"), "aspirin")
+    plot_lambda_value_residuals(Path("benchmark_runs/denom_aspirin_md17_22-May-2025_17-09-23/run_1"), "aspirin")
+    plot_learnable_attention_weights(Path("benchmark_runs/denom_uracil_md17_22-May-2025_17-24-37/run_1"), "uracil")
+    plot_lambda_value_residuals(Path("benchmark_runs/denom_uracil_md17_22-May-2025_17-24-37/run_1"), "uracil")
     # print_ablation_results()
-    plot_invariance_results("t")  # or "p" for P-invariance (num_timesteps)
+    # plot_invariance_results("t")  # or "p" for P-invariance (num_timesteps)

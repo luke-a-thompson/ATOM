@@ -1,6 +1,7 @@
 import subprocess
 import re
 from statistics import mean, stdev
+import torch
 
 
 def run_inference_command(model_path: str, config_path: str) -> float:
@@ -49,7 +50,7 @@ def run_all_inferences() -> None:
     """
     # Define the base paths
     base_model_path = "benchmark_runs/tg80_atom_mt"
-    base_config_path = "configs/tg80_multitask"
+    base_config_path = "configs/tg80_multitask_for_inference"
 
     # Define all inference runs
     inference_runs: dict[str, list[dict[str, str]]] = {
@@ -131,12 +132,13 @@ def run_all_inferences() -> None:
 
         molecule_losses: list[float] = []
         for i, run in enumerate(runs, 1):
+            torch.manual_seed(i + 50)
             print(f"\nRun {i} for {molecule}")
             print("-" * 30)
             try:
                 loss = run_inference_command(run["model"], run["config"])
                 molecule_losses.append(loss)
-                print(f"Test S2T loss: {loss:.6f}")
+                print(f"Test S2T loss: {loss:.2f}")
             except Exception as e:
                 print(f"Error in run {i} for {molecule}: {str(e)}")
 
@@ -149,9 +151,9 @@ def run_all_inferences() -> None:
         if losses:
             mean_loss, two_sigma = compute_statistics(losses)
             print(f"\n{molecule}:")
-            print(f"Mean Test S2T loss: {mean_loss:.6f}")
-            print(f"2-sigma std dev: {two_sigma:.6f}")
-            print(f"Individual losses: {[f'{loss:.6f}' for loss in losses]}")
+            print(f"Mean Test S2T loss: {mean_loss:.2f}")
+            print(f"2-sigma std dev: {two_sigma:.2f}")
+            print(f"Individual losses: {[f'{loss:.2f}' for loss in losses]}")
 
 
 if __name__ == "__main__":

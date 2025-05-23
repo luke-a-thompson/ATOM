@@ -12,7 +12,7 @@ log_weights = false
 [dataloader]
 multitask = false
 delta_T = 30000
-md17_version = "md17"
+dataset = "md17"
 num_timesteps = 8
 
 # Single-task dataloader parameters
@@ -54,7 +54,7 @@ adam_eps = 1e-10
 [scheduler]
 type = "none"
 
-[gtno_config]
+[atom_config]
 # Architecture parameters
 num_layers = 5
 num_heads = 8

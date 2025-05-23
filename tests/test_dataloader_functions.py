@@ -1,5 +1,6 @@
 import torch
-from gtno_py.dataloaders.atom_dataloader import MD17DynamicsDataset, DataPartition, MD17MoleculeType, MD17Version
+from atom.dataloaders.atom_dataloader import MD17DynamicsDataset, DataPartition, MD17MoleculeType
+from atom.training.config_options import Datasets
 from torch.utils.data import DataLoader
 
 device = "cuda"
@@ -33,7 +34,7 @@ class TestMD17DynamicsDataset:
             partition=DataPartition.train,
             max_samples=500,
             delta_frame=3000,
-            md17_version=MD17Version.md17,
+            md17_version=Datasets.md17,
             num_timesteps=config["model"]["num_timesteps"],
             data_dir="data/",
             split_dir="data/",
@@ -91,7 +92,7 @@ class TestMD17DynamicsDataset:
             partition=DataPartition.train,
             max_samples=500,
             delta_frame=3000,
-            md17_version=MD17Version.rmd17,
+            md17_version=Datasets.rmd17,
             num_timesteps=config["model"]["num_timesteps"],
             data_dir="data/",
             split_dir="data/",
@@ -135,7 +136,7 @@ class TestMD17DynamicsDataset:
             num_timesteps=num_timesteps,
             data_dir="data/",
             split_dir="data/",
-            md17_version=MD17Version.md17,
+            md17_version=Datasets.md17,
             molecule_type=MD17MoleculeType.aspirin,
             force_regenerate=True,
             max_nodes=13,

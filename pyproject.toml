@@ -1,18 +1,18 @@
 [tool.poetry]
-name = "gtno-py"
-version = "0.1.1"
+name = "ATOM"
+version = "0.1.2"
 description = ""
 authors = ["Luke Thompson <luke-a-thompson@outlook.com>"]
 readme = "README.md"
 keywords = ["graph transformer", "quantum chemistry", "molecular dynamics", "neural operator"]
 
 [[tool.poetry.packages]]
-include = "gtno_py"
+include = "atom"
 from = "src"
 
 [tool.poetry.scripts]
-train = "gtno_py.train:main"
-inference = "gtno_py.inference:main"
+train = "atom.train:main"
+inference = "atom.inference:main"
 
 [tool.poetry.dependencies]
 python = "^3.12"

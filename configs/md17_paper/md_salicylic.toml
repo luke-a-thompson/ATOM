@@ -2,7 +2,7 @@
 use_wandb = false
 
 [benchmark]
-model_type = "GTNO"
+model_type = "atom"
 benchmark_name = "paper_md17"
 compile = true
 compile_trace = false
@@ -12,7 +12,7 @@ log_weights = false
 [dataloader]
 multitask = false
 delta_T = 3000
-md17_version = "md17"
+dataset = "md17"
 num_timesteps = 8
 
 # Single-task dataloader parameters
@@ -40,6 +40,8 @@ device = "cuda"
 seed = 42
 batch_size = 100
 epochs = 1000
+use_amp = false
+amp_dtype = "bfloat16"
 max_grad_norm = 1.0
 learned_label_noise = false
 label_noise_std = 0.1
@@ -54,7 +56,7 @@ adam_eps = 1e-10
 [scheduler]
 type = "none"
 
-[gtno_config]
+[atom_config]
 # Architecture parameters
 num_layers = 5
 num_heads = 8

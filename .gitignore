@@ -3,7 +3,6 @@
 /__pycache__
 /data
 /trained_models
-*.png
 /dist
 
 # Byte-compiled / optimized / DLL files

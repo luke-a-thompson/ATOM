@@ -1,0 +1,87 @@
+[wandb]
+use_wandb = false
+
+[benchmark]
+model_type = "EGNO"
+benchmark_name = "paper_md17_egno"
+compile = true
+compile_trace = false
+runs = 3
+log_weights = false
+
+[dataloader]
+multitask = false
+delta_T = 3000
+dataset = "md17"
+num_timesteps = 8
+
+# Single-task dataloader parameters
+molecule_type = "uracil"  # Iterates through single-task learning on these molecules
+
+# Multitask dataloader parameters
+train_molecules = ["aspirin", "benzene", "ethanol", "toluene", "uracil", "salicylic", "malonaldehyde"]
+validation_molecules = ["aspirin", "benzene", "ethanol", "toluene", "uracil", "salicylic", "malonaldehyde"]
+test_molecules = ["naphthalene"]
+
+# Other dataloader parameters
+explicit_hydrogen = false
+explicit_hydrogen_gradients = false
+radius_graph_threshold = 1.6
+rrwp_length = 0  # 0 for no RRWPs
+normalize_z = false
+persistent_workers = true
+num_workers = 4
+pin_memory = true
+prefetch_factor = 2
+force_regenerate = true
+
+[training]
+device = "cuda"
+seed = 42
+batch_size = 100
+epochs = 1000
+use_amp = false
+amp_dtype = "bfloat16"
+max_grad_norm = 1.0
+learned_label_noise = false
+label_noise_std = 0.1
+
+[optimizer]
+type = "adamw"
+learning_rate = 1e-3
+weight_decay = 1e-5
+adam_betas = [0.9, 0.999]
+adam_eps = 1e-10
+
+[scheduler]
+type = "none"
+
+[atom_config]
+# Architecture parameters
+num_layers = 5
+num_heads = 8
+lifting_dim = 128
+# Output parameters
+output_heads = 1
+delta_update = false
+# Attention parameters
+heterogenous_attention_type = "ghca"
+use_rope = true
+rope_base = 1000
+learnable_attention_denom = false
+# Feature parameters
+use_spherical_harmonics = false
+equivariant_lifting_type = "equivariant"
+# Layer parameters
+norm = "rms"
+activation = "swiglu"
+value_residual_type = "learnable"
+
+[egno_config]
+num_layers = 5
+lifting_dim = 64
+activation = "silu"
+normalise_scalars = true
+use_time_conv = true
+num_fourier_modes = 2
+time_embed_dim = 32

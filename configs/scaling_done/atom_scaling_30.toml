@@ -1,0 +1,143 @@
+[wandb]
+use_wandb = false
+
+[benchmark]
+model_type = "atom"
+benchmark_name = "atom_tg80_scaling30"
+compile = true
+compile_trace = false
+runs = 1
+log_weights = false
+
+[dataloader]
+multitask = true
+delta_T = 10_000
+dataset = "tg80"
+num_timesteps = 8
+
+# Single-task dataloader parameters
+# molecule_type = "aspirin"  # Iterates through single-task learning on these molecules
+
+# Multitask dataloader parameters
+train_molecules = [
+    "isopropanol",
+    "cyclohexanol",
+    "indole",
+    "benzene",
+    "acetaldehyde",
+
+    "cyclohexanone",
+    "methanol",
+    "malonicacid",
+    "p-cresol",
+    "heptanol",
+
+    "butylamine",
+    "acetamide",
+    "furfural",
+    "tropane2",
+    "succinicacid",
+    
+    "styrene",
+    "pentanol",
+    "butane",
+    "1.2-dichloroethane",
+
+    "quinoline",
+    "furan",
+    "salicylicacid1",
+    "isobutane",
+    "aniline",
+    "formamide",
+    "salicylicacid2",
+    "thymine",
+    "anthracene",
+    "tropane3",
+
+]
+
+validation_molecules = [
+    "benzylamine",
+    "nitrobenzene",
+    "uracil1",
+    "1.3-butadiene",
+    "trimethylamine",
+    "acetonitrile",
+    "naphthalene",
+    "coumarin",
+]
+
+test_molecules = [
+    "2-butanone",
+    "cyclopropane",
+    "propylene",
+    "uracil",
+    "benzene2",
+    "cyclohexane",
+    "biphenyl",
+    "1.3-cyclohexadiene",
+]
+
+
+# Other dataloader parameters
+explicit_hydrogen = false
+explicit_hydrogen_gradients = false
+radius_graph_threshold = 1.6
+rrwp_length = 8  # 0 for no RRWPs
+normalize_z = false
+persistent_workers = true
+num_workers = 6
+pin_memory = true
+prefetch_factor = 2
+force_regenerate = true
+
+[training]
+device = "cuda"
+seed = 42
+batch_size = 192
+epochs = 250
+use_amp = false
+amp_dtype = "bfloat16"
+max_grad_norm = 1.0
+learned_label_noise = false
+label_noise_std = 0.1
+
+[optimizer]
+type = "muon"
+learning_rate = 1e-3
+weight_decay = 1e-5
+adam_betas = [0.9, 0.999]
+adam_eps = 1e-10
+
+[scheduler]
+type = "none"
+
+[atom_config]
+# Architecture parameters
+num_layers = 5
+num_heads = 8
+lifting_dim = 128
+# Output parameters
+output_heads = 8
+delta_update = false
+# Attention parameters
+heterogenous_attention_type = "ghca"
+use_rope = true
+rope_base = 1000
+learnable_attention_denom = false
+# Feature parameters
+use_spherical_harmonics = false
+equivariant_lifting_type = "equivariant"
+# Layer parameters
+norm = "rms"
+activation = "swiglu"
+value_residual_type = "learnable"
+
+[egno_config]
+num_layers = 5
+lifting_dim = 64
+activation = "silu"
+normalise_scalars = true
+use_time_conv = true
+num_fourier_modes = 2
+time_embed_dim = 32

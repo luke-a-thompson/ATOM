@@ -174,8 +174,8 @@ def create_corrected_volatility_visualization(data_dir: Path, dataset_name: str,
     plt.text(0.9, 0.1, "Drifting from Origin", transform=plt.gca().transAxes, ha="right", va="bottom", bbox=dict(facecolor="white", alpha=0.7), fontsize=12)
 
     plt.tight_layout()
-    plt.savefig(f"/home/luke/gtno_py/Z_paper_content/dataset/{dataset_name}_molecule_behavior_comparison.pdf", format="pdf")
-    print(f"Figure saved as PDF to /home/luke/gtno_py/Z_paper_content/dataset/{dataset_name}_molecule_behavior_comparison.pdf")
+    plt.savefig(f"/Z_paper_content/dataset/{dataset_name}_molecule_behavior_comparison.pdf", format="pdf")
+    print(f"Figure saved as PDF to /Z_paper_content/dataset/{dataset_name}_molecule_behavior_comparison.pdf")
 
 
 if __name__ == "__main__":
