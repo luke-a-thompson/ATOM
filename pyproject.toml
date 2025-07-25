@@ -2,7 +2,7 @@
 name = "ATOM"
 version = "0.1.2"
 description = ""
-authors = ["Luke Thompson <luke-a-thompson@outlook.com>"]
+authors = ["Anonymized for review"]
 readme = "README.md"
 keywords = ["graph transformer", "quantum chemistry", "molecular dynamics", "neural operator"]
 
@@ -18,7 +18,7 @@ inference = "atom.inference:main"
 python = "^3.12"
 numpy = "^2.0.0"
 pandas = "^2.1.0"
-torch = "^2.5.1"
+torch = {version = "^2.7.1", source = "pytorch-gpu"}
 e3nn = "^0.5.4"
 tensordict = "^0.7.0"
 pytorch_optimizer = "^3.3.4"
@@ -32,6 +32,8 @@ pubchempy = "^1.0.4"
 rdkit = "^2024.9.6"
 tlparse = "^0.3.37"
 statsmodels = "^0.14.4"
+torchvision = {version = "^0.22.1", source = "pytorch-gpu"}
+torchaudio = {version = "^2.7.1", source = "pytorch-gpu"}
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
@@ -41,6 +43,11 @@ pandas-stubs = "^2.2.3.241126"
 [tool.poetry.extras]
 visualization = ["matplotlib", "usyd-colors"]
 chemical_sieve = ["pubchempy", "rdkit"]
+
+[[tool.poetry.source]]
+name = "pytorch-gpu"
+url = "https://download.pytorch.org/whl/cu128"
+priority = "explicit"
 
 [tool.black]
 line-length = 150

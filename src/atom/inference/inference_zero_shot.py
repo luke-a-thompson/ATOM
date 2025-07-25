@@ -1,6 +1,6 @@
 import subprocess
 
-subprocess.run(
+_ = subprocess.run(
     [
         "poetry",
         "run",

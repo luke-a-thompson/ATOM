@@ -293,8 +293,8 @@ class Config(BaseModel):
 
     @model_validator(mode="after")
     def validate_output_heads(self) -> "Config":
-        if self.atom_config.output_heads > 1 and self.dataloader.multitask is False:
-            warn("Are you sure you want to use multiple output heads for a single-task model? This is unusual, but maybe you're onto something.")
+        if self.benchmark.model_type == ModelType.ATOM and self.atom_config.output_heads > 1 and self.dataloader.multitask is False:
+            print("Are you sure you want to use multiple output heads for a single-task model? This is unusual, but maybe you're onto something.")
         return self
 
     @classmethod

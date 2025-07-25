@@ -374,7 +374,6 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         with open(split_dir, "wb") as f:
             pkl.dump(split, f)
 
-        # Print information about the generated split
         if self.verbose:
             print(f"Generated and saved split with {len(train_idx)} train, {len(val_idx)} val, and {len(test_idx)} test samples")
             print(f"Note: Max samples will be limited to {self.max_samples if hasattr(self, 'max_samples') else 'unlimited'} during dataset usage")
@@ -404,7 +403,6 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         # Compute distances between all pairs of atoms
         distances: torch.Tensor = torch.norm(pos_i - pos_j, dim=2)  # Shape: (num_atoms, num_atoms)
 
-        # Create adjacency matrix based on threshold
         one_hop_edges: torch.Tensor = (distances < threshold).int()
 
         # Set diagonal to zero (no self-loops)

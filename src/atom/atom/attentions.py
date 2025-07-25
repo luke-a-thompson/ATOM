@@ -218,11 +218,9 @@ class SphericalHarmonicsAttentionBias(nn.Module):
         B, T, N, _ = coords.shape
         S = N * T  # Total sequence length after flattening time and nodes
 
-        # --- FIX START ---
         # Flatten the time and node dimensions correctly
         # Input coords is [B, T, N, 3], reshape to [B, N*T, 3]
         coords = coords.view(B, S, 3)
-        # --- FIX END ---
 
         # Re-extract shape after reshape just to be safe, although S is already calculated
         B_check, S_check, _ = coords.shape
@@ -335,19 +333,11 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
 
         assert self.d_head % 2 == 0, "d_head must be even"
 
-        from e3nn import o3
-        from atom.atom.atom_model import get_lifting_dim_irreps
-
-        # lifting_dim_irreps = get_lifting_dim_irreps(self.lifting_dim)
-        # self.key = o3.Linear(lifting_dim_irreps, lifting_dim_irreps)
-        # self.value = o3.Linear(lifting_dim_irreps, lifting_dim_irreps)
-        # self.query = o3.Linear(lifting_dim_irreps, lifting_dim_irreps)
-        # self.out_proj = o3.Linear(lifting_dim_irreps, lifting_dim_irreps)
-
         self.key = nn.Linear(lifting_dim, lifting_dim)
         self.value = nn.Linear(lifting_dim, lifting_dim)
         self.query = nn.Linear(lifting_dim, lifting_dim)
         self.out_proj = nn.Linear(lifting_dim, lifting_dim)
+
         self.attention_dropout = nn.Dropout(attention_dropout)
 
         denom_init = torch.full((num_heads,), float(self.d_head))
@@ -365,7 +355,14 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
             self.spherical_harmonics = SphericalHarmonicsAttentionBias(num_timesteps=self.num_timesteps, max_degree=1, num_heads=self.num_heads, hidden_dim=16)
 
     @override
-    def forward(self, x_0: torch.Tensor, v_0: torch.Tensor | None, concatenated_features: torch.Tensor | None, q_data: torch.Tensor, mask: torch.Tensor | None) -> torch.Tensor:
+    def forward(
+        self,
+        x_0: torch.Tensor,
+        v_0: torch.Tensor | None,
+        concatenated_features: torch.Tensor | None,
+        q_data: torch.Tensor,
+        mask: torch.Tensor | None,
+    ) -> torch.Tensor:
         """Performs heterogeneous cross-attention with multiple feature types.
 
         Parameters

@@ -19,8 +19,12 @@ def main() -> None:
 
     if config.dataloader.multitask:
         test_loader = create_dataloaders_multitask(config)[2]
+        molecule_type = config.dataloader.test_molecules
+        inference_type = "multitask"
     else:
         test_loader = create_dataloaders_single(config)[2]
+        molecule_type = config.dataloader.molecule_type
+        inference_type = "single task"
 
     model = initialize_model(config).to(config.training.device)
     clean_model_state_dict = clean_state_dict_prefixes(model_state_dict)
@@ -29,6 +33,9 @@ def main() -> None:
 
     test_s2t_loss, test_s2s_loss = eval_epoch(config, model, test_loader)
 
+    print(
+        f"Statistics for {config.benchmark.benchmark_name}: {inference_type} inference on {len(test_loader)} batches (batch_size={config.training.batch_size}) of molecule type {molecule_type}."
+    )
     print(f"Test S2T loss: {test_s2t_loss*100:.2f}x10^-2")
     print(f"Test S2S loss: {test_s2s_loss*100:.2f}x10^-2")
 

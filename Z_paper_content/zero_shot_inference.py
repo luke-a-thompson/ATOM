@@ -16,7 +16,7 @@ def run_inference_command(model_path: str, config_path: str) -> float:
         float: The Test S2T loss value
     """
     cmd = f"poetry run inference --model {model_path} --config {config_path}"
-    print(f"Running: {cmd}")
+    # print(f"Running: {cmd}")
 
     # Run the command and capture output
     result = subprocess.run(cmd, shell=True, check=True, capture_output=True, text=True)
@@ -156,5 +156,81 @@ def run_all_inferences() -> None:
             print(f"Individual losses: {[f'{loss:.2f}' for loss in losses]}")
 
 
+def run_scaling_inferences() -> None:
+    """
+    Run all inference commands for different molecules and compute statistics.
+    """
+    # Define the base paths
+    base_model_path = "benchmark_runs/scaling"
+    base_config_path = "configs/scaling_done"
+
+    inference_runs: dict[str, list[dict[str, str]]] = {
+        "Scaling 2": [
+            {
+                "model": f"{base_model_path}/atom_tg80_scaling2_multitask_22-May-2025_23-12-35/run_1/best_val_model.pth",
+                "config": f"{base_config_path}/scaling_test.toml",
+            },
+        ],
+        "Scaling 5": [
+            {
+                "model": f"{base_model_path}/atom_tg80_scaling5_multitask_23-May-2025_02-39-10/run_1/best_val_model.pth",
+                "config": f"{base_config_path}/scaling_test.toml",
+            },
+        ],
+        "Scaling 10": [
+            {
+                "model": f"{base_model_path}/atom_tg80_scaling10_multitask_22-May-2025_21-56-45/run_1/best_val_model.pth",
+                "config": f"{base_config_path}/scaling_test.toml",
+            },
+        ],
+        "Scaling 15": [
+            {
+                "model": f"{base_model_path}/atom_tg80_scaling15_multitask_22-May-2025_22-27-19/run_1/best_val_model.pth",
+                "config": f"{base_config_path}/scaling_test.toml",
+            },
+        ],
+        "Scaling 20": [
+            {
+                "model": f"{base_model_path}/atom_tg80_scaling20_multitask_22-May-2025_23-29-27/run_1/best_val_model.pth",
+                "config": f"{base_config_path}/scaling_test.toml",
+            },
+        ],
+        "Scaling 30": [
+            {
+                "model": f"{base_model_path}/atom_tg80_scaling30_multitask_23-May-2025_00-16-53/run_1/best_val_model.pth",
+                "config": f"{base_config_path}/scaling_test.toml",
+            },
+        ],
+        "Scaling 40": [
+            {
+                "model": f"{base_model_path}/atom_tg80_scaling40_multitask_23-May-2025_01-20-50/run_1/best_val_model.pth",
+                "config": f"{base_config_path}/scaling_test.toml",
+            },
+        ],
+        "Scaling 50": [
+            {
+                "model": f"{base_model_path}/atom_tg80_scaling50_multitask_23-May-2025_09-52-49/run_1/best_val_model.pth",
+                "config": f"{base_config_path}/scaling_test.toml",
+            },
+        ],
+        "Scaling 60": [
+            {
+                "model": f"{base_model_path}/atom_tg80_scaling60_multitask_23-May-2025_18-39-48/run_1/best_val_model.pth",
+                "config": f"{base_config_path}/scaling_test.toml",
+            },
+        ],
+    }
+
+    for molecule, runs in inference_runs.items():
+        for i, run in enumerate(runs, 1):
+            torch.manual_seed(i + 50)
+            try:
+                s2t_loss = run_inference_command(run["model"], run["config"])
+                print(f"{molecule} Run {i} s2t loss: {s2t_loss:.4f}")
+            except Exception as e:
+                print(f"Error in run {i} for {molecule}: {str(e)}")
+
+
 if __name__ == "__main__":
-    run_all_inferences()
+    # run_all_inferences()
+    run_scaling_inferences()
