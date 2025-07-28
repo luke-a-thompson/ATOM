@@ -5,7 +5,7 @@ from atom.training.config_options import FFNActivation
 from atom.egno.layers import TimeConvMode
 from atom.egno.layers import EGNN
 from atom.egno.layers import TimeConv
-from typing import assert_type, override, final
+from typing import override
 from atom.atom.activations import get_activation
 from tensordict import TensorDict
 
@@ -30,10 +30,10 @@ class EGNO(nn.Module):
         self.use_time_conv = use_time_conv
         self.lifting_dim = lifting_dim
 
-        in_dim = num_node_features + time_embed_dim
+        self.in_dim = num_node_features + time_embed_dim
 
         self.egnn = EGNN(
-            in_dim=in_dim,
+            in_dim=self.in_dim,
             num_edge_features=num_edge_features,
             lifting_dim=lifting_dim,
             num_layers=num_layers,

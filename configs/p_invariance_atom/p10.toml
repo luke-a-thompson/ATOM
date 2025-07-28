@@ -67,6 +67,7 @@ delta_update = false
 # Attention parameters
 heterogenous_attention_type = "ghca"
 use_rope = true
+rope_base = 1000
 learnable_attention_denom = false
 # Feature parameters
 use_spherical_harmonics = false

@@ -1,6 +1,5 @@
 import importlib.util
 import tomllib
-from warnings import warn
 from pathlib import Path
 from pydantic import BaseModel, model_validator
 import torch
@@ -12,12 +11,14 @@ from atom.training.config_options import (
     Datasets,
     MD17MoleculeType,
     RMD17MoleculeType,
+    MD22MoleculeType,
     TG80MoleculeType,
     ModelType,
     NormType,
     OptimizerType,
     SchedulerType,
     ValueResidualType,
+    PositionalEncodingType,
 )
 
 
@@ -67,12 +68,12 @@ class DataloaderConfig(BaseModel):
     multitask: bool
     dataset: Datasets
     # Single-task dataloader parameters
-    molecule_type: MD17MoleculeType | RMD17MoleculeType | TG80MoleculeType | None = None
+    molecule_type: MD17MoleculeType | RMD17MoleculeType | TG80MoleculeType | MD22MoleculeType | None = None
 
     # Multitask dataloader parameters
-    train_molecules: list[MD17MoleculeType | RMD17MoleculeType | TG80MoleculeType] | None = None
-    validation_molecules: list[MD17MoleculeType | RMD17MoleculeType | TG80MoleculeType] | None = None
-    test_molecules: list[MD17MoleculeType | RMD17MoleculeType | TG80MoleculeType] | None = None
+    train_molecules: list[MD17MoleculeType | RMD17MoleculeType | TG80MoleculeType | MD22MoleculeType] | None = None
+    validation_molecules: list[MD17MoleculeType | RMD17MoleculeType | TG80MoleculeType | MD22MoleculeType] | None = None
+    test_molecules: list[MD17MoleculeType | RMD17MoleculeType | TG80MoleculeType | MD22MoleculeType] | None = None
 
     num_timesteps: int
     delta_T: int
@@ -123,13 +124,15 @@ class DataloaderConfig(BaseModel):
                 enum_type = RMD17MoleculeType
             case Datasets.tg80:
                 enum_type = TG80MoleculeType
+            case Datasets.md22:
+                enum_type = MD22MoleculeType
             case Datasets.nbody_simple:
                 enum_type = None
             case _:
                 raise ValueError(f"Invalid dataset: {self.dataset}")
 
         # Handle MD
-        if self.dataset in [Datasets.md17, Datasets.rmd17, Datasets.tg80]:
+        if self.dataset in [Datasets.md17, Datasets.rmd17, Datasets.tg80, Datasets.md22]:
             if not self.multitask and self.molecule_type is not None:
                 if isinstance(self.molecule_type, list):
                     self.molecule_type = [enum_type(mol) for mol in self.molecule_type]
@@ -229,7 +232,7 @@ class ATOMConfig(BaseModel):
     delta_update: bool
     # Attention parameters
     heterogenous_attention_type: AttentionType
-    use_rope: bool
+    positional_encoding: PositionalEncodingType
     rope_base: float
     learnable_attention_denom: bool
     # Feature parameters

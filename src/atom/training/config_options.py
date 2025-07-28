@@ -14,6 +14,7 @@ class Datasets(StrEnum):
     md17 = "md17"
     rmd17 = "rmd17"
     tg80 = "tg80"
+    md22 = "md22"
     nbody_simple = "nbody_simple"
 
 
@@ -40,6 +41,13 @@ class RMD17MoleculeType(StrEnum):
     salicylic = "salicylic"
     toluene = "toluene"
     uracil = "uracil"
+
+
+@final
+class MD22MoleculeType(StrEnum):
+    DHA = "dha"
+    NHME = "nhme"
+    STACHYOSE = "stachyose"
 
 
 @final
@@ -159,6 +167,14 @@ class ValueResidualType(StrEnum):
     NONE = "none"
     FIXED = "fixed"
     LEARNABLE = "learnable"
+
+
+@final
+class PositionalEncodingType(StrEnum):
+    TROPE = "trope"
+    ROPE = "rope"
+    SINUSOIDAL = "sinusoidal"
+    NONE = "none"
 
 
 @final

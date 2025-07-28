@@ -2,7 +2,7 @@ from typing import final, override
 import torch
 import torch.nn as nn
 from atom.atom.activations import ReLU2, SwiGLU
-from atom.training.config_options import FFNActivation, NormType, ValueResidualType, AttentionType, EquivariantLiftingType
+from atom.training.config_options import FFNActivation, NormType, ValueResidualType, AttentionType, EquivariantLiftingType, PositionalEncodingType
 from tensordict import TensorDict
 from atom.atom.attentions import QuadraticHeterogenousCrossAttention, QuadraticSelfAttention
 from atom.atom.mlps import MLP
@@ -19,7 +19,7 @@ class ATOMBlock(nn.Module):
         num_heads: int,
         attention_type: AttentionType,
         num_timesteps: int,
-        use_rope: bool,
+        positional_encoding: PositionalEncodingType,
         rope_base: float,
         use_spherical_harmonics: bool,
         value_residual_type: ValueResidualType,
@@ -83,7 +83,7 @@ class ATOMBlock(nn.Module):
                     lifting_dim=lifting_dim,
                     num_heads=num_heads,
                     num_timesteps=self.num_timesteps,
-                    use_rope=use_rope,
+                    positional_encoding=positional_encoding,
                     use_spherical_harmonics=use_spherical_harmonics,
                     learnable_attention_denom=learnable_attention_denom,
                 )
@@ -93,7 +93,7 @@ class ATOMBlock(nn.Module):
                     lifting_dim=lifting_dim,
                     num_heads=num_heads,
                     num_timesteps=self.num_timesteps,
-                    use_rope=use_rope,
+                    positional_encoding=positional_encoding,
                     rope_base=rope_base,
                     use_spherical_harmonics=use_spherical_harmonics,
                     learnable_attention_denom=learnable_attention_denom,
@@ -146,9 +146,10 @@ class ATOMBlock(nn.Module):
         tuple[torch.Tensor, torch.Tensor | None]
             The updated positions and the initial value for the next residual connection.
         """
-        concatenated_features = self.pre_norm(concatenated_features)
         x_0 = self.pre_norm(x_0)
         v_0 = self.pre_norm(v_0)
+        concatenated_features = self.pre_norm(concatenated_features)
+        # q_data = self.pre_norm(q_data)
 
         if self.attention_type == AttentionType.SELF:
             attended_nodes: torch.Tensor = x_0 + self.attention(tensor=x_0, mask=mask)
@@ -180,7 +181,7 @@ class ATOM(nn.Module):
         output_heads: int,
         delta_update: bool,
         num_timesteps: int,
-        use_rope: bool,
+        positional_encoding: PositionalEncodingType,
         rope_base: float,
         use_spherical_harmonics: bool,
         use_equivariant_lifting: EquivariantLiftingType,
@@ -214,8 +215,8 @@ class ATOM(nn.Module):
             Whether to predict the delta of positions or absolute positions.
         num_timesteps : int
             The number of future steps (T) to predict.
-        use_rope : bool
-            Whether to use rotary positional embeddings.
+        positional_encoding : PositionalEncodingType
+            Type of positional encoding to use.
         rope_base : float
             Base for rotary positional embeddings.
         use_spherical_harmonics : bool
@@ -285,7 +286,7 @@ class ATOM(nn.Module):
                     num_heads,
                     attention_type,
                     num_timesteps,
-                    use_rope,
+                    positional_encoding,
                     rope_base,
                     use_spherical_harmonics,
                     value_residual_type,

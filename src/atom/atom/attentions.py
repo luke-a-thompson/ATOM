@@ -1,9 +1,11 @@
+import math
 from typing import final, override
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from atom.atom.mlps import MLP
 from e3nn import o3
+from atom.training.config_options import PositionalEncodingType
 
 
 @final
@@ -149,6 +151,211 @@ class TemporalRoPEWithOffset(nn.Module):
 
 
 @final
+class RoPE(nn.Module):
+    """
+    Standard Rotary Positional Embedding (RoPE) with optional per-head learnable offsets.
+    This module applies rotary embeddings to each position in the sequence independently.
+
+    Parameters
+    ----------
+    d_head : int
+        Dimension of each attention head. Must be even.
+    n_heads : int
+        Number of attention heads.
+    base : float, optional
+        Base value for RoPE frequency calculation, by default 1000.0.
+    learnable_offset : bool, optional
+        Whether to use learnable per-head offsets, by default False.
+
+    Attributes
+    ----------
+    offset : nn.Parameter or torch.Tensor
+        Learnable or fixed per-head offsets.
+    freqs : torch.Tensor
+        Precomputed RoPE frequencies.
+
+    Raises
+    ------
+    AssertionError
+        If `d_head` is not even.
+
+    Notes
+    -----
+    Input tensor shape: `[B, n_heads, seq_len, d_head]`
+        - `d_head` must be even.
+        - `B` = batch size
+        - `n_heads` = number of attention heads
+
+    Process:
+        1. Generate sequential time indices from 0 to seq_len-1.
+        2. Compute cos/sin embeddings for each position, adjusted by per-head offsets.
+        3. Apply RoPE by rotating even/odd tensor components using the cos/sin values.
+        4. Handle masking for padded nodes if a mask is provided.
+
+    Output tensor shape: `[B, n_heads, seq_len, d_head]`
+    """
+
+    def __init__(self, d_head: int, n_heads: int, base: float = 1000.0, learnable_offset: bool = False):
+        super().__init__()
+        assert d_head % 2 == 0, "d_head must be even for standard RoPE."
+
+        self.d_head = d_head
+        self.n_heads = n_heads
+        self.base = base
+
+        self.half_dim = d_head // 2
+
+        if learnable_offset:
+            # Each of n_heads gets its own offset, initialised to 0
+            self.offset = nn.Parameter(torch.zeros(n_heads, device="cuda"))
+        else:
+            # A fixed buffer, all zeros by default
+            self.register_buffer("offset", torch.zeros(n_heads, device="cuda"), persistent=False)
+
+        self.freqs = (1.0 / (self.base ** (2 * torch.arange(0, self.half_dim, device=self.offset.device).float() / d_head))).unsqueeze(0).unsqueeze(0)  # [1, 1, half_dim]
+
+    @override
+    def forward(self, tensor: torch.Tensor, mask: torch.Tensor | None) -> torch.Tensor:
+        """
+        Apply RoPE to the input tensor.
+
+        Parameters
+        ----------
+        tensor : torch.Tensor
+            Input tensor of shape `[B, n_heads, seq_len, d_head]`.
+        mask : torch.Tensor | None
+            Optional mask of shape `[B, 1, seq_len, 1]` for padded nodes.
+            If provided, padded nodes will not be rotated.
+
+        Returns
+        -------
+        torch.Tensor
+            Rotated tensor of the same shape `[B, n_heads, seq_len, d_head]`.
+
+        Raises
+        ------
+        AssertionError
+            If input tensor dimensions or `num_heads` do not match initialization.
+        """
+        B, H, seq_len, d_head = tensor.shape
+        assert H == self.n_heads, f"Expected n_heads={self.n_heads}, got {H}"
+        assert d_head == self.d_head, f"Expected d_head={self.d_head}, got {d_head}"
+
+        # 1) Create integer time indices for each element in the sequence => shape [seq_len]
+        positions = torch.arange(seq_len, device=tensor.device)
+
+        # 2) Construct angles per head: shape => [H, seq_len, half_dim].
+        offset_broadcast = self.offset.unsqueeze(-1)  # [H, 1], this adds the head dim
+        positions_broadcast = positions.unsqueeze(0)  # [1, seq_len]
+        shifted_positions = positions_broadcast + offset_broadcast
+        angle = shifted_positions.unsqueeze(-1) * self.freqs
+
+        # 3) cos, sin => each [1, H, seq_len, half_dim]
+        cos_t = angle.cos().unsqueeze(0)
+        sin_t = angle.sin().unsqueeze(0)
+
+        # 4) Expand cos_t/sin_t to [B, H, seq_len, half_dim]
+        cos_t = cos_t.expand(B, -1, seq_len, self.half_dim)
+        sin_t = sin_t.expand(B, -1, seq_len, self.half_dim)
+
+        # Avoid rotating padded nodes. Mask.shape should be [B, 1, seq_len, 1] to broadcast
+        if mask is not None:
+            cos_t = torch.where(mask, cos_t, torch.ones_like(cos_t))
+            sin_t = torch.where(mask, sin_t, torch.zeros_like(sin_t))
+
+        # 5) Apply the rotation to the last dimension of 'tensor'
+        t1 = tensor[..., 0::2]
+        t2 = tensor[..., 1::2]
+
+        rotated_0 = t1 * cos_t - t2 * sin_t
+        rotated_1 = t1 * sin_t + t2 * cos_t
+
+        rotated = torch.stack([rotated_0, rotated_1], dim=-1).view_as(tensor)
+
+        return rotated
+
+
+@final
+class SinusoidalPositionalEmbedding(nn.Module):
+    """
+    Adds traditional sinusoidal positional embeddings to an input tensor.
+
+    The embeddings are pre-computed and added to the input tensor in the forward pass.
+    This implementation is based on the "Attention Is All You Need" paper.
+
+    Parameters
+    ----------
+    d_model : int
+        The dimension of the embedding vector.
+    max_len : int, optional
+        The maximum sequence length for which to pre-compute embeddings, by default 5000.
+
+    Attributes
+    ----------
+    pe : torch.Tensor
+        A buffer holding the pre-computed positional embeddings of shape `[1, max_len, d_model]`.
+
+    Notes
+    -----
+    - Input tensor shape can be `[B, seq_len, d_model]` or `[B, T, N, d_model]`.
+    - If the input is 4D `[B, T, N, d]`, it is flattened to `[B, T*N, d]` before adding PE,
+      and then reshaped to its original dimensions.
+    - Output tensor has the same shape as the input tensor.
+    """
+
+    def __init__(self, d_model: int, max_len: int = 5000):
+        super().__init__()
+        self.d_model = d_model
+        self.pe: torch.Tensor
+
+        pe = torch.zeros(max_len, d_model)
+        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        pe = pe.unsqueeze(0)  # Shape: [1, max_len, d_model]
+        self.register_buffer("pe", pe, persistent=False)
+
+    @override
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Adds positional embeddings to the input tensor.
+
+        Parameters
+        ----------
+        x : torch.Tensor
+            Input tensor of shape `[B, seq_len, d_model]` or `[B, T, N, d_model]`.
+
+        Returns
+        -------
+        torch.Tensor
+            Tensor with added positional embeddings, with the same shape as the input.
+
+        Raises
+        ------
+        ValueError
+            If the sequence length of the input tensor exceeds `max_len`.
+        """
+        original_shape = x.shape
+        is_4d = x.dim() == 4
+        if is_4d:
+            B, T, N, d = x.shape
+            x = x.view(B, T * N, d)
+
+        seq_len = x.shape[1]
+        if seq_len > self.pe.shape[1]:
+            raise ValueError(f"Sequence length {seq_len} exceeds max_len {self.pe.shape[1]}")
+
+        # Add positional embedding using broadcasting
+        x = x + self.pe[:, :seq_len].to(x.device)
+
+        if is_4d:
+            x = x.view(original_shape)
+
+        return x
+
+
+@final
 class SphericalHarmonicsAttentionBias(nn.Module):
     """
     Computes a bias for attention logits from relative node coordinates.
@@ -260,7 +467,7 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         lifting_dim: int,
         num_heads: int,
         num_timesteps: int,
-        use_rope: bool,
+        positional_encoding: PositionalEncodingType,
         rope_base: float,
         use_spherical_harmonics: bool,
         learnable_attention_denom: bool = False,
@@ -326,7 +533,6 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         self.num_hetero_feats = num_hetero_feats
         self.lifting_dim = lifting_dim
         self.num_timesteps = num_timesteps
-        self.use_rope = use_rope
         self.rope_base = rope_base
         self.use_spherical_harmonics = use_spherical_harmonics
         self.d_head = self.lifting_dim // self.num_heads
@@ -348,8 +554,21 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
 
         self.feature_weights = nn.Parameter(torch.randn(self.num_hetero_feats) * 0.1)
 
-        if use_rope:
-            self.rope = TemporalRoPEWithOffset(num_timesteps=self.num_timesteps, d_head=self.d_head, n_heads=self.num_heads, base=self.rope_base, learnable_offset=False)
+        self.positional_encoding_type = positional_encoding
+        self.positional_encoding: nn.Module | None = None
+        match positional_encoding:
+            case PositionalEncodingType.TROPE:
+                self.positional_encoding = TemporalRoPEWithOffset(
+                    num_timesteps=self.num_timesteps, d_head=self.d_head, n_heads=self.num_heads, base=self.rope_base, learnable_offset=False
+                )
+            case PositionalEncodingType.ROPE:
+                self.positional_encoding = RoPE(d_head=self.d_head, n_heads=self.num_heads, base=self.rope_base, learnable_offset=False)
+            case PositionalEncodingType.SINUSOIDAL:
+                self.positional_encoding = SinusoidalPositionalEmbedding(d_model=self.lifting_dim)
+            case PositionalEncodingType.NONE:
+                self.positional_encoding = None
+            case _:
+                raise ValueError(f"Invalid positional encoding type: {positional_encoding}")
 
         if use_spherical_harmonics:
             self.spherical_harmonics = SphericalHarmonicsAttentionBias(num_timesteps=self.num_timesteps, max_degree=1, num_heads=self.num_heads, hidden_dim=16)
@@ -386,7 +605,7 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         Notes
         -----
         Process:
-            1. Flatten query data from `[B, T, N, d]` to `[B, T*N, d]`.
+            1. Flatten query data from `[B, T, N, d]` to `[B, N * T (seq_q), d]`.
             2. Project query to `[B, heads, T*N, d_head]`.
             3. For each heterogeneous feature (x_0, v_0, concatenated_features):
                - Project to K/V of shape `[B, heads, T*N, d_head]`.
@@ -410,11 +629,16 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
             key_mask_for_scores = reshaped_mask.unsqueeze(1).unsqueeze(1)  # [B, 1, 1, T*N] for attention scores
             rope_mask_for_rope = reshaped_mask.unsqueeze(1).unsqueeze(-1)  # [B, 1, T*N, 1] for RoPE
 
-        # Project Q => [B, heads, seq_q, d_head]
+        # Apply sinusoidal PE before projection if configured
+        if self.positional_encoding_type == PositionalEncodingType.SINUSOIDAL and self.positional_encoding is not None:
+            q_data_flat = self.positional_encoding(q_data_flat)
+
+        # Project Q => [B, num_heads, N*T, d_head]
         q_proj: torch.Tensor = self.query(q_data_flat).view(B, T * N, self.num_heads, self.d_head).permute(0, 2, 1, 3)  # [B, heads, seq_q, d_head]
 
-        if self.use_rope:
-            q_proj = self.rope(q_proj, rope_mask_for_rope)
+        # Apply RoPE-like PE after projection if configured
+        if self.positional_encoding_type in [PositionalEncodingType.ROPE, PositionalEncodingType.TROPE] and self.positional_encoding is not None:
+            q_proj = self.positional_encoding(q_proj, rope_mask_for_rope)
 
         spherical_harmonics_bias: torch.Tensor | None = None
         if self.use_spherical_harmonics:
@@ -430,21 +654,27 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
             v_0.view(B, T * N, d) if v_0 is not None else None,
             concatenated_features.view(B, T * N, d) if concatenated_features is not None else None,
         ]
-        assert len(hetero_features) == self.num_hetero_feats
+        assert len(hetero_features) == self.num_hetero_feats, f"Expected {self.num_hetero_feats} heterogeneous features but got {len(hetero_features)}"
 
         gates = F.softmax(self.feature_weights, dim=0)  # Precompute gates; ∑ gates = 1
         for i, h_feat_flat in enumerate(hetero_features):
             if h_feat_flat is None:  # Skip if feature is None
                 continue
 
-            assert h_feat_flat.shape[-1] == self.lifting_dim, f"Expected {self.lifting_dim}, got {h_feat_flat.shape[-1]}"
+            # Apply sinusoidal PE to hetero features before projection
+            if self.positional_encoding_type == PositionalEncodingType.SINUSOIDAL and self.positional_encoding is not None:
+                h_feat_flat = self.positional_encoding(h_feat_flat)
+
+            # h_feat_flat.shape should be [B, T*N, d]
+            assert h_feat_flat.shape == (B, T * N, self.lifting_dim), f"Expected shape (B, T*N, d) as {B, T * N, self.lifting_dim} but got {h_feat_flat.shape}"
 
             # Project K and V => [B, heads, seq_k, d_head]
             k_proj_i: torch.Tensor = self.key(h_feat_flat).view(B, N * T, self.num_heads, self.d_head).permute(0, 2, 1, 3)
             v_proj_i: torch.Tensor = self.value(h_feat_flat).view(B, N * T, self.num_heads, self.d_head).permute(0, 2, 1, 3)
 
-            if self.use_rope:
-                k_proj_i = self.rope(k_proj_i, rope_mask_for_rope)
+            # Apply RoPE-like PE after projection if configured
+            if self.positional_encoding_type in [PositionalEncodingType.ROPE, PositionalEncodingType.TROPE] and self.positional_encoding is not None:
+                k_proj_i = self.positional_encoding(k_proj_i, rope_mask_for_rope)
 
             # 1) scores = Q·K^T / sqrt(d_head)
             scores = q_proj @ k_proj_i.transpose(-2, -1) / self.attention_denom.view(1, -1, 1, 1)  # Broadcasts over heads
@@ -465,6 +695,7 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
 
         permuted_accumulated_out = accumulated_out.permute(0, 2, 1, 3).reshape(B, T * N, self.lifting_dim)
         final_out_projection: torch.Tensor = self.out_proj(permuted_accumulated_out)
+        assert final_out_projection.shape == (B, T * N, self.lifting_dim), f"Expected (B, T*N, d) as {B, T * N, self.lifting_dim} but got {final_out_projection.shape}"
         # Unflatten => [B, T, N, d]
         final_out_reshaped = final_out_projection.view(B, T, N, self.lifting_dim)
 
@@ -478,7 +709,7 @@ class QuadraticSelfAttention(nn.Module):
         num_heads: int,
         num_timesteps: int,
         lifting_dim: int,
-        use_rope: bool,
+        positional_encoding: PositionalEncodingType,
         use_spherical_harmonics: bool,
         learnable_attention_denom: bool = False,
         attention_dropout: float = 0.2,
@@ -528,7 +759,6 @@ class QuadraticSelfAttention(nn.Module):
         self.num_heads = num_heads
         self.lifting_dim = lifting_dim
         self.num_timesteps = num_timesteps
-        self.use_rope = use_rope
         self.use_spherical_harmonics = use_spherical_harmonics
         self.d_head = self.lifting_dim // self.num_heads
 
@@ -545,8 +775,19 @@ class QuadraticSelfAttention(nn.Module):
         else:
             self.register_buffer("attention_denom", denom_init, persistent=False)
 
-        if use_rope:
-            self.rope = TemporalRoPEWithOffset(num_timesteps=self.num_timesteps, d_head=self.d_head, n_heads=self.num_heads, base=1000.0, learnable_offset=False)
+        self.positional_encoding_type = positional_encoding
+        self.positional_encoding: nn.Module | None = None
+        match positional_encoding:
+            case PositionalEncodingType.TROPE:
+                self.positional_encoding = TemporalRoPEWithOffset(num_timesteps=self.num_timesteps, d_head=self.d_head, n_heads=self.num_heads, base=1000.0, learnable_offset=False)
+            case PositionalEncodingType.ROPE:
+                self.positional_encoding = RoPE(d_head=self.d_head, n_heads=self.num_heads, base=1000.0, learnable_offset=False)
+            case PositionalEncodingType.SINUSOIDAL:
+                self.positional_encoding = SinusoidalPositionalEmbedding(d_model=self.lifting_dim)
+            case PositionalEncodingType.NONE:
+                self.positional_encoding = None
+            case _:
+                raise ValueError(f"Invalid positional encoding type: {positional_encoding}")
 
         if use_spherical_harmonics:
             self.spherical_harmonics = SphericalHarmonicsAttentionBias(num_timesteps=self.num_timesteps, max_degree=1, num_heads=self.num_heads, hidden_dim=16)
@@ -593,10 +834,13 @@ class QuadraticSelfAttention(nn.Module):
             key_mask_for_scores = reshaped_mask.unsqueeze(1).unsqueeze(1)  # [B, 1, 1, T*N] for attention scores
             rope_mask_for_rope = reshaped_mask.unsqueeze(1).unsqueeze(-1)  # [B, 1, T*N, 1] for RoPE
 
+        if self.positional_encoding_type == PositionalEncodingType.SINUSOIDAL and self.positional_encoding is not None:
+            tensor_flat = self.positional_encoding(tensor_flat)
+
         q_proj: torch.Tensor = self.query(tensor_flat).view(B, T * N, self.num_heads, self.d_head).permute(0, 2, 1, 3)
 
-        if self.use_rope:
-            q_proj = self.rope(q_proj, rope_mask_for_rope)
+        if self.positional_encoding_type in [PositionalEncodingType.ROPE, PositionalEncodingType.TROPE] and self.positional_encoding is not None:
+            q_proj = self.positional_encoding(q_proj, rope_mask_for_rope)
 
         spherical_harmonics_bias: torch.Tensor | None = None
         if self.use_spherical_harmonics:
@@ -607,8 +851,8 @@ class QuadraticSelfAttention(nn.Module):
         k_proj = k_proj.view(B, N * T, self.num_heads, self.d_head).permute(0, 2, 1, 3)
         v_proj = v_proj.view(B, N * T, self.num_heads, self.d_head).permute(0, 2, 1, 3)
 
-        if self.use_rope:
-            k_proj = self.rope(k_proj, rope_mask_for_rope)
+        if self.positional_encoding_type in [PositionalEncodingType.ROPE, PositionalEncodingType.TROPE] and self.positional_encoding is not None:
+            k_proj = self.positional_encoding(k_proj, rope_mask_for_rope)
 
         scores: torch.Tensor = q_proj @ k_proj.transpose(-2, -1) / self.attention_denom.view(1, -1, 1, 1)
         if key_mask_for_scores is not None:

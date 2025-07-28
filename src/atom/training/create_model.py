@@ -27,7 +27,7 @@ def initialize_model(config: Config) -> nn.Module:
                 output_heads=config.atom_config.output_heads,
                 delta_update=config.atom_config.delta_update,
                 num_timesteps=config.dataloader.num_timesteps,
-                use_rope=config.atom_config.use_rope,
+                positional_encoding=config.atom_config.positional_encoding,
                 rope_base=config.atom_config.rope_base,
                 use_spherical_harmonics=config.atom_config.use_spherical_harmonics,
                 use_equivariant_lifting=config.atom_config.equivariant_lifting_type,
@@ -37,8 +37,8 @@ def initialize_model(config: Config) -> nn.Module:
             )
         case ModelType.EGNO:
             return EGNO(
-                num_node_features=2 if config.dataloader.dataset in [Datasets.md17, Datasets.rmd17, Datasets.tg80] else 1,
-                num_edge_features=5 if config.dataloader.dataset in [Datasets.md17, Datasets.rmd17, Datasets.tg80] else 2,
+                num_node_features=2 if config.dataloader.dataset in [Datasets.md17, Datasets.rmd17, Datasets.tg80, Datasets.md22] else 1,
+                num_edge_features=5 if config.dataloader.dataset in [Datasets.md17, Datasets.rmd17, Datasets.tg80, Datasets.md22] else 2,
                 num_layers=config.egno_config.num_layers,
                 lifting_dim=config.egno_config.lifting_dim,
                 activation=config.egno_config.activation,

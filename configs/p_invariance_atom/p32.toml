@@ -40,7 +40,7 @@ device = "cuda"
 seed = 42
 batch_size = 100
 epochs = 1000
-use_amp = false
+use_amp = true
 amp_dtype = "bfloat16"
 max_grad_norm = 1.0
 learned_label_noise = false
@@ -67,6 +67,7 @@ delta_update = false
 # Attention parameters
 heterogenous_attention_type = "ghca"
 use_rope = true
+rope_base = 1000
 learnable_attention_denom = false
 # Feature parameters
 use_spherical_harmonics = false

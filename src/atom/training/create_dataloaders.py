@@ -9,9 +9,10 @@ from atom.dataloaders.nbody_dataloader import NBodyDynamicsDataset
 from atom.training.config_options import (
     DataPartition,
     MD17MoleculeType,
+    RMD17MoleculeType,
+    MD22MoleculeType,
     TG80MoleculeType,
     ModelType,
-    RMD17MoleculeType,
     Datasets,
 )
 from atom.training.load_config import Config
@@ -19,7 +20,7 @@ from atom.training.load_config import Config
 
 def create_datasets(
     config: Config,
-    molecule_type: MD17MoleculeType | RMD17MoleculeType | TG80MoleculeType | None,
+    molecule_type: MD17MoleculeType | RMD17MoleculeType | TG80MoleculeType | MD22MoleculeType | None,
     max_nodes: int | None = None,
     max_edges: int | None = None,
 ) -> tuple[MD17DynamicsDataset | NBodyDynamicsDataset, MD17DynamicsDataset | NBodyDynamicsDataset, MD17DynamicsDataset | NBodyDynamicsDataset]:
@@ -44,7 +45,7 @@ def create_datasets(
         egno_mode = False
 
     match config.dataloader.dataset:
-        case Datasets.md17 | Datasets.rmd17 | Datasets.tg80:
+        case Datasets.md17 | Datasets.rmd17 | Datasets.tg80 | Datasets.md22:
             train_dataset = MD17DynamicsDataset(
                 partition=DataPartition.train,
                 max_samples=500,

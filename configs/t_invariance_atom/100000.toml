@@ -6,7 +6,7 @@ model_type = "atom"
 benchmark_name = "delta_t_100000"
 compile = true
 compile_trace = false
-runs = 3
+runs = 1
 log_weights = false
 
 [dataloader]
@@ -66,7 +66,7 @@ output_heads = 1
 delta_update = false
 # Attention parameters
 heterogenous_attention_type = "ghca"
-use_rope = true
+positional_encoding = "trope"
 rope_base = 1000
 learnable_attention_denom = false
 # Feature parameters

@@ -7,7 +7,7 @@ import os
 from typing import final, override
 from pathlib import Path
 import torch.nn.functional as F
-from atom.training.config_options import DataPartition, Datasets, MD17MoleculeType, RMD17MoleculeType, TG80MoleculeType
+from atom.training.config_options import DataPartition, Datasets, MD17MoleculeType, RMD17MoleculeType, TG80MoleculeType, MD22MoleculeType
 
 
 class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
@@ -23,7 +23,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         data_dir: str,
         split_dir: str,
         md17_version: Datasets,
-        molecule_type: MD17MoleculeType | RMD17MoleculeType | TG80MoleculeType,
+        molecule_type: MD17MoleculeType | RMD17MoleculeType | TG80MoleculeType | MD22MoleculeType,
         max_nodes: int | None,
         return_edge_data: bool,
         num_timesteps: int = 1,  # Number of timesteps to replicate
@@ -55,7 +55,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         """
         self.partition: DataPartition = partition
         self.md17_version: Datasets = md17_version
-        self.molecule_type: MD17MoleculeType | RMD17MoleculeType | TG80MoleculeType = molecule_type
+        self.molecule_type: MD17MoleculeType | RMD17MoleculeType | TG80MoleculeType | MD22MoleculeType = molecule_type
         self.max_nodes: int | None = max_nodes
         self.delta_frame: int = delta_frame
         self.num_timesteps: int = num_timesteps
@@ -92,6 +92,16 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
                 # test_par = 0.4  # Used in paper
                 val_par = 0.1
                 test_par = 0.1
+            case Datasets.md22:
+                full_dir = os.path.join(data_dir + "md22_npz/" + "md22_" + molecule_type + ".npz")
+                split_dir = os.path.join(split_dir + "md22_splits/" + "md22_" + molecule_type + "_split.pkl")
+                if molecule_type == MD22MoleculeType.STACHYOSE:
+                    train_par = 0.2
+                    val_par = 0.1
+                    test_par = 0.1
+                positions_col = "R"
+                charges_col = "z"
+                self.dft_imprecision_margin: int = 500
             case _:
                 raise ValueError(f"Invalid MD17 version: {md17_version}")
 
@@ -151,7 +161,9 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
 
             # Check that all other timesteps have identical data
             for t in range(1, self.num_timesteps):
-                assert torch.allclose(self.replicated_x_0[0][t], first_timestep_data), f"Initial positions (x_0) at timestep {t} differ from timestep 0. " f"Shape: {self.replicated_x_0.shape}"
+                assert torch.allclose(self.replicated_x_0[0][t], first_timestep_data), (
+                    f"Initial positions (x_0) at timestep {t} differ from timestep 0. " f"Shape: {self.replicated_x_0.shape}"
+                )
 
     def process_data(self, split_times: npt.NDArray[np.int_], x: npt.NDArray[np.float64], v: npt.NDArray[np.float64], z: npt.NDArray[np.uint8]):
         """Processes loaded data, common to both MD17Dataset and MD17DynamicsDataset"""
@@ -201,7 +213,15 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
             self.v_t: torch.Tensor = torch.Tensor(v_t)
             self.v_t = self._pad_tensor(self.v_t)
 
-        assert self.x_t.shape[:2] == self.v_t.shape[:2] == self.x_0.shape[:2] == self.v_0.shape[:2] == self.z_0.shape[:2] == self.concatenated_features.shape[:2] == self.mole_idx.shape[:2], (
+        assert (
+            self.x_t.shape[:2]
+            == self.v_t.shape[:2]
+            == self.x_0.shape[:2]
+            == self.v_0.shape[:2]
+            == self.z_0.shape[:2]
+            == self.concatenated_features.shape[:2]
+            == self.mole_idx.shape[:2]
+        ), (
             f"Shape mismatch:\n"
             f"x_t.shape: {self.x_t.shape}\n"
             f"v_t.shape: {self.v_t.shape}\n"
@@ -250,7 +270,9 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
             torch.Tensor: The replicated tensor.
         """
         # Add new time dimension
-        assert tensor.shape[0] == self.max_samples, f"Tensor shape: {tensor.shape}, max_samples: {self.max_samples}. Molecule type: {self.molecule_type} for split: {self.partition}"
+        assert (
+            tensor.shape[0] == self.max_samples
+        ), f"Tensor shape: {tensor.shape}, max_samples: {self.max_samples}. Molecule type: {self.molecule_type} for split: {self.partition}"
         tensor_with_time = tensor.unsqueeze(1)
 
         # Expand along time dimension to num_timesteps
@@ -416,7 +438,9 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
             one_hop_edges.fill_diagonal_(0)
 
         if one_hop_edges.sum() == 0:
-            raise ValueError(f"Could not find any edges even with threshold {current_threshold}. This suggests the molecule data may be corrupted.  Molecule type: {self.molecule_type}")
+            raise ValueError(
+                f"Could not find any edges even with threshold {current_threshold}. This suggests the molecule data may be corrupted.  Molecule type: {self.molecule_type}"
+            )
 
         # Compute two-hop connections
         two_hop_edges: torch.Tensor = (one_hop_edges @ one_hop_edges).clamp(max=1)
@@ -717,7 +741,7 @@ class MD17DynamicsDataset(MD17Dataset):
         data_dir: str,
         split_dir: str,
         md17_version: Datasets,
-        molecule_type: MD17MoleculeType | RMD17MoleculeType | TG80MoleculeType,
+        molecule_type: MD17MoleculeType | RMD17MoleculeType | TG80MoleculeType | MD22MoleculeType,
         max_nodes: int | None,
         return_edge_data: bool,
         num_timesteps: int = 8,  # Number of timesteps for dynamics
