@@ -362,7 +362,7 @@ class ATOM(nn.Module):
         # Batch (x, y, z) + projection layer
         if self.output_heads > 1:
             # Decides which output heads should be emphasised
-            head_weights: torch.Tensor = self.weight_pred_gate_net(lifted_x_0.mean(dim=(1, 2)))  # mean pool over nodes and timesteps (molecule-level summary)
+            head_weights: torch.Tensor = self.weight_pred_gate_net(lifted_concat_features.mean(dim=(1, 2)))  # mean pool over nodes and timesteps (molecule-level summary)
             # Project each head's predictions to the final output space
             pred_pos_per_head: list[torch.Tensor] = [self.projection_layers[i](lifted_x_0) for i in range(self.output_heads)]
             # Weighted sum of the heads
