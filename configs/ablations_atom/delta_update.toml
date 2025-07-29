@@ -66,7 +66,7 @@ output_heads = 1
 delta_update = true
 # Attention parameters
 heterogenous_attention_type = "ghca"
-positional_encoding = trope
+positional_encoding = "trope"
 learnable_attention_denom = false
 # Feature parameters
 use_spherical_harmonics = false

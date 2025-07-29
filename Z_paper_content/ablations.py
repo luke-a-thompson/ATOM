@@ -237,7 +237,7 @@ def plot_ablations(ablation_dir: Path, save_path: Path | None = None, error_bar_
 
 
 if __name__ == "__main__":
-    ablation_dir = Path("benchmark_runs/t_invariance_atom_ablations")
+    ablation_dir = Path("benchmark_runs/MD17_ablations")
     # Use percentile error bars by default
     set_matplotlib_style()
     plot_ablations(ablation_dir=ablation_dir, save_path=Path("Z_paper_content/ablations/ablation_MD17.pdf"), error_bar_type=ErrorBarType.PERCENTILE)

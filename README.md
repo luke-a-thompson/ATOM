@@ -51,7 +51,6 @@ python tests/test_equivariance.py --config configs/md17_paper/md_aspirin.toml --
 ## Performing Single Task Learning Experiments on TG80
 
 <details>
-
 <summary>Commands to generate zero-shot results for ATOM</summary>
 
 ### Uracil (Fold 1)
@@ -97,7 +96,6 @@ poetry run inference --runs \
 </details>
 
 <details>
-
 <summary>Commands to generate single task results for EGNO</summary>
 
 ### Uracil (Fold 1)
@@ -145,7 +143,6 @@ poetry run inference --runs \
 ## Performing Zero-shot Generalization Generalization Experiments on TG80
 
 <details>
-
 <summary>Commands to generate zero-shot results for ATOM</summary>
 
 ### Uracil (Fold 1)
@@ -194,7 +191,6 @@ You may wish to confirm that none of these pretrained multitask models were trai
 </details>
 
 <details>
-
 <summary>Commands to generate zero-shot results for EGNO</summary>
 
 ### Uracil (Fold 1)
@@ -245,6 +241,34 @@ poetry run inference --runs \
   "benchmark_runs/tg80_egno_mt/egno_tg80_multitask_muon_fold5_multitask_15-May-2025_19-14-24/run_1/best_val_model.pth,configs/tg80_multitask_zs_egno/egno_zs_fold5.toml"
 
 # poetry run inference --model benchmark_runs/tg80_atom_mt/atom_tg80_multitask_muon_fold5_multitask_15-May-2025_12-40-10/run_2/best_val_model.pth --config configs/tg80_multitask_zs_egno/egno_zs_fold5.toml
+```
+
+</details>
+
+<details>
+<summary>Commands to generate zero-shot results for ATOM with varying number of MoE output heads</summary>
+
+```bash
+poetry run inference --runs \
+  "benchmark_runs/tg80_moe_ablation/atom_tg80_multitask_muon_fold1_1moe_multitask_29-Jul-2025_00-38-17/run_1/best_val_model.pth,configs/ablations_moe_tg80_multitask_atom_zs_inference/atom_multitask_muon_fold1_1moe.toml" \
+  "benchmark_runs/tg80_moe_ablation/atom_tg80_multitask_muon_fold1_2moe_multitask_29-Jul-2025_00-59-07/run_1/best_val_model.pth,configs/ablations_moe_tg80_multitask_atom_zs_inference/atom_multitask_muon_fold1_2moe.toml" \
+  "benchmark_runs/tg80_moe_ablation/atom_tg80_multitask_muon_fold1_4moe_multitask_29-Jul-2025_01-24-43/run_1/best_val_model.pth,configs/ablations_moe_tg80_multitask_atom_zs_inference/atom_multitask_muon_fold1_4moe.toml" \
+  "benchmark_runs/tg80_moe_ablation/atom_tg80_multitask_muon_fold1_12moe_multitask_28-Jul-2025_23-53-42/run_1/best_val_model.pth,configs/ablations_moe_tg80_multitask_atom_zs_inference/atom_multitask_muon_fold1_12moe.toml" \
+  "benchmark_runs/tg80_moe_ablation/atom_tg80_multitask_muon_fold1_16moe_multitask_29-Jul-2025_00-15-54/run_1/best_val_model.pth,configs/ablations_moe_tg80_multitask_atom_zs_inference/atom_multitask_muon_fold1_16moe.toml"
+```
+
+</details>
+
+<details>
+<summary>Commands to generate zero-shot results for ATOM with varying number of RRWP elements</summary>
+
+```bash
+poetry run inference --runs \
+  "benchmark_runs/tg80_rrwp_ablation/atom_tg80_multitask_muon_fold1_norrwp_multitask_29-Jul-2025_13-03-29/run_1/best_val_model.pth,configs/ablations_rrwp_tg80_multitask_atom_zs_inference/atom_multitask_muon_fold1_norrwp.toml" \
+  "benchmark_runs/tg80_rrwp_ablation/atom_tg80_multitask_muon_fold1_1rrwp_multitask_29-Jul-2025_03-00-11/run_1/best_val_model.pth,configs/ablations_rrwp_tg80_multitask_atom_zs_inference/atom_multitask_muon_fold1_1rrwp.toml" \
+  "benchmark_runs/tg80_rrwp_ablation/atom_tg80_multitask_muon_fold1_2rrwp_multitask_29-Jul-2025_12-04-16/run_1/best_val_model.pth,configs/ablations_rrwp_tg80_multitask_atom_zs_inference/atom_multitask_muon_fold1_2rrwp.toml" \
+  "benchmark_runs/tg80_rrwp_ablation/atom_tg80_multitask_muon_fold1_4rrwp_multitask_29-Jul-2025_12-33-42/run_1/best_val_model.pth,configs/ablations_rrwp_tg80_multitask_atom_zs_inference/atom_multitask_muon_fold1_4rrwp.toml" \
+  "benchmark_runs/tg80_atom_mt/atom_tg80_multitask_muon_fold1_multitask_15-May-2025_09-36-35/run_1/best_val_model.pth,configs/tg80_multitask_zs_atom/atom_zs_fold1.toml"
 ```
 
 </details>
