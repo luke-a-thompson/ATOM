@@ -66,7 +66,7 @@ output_heads = 1
 delta_update = false
 # Attention parameters
 heterogenous_attention_type = "ghca"
-use_rope = true
+positional_encoding = trope
 rope_base = 10000
 learnable_attention_denom = false
 # Feature parameters
