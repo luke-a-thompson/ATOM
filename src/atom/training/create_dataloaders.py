@@ -15,7 +15,7 @@ from atom.training.config_options import (
     ModelType,
     Datasets,
 )
-from atom.training.load_config import Config
+from atom.training.create_config import Config
 
 
 def create_datasets(

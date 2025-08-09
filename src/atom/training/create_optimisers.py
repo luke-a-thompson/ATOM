@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.optim as optim
 
 from atom.training.config_options import OptimizerType, SchedulerType
-from atom.training.load_config import Config
+from atom.training.create_config import Config
 
 
 def initialize_optimizer(config: Config, model: nn.Module) -> torch.optim.Optimizer:

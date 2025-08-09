@@ -1,6 +1,8 @@
 from typing import final, override
+
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from atom.atom.activations import ReLU2, SwiGLU
 from atom.training.config_options import FFNActivation, NormType, ValueResidualType, AttentionType, EquivariantLiftingType, PositionalEncodingType
 from tensordict import TensorDict
@@ -21,7 +23,6 @@ class ATOMBlock(nn.Module):
         num_timesteps: int,
         positional_encoding: PositionalEncodingType,
         rope_base: float,
-        use_spherical_harmonics: bool,
         value_residual_type: ValueResidualType,
         learnable_attention_denom: bool,
     ) -> None:
@@ -84,7 +85,6 @@ class ATOMBlock(nn.Module):
                     num_heads=num_heads,
                     num_timesteps=self.num_timesteps,
                     positional_encoding=positional_encoding,
-                    use_spherical_harmonics=use_spherical_harmonics,
                     learnable_attention_denom=learnable_attention_denom,
                 )
             case AttentionType.GHCA:
@@ -95,7 +95,6 @@ class ATOMBlock(nn.Module):
                     num_timesteps=self.num_timesteps,
                     positional_encoding=positional_encoding,
                     rope_base=rope_base,
-                    use_spherical_harmonics=use_spherical_harmonics,
                     learnable_attention_denom=learnable_attention_denom,
                 )
             case _:
@@ -183,7 +182,6 @@ class ATOM(nn.Module):
         num_timesteps: int,
         positional_encoding: PositionalEncodingType,
         rope_base: float,
-        use_spherical_harmonics: bool,
         use_equivariant_lifting: EquivariantLiftingType,
         rrwp_length: int,
         value_residual_type: ValueResidualType,
@@ -219,8 +217,6 @@ class ATOM(nn.Module):
             Type of positional encoding to use.
         rope_base : float
             Base for rotary positional embeddings.
-        use_spherical_harmonics : bool
-            Whether to use spherical harmonics.
         use_equivariant_lifting : EquivariantLiftingType
             Type of equivariant lifting to use.
         rrwp_length : int
@@ -288,7 +284,6 @@ class ATOM(nn.Module):
                     num_timesteps,
                     positional_encoding,
                     rope_base,
-                    use_spherical_harmonics,
                     value_residual_type,
                     learnable_attention_denom,
                 )
@@ -298,16 +293,15 @@ class ATOM(nn.Module):
 
         # Final projection to (x, y, z)
         if self.output_heads > 1:
-            self.weight_pred_gate_net = nn.Sequential(
-                MLP(
-                    in_dim=lifting_dim,
-                    hidden_dim=lifting_dim // 4,
-                    out_dim=self.output_heads,
-                    hidden_layers=2,
-                    activation=SwiGLU(lifting_dim // 4),
-                    dropout_p=0.1,
-                ),
-                nn.Softmax(dim=-1),
+            # Router network outputs *logits* (no Softmax) so we can apply
+            # a Straight-Through Gumbel-Softmax later.
+            self.weight_pred_gate_net = MLP(
+                in_dim=lifting_dim,
+                hidden_dim=lifting_dim // 4,
+                out_dim=self.output_heads,
+                hidden_layers=2,
+                activation=SwiGLU(lifting_dim // 4),
+                dropout_p=0.1,
             )
 
             self.projection_layers = nn.ModuleList([o3.Linear(lifting_dim_irreps, "1x1o") for _ in range(self.output_heads)])
@@ -361,15 +355,34 @@ class ATOM(nn.Module):
 
         # Batch (x, y, z) + projection layer
         if self.output_heads > 1:
-            # Decides which output heads should be emphasised
-            head_weights: torch.Tensor = self.weight_pred_gate_net(lifted_concat_features.mean(dim=(1, 2)))  # mean pool over nodes and timesteps (molecule-level summary)
-            # Project each head's predictions to the final output space
-            pred_pos_per_head: list[torch.Tensor] = [self.projection_layers[i](lifted_x_0) for i in range(self.output_heads)]
-            # Weighted sum of the heads
-            final_pred_pos = torch.zeros_like(pred_pos_per_head[0])
+            gate_logits: torch.Tensor = self.weight_pred_gate_net(lifted_concat_features.mean(dim=(1, 2)))  # [B, H]
 
-            for i in range(self.output_heads):
-                final_pred_pos = final_pred_pos + head_weights[:, i].view(-1, 1, 1, 1) * pred_pos_per_head[i]  # Weighted sum
+            if self.training:
+                # Straight-Through Gumbel-Softmax gives a one-hot routing mask in the
+                # forward pass while keeping gradients on the soft probabilities.
+                routing_mask: torch.Tensor = F.gumbel_softmax(gate_logits, tau=1.0, hard=True, dim=-1)  # [B, H]
+
+                # Dense evaluation: compute every expert once then apply the mask.
+                expert_outputs = torch.stack([head(lifted_x_0) for head in self.projection_layers], dim=1)  # [B, H, T, N, 3]
+                routing_mask = routing_mask.view(*routing_mask.shape, 1, 1, 1)  # [B, H,1,1,1]
+                final_pred_pos = (expert_outputs * routing_mask).sum(dim=1)  # [B, T, N, 3]
+            else:
+                # Inference: pick top-1 expert and evaluate only that expert for efficiency.
+                top_expert_idx: torch.Tensor = torch.argmax(gate_logits, dim=-1)  # [B]
+
+                # Prepare tensor for results
+                final_pred_pos = torch.zeros(
+                    (*lifted_x_0.shape[:-1], 3),
+                    device=lifted_x_0.device,
+                    dtype=lifted_x_0.dtype,
+                )
+
+                for i, expert in enumerate(self.projection_layers):
+                    mask = top_expert_idx == i  # [B]
+                    if not torch.any(mask):
+                        continue
+                    expert_out = expert(lifted_x_0[mask])  # [b_selected, T, N, 3]
+                    final_pred_pos[mask] = expert_out
         else:
             # Single-head prediction
             final_pred_pos: torch.Tensor = self.projection_layer(lifted_x_0)

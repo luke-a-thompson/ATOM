@@ -31,7 +31,7 @@ def singletask_benchmark(config: Config) -> None:
     timestamp = datetime.now().strftime("%d-%b-%Y_%H-%M-%S")
     benchmark_dir = Path(f"benchmark_runs/{config.benchmark.benchmark_name}_singletask_{timestamp}")
     benchmark_dir.mkdir(parents=True, exist_ok=True)
-    run_results: list[SingleRunResults] = []
+    single_run_results: list[SingleRunResults] = []
 
     runs_progress_bar = tqdm(range(config.benchmark.runs), leave=False, unit="run", position=1)
     for run in runs_progress_bar:
@@ -42,15 +42,15 @@ def singletask_benchmark(config: Config) -> None:
             model = torch.compile(model)
 
         # Pass the weights directory to main function
-        single_run_results = train_model(
+        single_run_result = train_model(
             config,
             model,
-            benchmark_dir=benchmark_dir,
-            run_number=run,
+            benchmark_dir,
+            run,
         )
-        run_results.append(single_run_results)
+        single_run_results.append(single_run_result)
 
-    multi_run_results = MultiRunResults(single_run_results=run_results, config=config)
+    multi_run_results = MultiRunResults(single_run_results=single_run_results, config=config)
 
     # Save to JSON
     multi_run_results_json = multi_run_results.model_dump_json(
@@ -63,7 +63,7 @@ def singletask_benchmark(config: Config) -> None:
     )
     results_filename = f"{benchmark_dir}/results.json"
     with open(results_filename, "w") as f:
-        f.write(multi_run_results_json)
+        _ = f.write(multi_run_results_json)
 
     wandb.log(
         {
@@ -97,10 +97,35 @@ def multitask_benchmark(config: Config) -> None:
         set_seeds(config.training.seed + run)
         runs_progress_bar.set_description(f"Run {run+1}/{config.benchmark.runs}")
         model = initialize_model(config).to(config.training.device)
-        if config.benchmark.compile:
-            model = torch.compile(model)
+        # Calculate and print model parameter counts
+        total_params: int = sum(p.numel() for p in model.parameters())
+        trainable_params: int = sum(p.numel() for p in model.parameters() if p.requires_grad)
+        tqdm.write(f"Total params: {total_params:,}")
+        tqdm.write(f"Total trainable params: {trainable_params:,}")
 
-        # Pass the weights directory to main function
+        from atom.atom.atom_model import ATOM
+
+        if isinstance(model, ATOM):
+            if model.output_heads > 1:
+                gating_params = sum(p.numel() for p in model.weight_pred_gate_net.parameters())
+                single_expert_params = sum(p.numel() for p in model.projection_layers[0].parameters())
+                active_params = gating_params + single_expert_params
+                total_expert_params = sum(p.numel() for p in model.projection_layers.parameters())
+
+                tqdm.write("\n--- MoE Expert Layer Analysis ---")
+                tqdm.write(f"Gating network params: {gating_params:,}")
+                tqdm.write(f"Params per expert: {single_expert_params:,}")
+                tqdm.write(f"Total params for all experts: {total_expert_params:,}")
+                tqdm.write(f"Active params per inference (gate + 1 expert): {active_params:,}")
+                tqdm.write(f"A non-MoE model would have {single_expert_params:,} params in its final projection layer.")
+                tqdm.write("------------------------------------")
+            else:
+                if hasattr(model, "projection_layer"):
+                    projection_params = sum(p.numel() for p in model.projection_layer.parameters())
+                    tqdm.write("\n--- Non-MoE Model ---")
+                    tqdm.write(f"Final projection layer params: {projection_params:,}")
+                    tqdm.write("-----------------------")
+        # assert False, "stop"
         single_run_results = train_model(
             config,
             model,
@@ -121,7 +146,7 @@ def multitask_benchmark(config: Config) -> None:
     )
     results_filename = f"{benchmark_dir}/results.json"
     with open(results_filename, "w") as f:
-        f.write(multi_run_results_json)
+        _ = f.write(multi_run_results_json)
 
     wandb.log(
         {

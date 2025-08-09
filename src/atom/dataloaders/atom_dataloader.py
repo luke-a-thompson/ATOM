@@ -53,7 +53,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
             test_par (float): The percentage of the data to use for testing.
             num_timesteps (int): Number of timesteps for replication.
         """
-        self.partition: DataPartition = partition
+        self.data_partition: DataPartition = partition
         self.md17_version: Datasets = md17_version
         self.molecule_type: MD17MoleculeType | RMD17MoleculeType | TG80MoleculeType | MD22MoleculeType = molecule_type
         self.max_nodes: int | None = max_nodes
@@ -170,13 +170,17 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         x_0, v_0 = self.get_initial_frames(split_times, x, v)
         x_t, v_t = self.get_target_frames(split_times, x, v)
 
+        self.x_t: torch.Tensor = self._pad_tensor(x_t)
+        self.v_t: torch.Tensor = self._pad_tensor(v_t)
+
         self.num_nodes: int = z.shape[0]
 
         one_hop_adjacency, two_hop_adjacency = self._compute_adjacency_matrix(x, self.num_nodes, self.radius_graph_threshold)
+
         if self.return_edge_data and not self.egno_mode:
-            self.edge_attr, self.edge_index = self._build_edge_attributes(one_hop_adjacency, two_hop_adjacency, z, x_0)
+            self.edge_attr, self.edge_index = self._build_edge_attributes(one_hop_adjacency, two_hop_adjacency, torch.tensor(z), x_0)
         elif self.egno_mode:
-            self.edge_attr, self.edge_index = self._build_edge_attributes_with_cfg(one_hop_adjacency, two_hop_adjacency, z, x_0)
+            self.edge_attr, self.edge_index = self._build_edge_attributes_with_cfg(one_hop_adjacency, two_hop_adjacency, torch.tensor(z), x_0)
         if self.max_edges is not None and self.egno_mode:
             current_edges = self.edge_attr.shape[0]
             if current_edges < self.max_edges:
@@ -205,13 +209,6 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         self.z_0 = self._pad_tensor(self.z_0)
         self.concatenated_features = self._pad_tensor(self.concatenated_features)
         self.mole_idx = self._pad_tensor(self.mole_idx)
-
-        if x_t is not None:
-            self.x_t: torch.Tensor = torch.Tensor(x_t)
-            self.x_t = self._pad_tensor(self.x_t)
-        if v_t is not None:
-            self.v_t: torch.Tensor = torch.Tensor(v_t)
-            self.v_t = self._pad_tensor(self.v_t)
 
         assert (
             self.x_t.shape[:2]
@@ -272,7 +269,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         # Add new time dimension
         assert (
             tensor.shape[0] == self.max_samples
-        ), f"Tensor shape: {tensor.shape}, max_samples: {self.max_samples}. Molecule type: {self.molecule_type} for split: {self.partition}"
+        ), f"Tensor shape: {tensor.shape}, max_samples: {self.max_samples}. Molecule type: {self.molecule_type} for split: {self.data_partition}"
         tensor_with_time = tensor.unsqueeze(1)
 
         # Expand along time dimension to num_timesteps
@@ -432,10 +429,16 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
 
         # If no edges are found, gradually increase threshold until we get edges
         current_threshold = threshold
+        if one_hop_edges.sum() == 0 and self.verbose:
+            print(f"[{self.molecule_type}] No edges found with initial threshold {threshold}. Increasing threshold to find edges...")
+
         while one_hop_edges.sum() == 0 and current_threshold < 10.0:  # Cap at 10.0 to prevent infinite loop
             current_threshold *= 1.5
             one_hop_edges = (distances < current_threshold).int()
             one_hop_edges.fill_diagonal_(0)
+
+        if one_hop_edges.sum() > 0 and current_threshold != threshold and self.verbose:
+            print(f"[{self.molecule_type}] Found edges with new threshold {current_threshold:.2f}.")
 
         if one_hop_edges.sum() == 0:
             raise ValueError(
@@ -444,8 +447,18 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
 
         # Compute two-hop connections
         two_hop_edges: torch.Tensor = (one_hop_edges @ one_hop_edges).clamp(max=1)
+        two_hop_edges.fill_diagonal_(0)
 
         assert one_hop_edges.shape == two_hop_edges.shape == (num_atoms, num_atoms)
+
+        if self.verbose and self.data_partition == DataPartition.train:
+            one_hop_edges = one_hop_edges.sum()
+            two_hop_only_adjacency = (two_hop_edges - one_hop_edges).clamp(min=0)
+            two_hop_edges = two_hop_only_adjacency.sum()
+            total_edges = one_hop_edges + two_hop_edges
+
+            print(f"[{self.molecule_type}] Total edges: {int(total_edges / 2)}. One-hop: {int(one_hop_edges / 2)}, Two-hop: {int(two_hop_edges / 2)}.")
+
         return one_hop_edges, two_hop_edges
 
     def _build_edge_attributes(
@@ -664,7 +677,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
     def _pad_tensor(self, tensor: torch.Tensor) -> torch.Tensor:
         # tensor shape assumed to be (num_samples, N, d)
         if self.max_nodes is not None:
-            assert tensor.shape[-2] <= self.max_nodes, f"Tensor shape: {tensor.shape}, max_nodes: {self.max_nodes}"
+            assert tensor.shape[-2] <= self.max_nodes, f"Node dim of tensor indicates {tensor.shape[-2]} nodes, max_nodes: {self.max_nodes}. Overall shape is {tensor.shape}"
             pad_amt = self.max_nodes - tensor.shape[-2]
             if pad_amt > 0:
                 # pad (last_dim_left, last_dim_right, node_dim_left, node_dim_right)
@@ -780,7 +793,9 @@ class MD17DynamicsDataset(MD17Dataset):
             egno_mode=egno_mode,
             max_edges=max_edges,
         )
-        self.x_t, self.v_t = self.get_dynamic_target_frames()
+        x_t, v_t = self.get_dynamic_target_frames()
+        self.x_t = self._pad_tensor(x_t)
+        self.v_t = self._pad_tensor(v_t)
 
         # Re-replicate dataset after defining x_t, v_t for dynamics dataset
         self.replicated_x_0: torch.Tensor = self._replicate_tensor(self.x_0)
@@ -788,13 +803,6 @@ class MD17DynamicsDataset(MD17Dataset):
         self.replicated_concatenated_features: torch.Tensor = self._replicate_tensor(self.concatenated_features)
         self.replicated_z_0: torch.Tensor = self._replicate_tensor(self.z_0)
         self.replicated_mole_idx: torch.Tensor = self._replicate_tensor(self.mole_idx)
-
-        if self.x_t is not None:
-            self.x_t = torch.Tensor(self.x_t)
-            self.x_t = self._pad_tensor(self.x_t)
-        if self.v_t is not None:
-            self.v_t = torch.Tensor(self.v_t)
-            self.v_t = self._pad_tensor(self.v_t)
 
         assert (
             self.x_t.shape[:3]
@@ -815,7 +823,7 @@ class MD17DynamicsDataset(MD17Dataset):
             f"replicated_mole_idx.shape: {self.replicated_mole_idx.shape}"
         )
 
-    def get_dynamic_target_frames(self) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+    def get_dynamic_target_frames(self) -> tuple[torch.Tensor, torch.Tensor]:
         split_times = self.split_times
         delta_frame = self.delta_frame
         num_timesteps = self.num_timesteps
@@ -824,35 +832,38 @@ class MD17DynamicsDataset(MD17Dataset):
         x_t = np.stack(x_t_list, axis=1)
         v_t_list = [self.v[split_times + delta_frame * i // num_timesteps] for i in range(1, num_timesteps + 1)]
         v_t = np.stack(v_t_list, axis=1)
+
+        x_t = torch.Tensor(x_t)
+        v_t = torch.Tensor(v_t)
         return x_t, v_t
 
 
 if __name__ == "__main__":
     # Test MD17Dataset
-    dataset_static = MD17Dataset(
-        partition=DataPartition.train,
-        max_samples=5000,
-        delta_frame=30000,
-        data_dir="data/",
-        split_dir="data/",
-        md17_version=Datasets.rmd17,
-        molecule_type=MD17MoleculeType.benzene,
-        max_nodes=20,
-        force_regenerate=False,
-        num_timesteps=1,  # Set num_timesteps for replication
-        return_edge_data=False,
-    )
-    dataloader_static = DataLoader(dataset_static, batch_size=100, shuffle=True)
-    print("MD17Dataset Output Shapes:")
-    for data in dataloader_static:
-        for key in data:
-            if key not in ["cfg", "edge_attr", "edge_index"]:
-                print(f"  {key}:", data[key].shape)
-        if "cfg" in data:
-            print("  cfg shapes:")
-            for key in data["cfg"]:
-                print(f"    {key}:", data["cfg"][key].shape)
-        break
+    # dataset_static = MD17Dataset(
+    #     partition=DataPartition.train,
+    #     max_samples=5000,
+    #     delta_frame=3000,
+    #     data_dir="data/",
+    #     split_dir="data/",
+    #     md17_version=Datasets.tg80,
+    #     molecule_type=TG80MoleculeType.uracil,
+    #     max_nodes=None,
+    #     force_regenerate=False,
+    #     num_timesteps=1,  # Set num_timesteps for replication
+    #     return_edge_data=False,
+    # )
+    # dataloader_static = DataLoader(dataset_static, batch_size=100, shuffle=True)
+    # print("MD17Dataset Output Shapes:")
+    # for data in dataloader_static:
+    #     for key in data:
+    #         if key not in ["cfg", "edge_attr", "edge_index"]:
+    #             print(f"  {key}:", data[key].shape)
+    #     if "cfg" in data:
+    #         print("  cfg shapes:")
+    #         for key in data["cfg"]:
+    #             print(f"    {key}:", data["cfg"][key].shape)
+    #     break
 
     # Test MD17DynamicsDataset
     dataset_dynamic = MD17DynamicsDataset(
@@ -861,10 +872,10 @@ if __name__ == "__main__":
         delta_frame=3000,
         data_dir="data/",
         split_dir="data/",
-        md17_version=Datasets.md17,
-        molecule_type=MD17MoleculeType.aspirin,
-        max_nodes=13,
-        force_regenerate=True,
+        md17_version=Datasets.tg80,
+        molecule_type=TG80MoleculeType.uracil,
+        max_nodes=None,
+        force_regenerate=False,
         num_timesteps=8,  # Set num_timesteps for replication
         return_edge_data=False,
     )

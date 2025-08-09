@@ -6,12 +6,12 @@ model_type = "atom"
 benchmark_name = "atom_default"
 compile = true
 compile_trace = false
-runs = 3
+runs = 1
 log_weights = false
 
 [dataloader]
 multitask = false
-delta_T = 3000
+delta_T = 300
 dataset = "md17"
 num_timesteps = 8
 
@@ -19,9 +19,9 @@ num_timesteps = 8
 molecule_type = "aspirin"  # Iterates through single-task learning on these molecules
 
 # Multitask dataloader parameters
-train_molecules = ["aspirin", "benzene", "ethanol", "toluene", "uracil", "salicylic", "malonaldehyde"]
-validation_molecules = ["aspirin", "benzene", "ethanol", "toluene", "uracil", "salicylic", "malonaldehyde"]
-test_molecules = ["naphthalene"]
+# train_molecules = ["aspirin", "benzene", "ethanol", "toluene", "uracil", "salicylic", "malonaldehyde"]
+# validation_molecules = ["aspirin", "benzene", "ethanol", "toluene", "uracil", "salicylic", "malonaldehyde"]
+# test_molecules = ["naphthalene"]
 
 # Other dataloader parameters
 explicit_hydrogen = false
@@ -37,10 +37,10 @@ force_regenerate = true
 
 [training]
 device = "cuda"
-seed = 42
+seed = 44
 batch_size = 100
 epochs = 1000
-use_amp = false
+use_amp = true
 amp_dtype = "bfloat16"
 max_grad_norm = 1.0
 learned_label_noise = false

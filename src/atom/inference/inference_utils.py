@@ -3,6 +3,7 @@ from collections import OrderedDict
 import torch
 from dataclasses import dataclass
 from pathlib import Path
+import time
 
 
 @dataclass
@@ -11,6 +12,7 @@ class InferenceRunResult:
 
     s2t_test_loss: float
     s2s_test_loss: float
+    latency: float  # in seconds
     model_path: Path
     config_path: Path
     molecule_type: str
@@ -38,6 +40,14 @@ class MultiInferenceResults:
     @property
     def s2s_std(self) -> float:
         return torch.std(torch.tensor([result.s2s_test_loss for result in self.run_results])).item()
+
+    @property
+    def latency_mean(self) -> float:
+        return sum(result.latency for result in self.run_results) / len(self.run_results)
+
+    @property
+    def latency_std(self) -> float:
+        return torch.std(torch.tensor([result.latency for result in self.run_results])).item()
 
 
 def parse_inference_args() -> argparse.Namespace:

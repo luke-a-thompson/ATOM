@@ -126,25 +126,20 @@ class DataloaderConfig(BaseModel):
                 enum_type = TG80MoleculeType
             case Datasets.md22:
                 enum_type = MD22MoleculeType
-            case Datasets.nbody_simple:
-                enum_type = None
             case _:
                 raise ValueError(f"Invalid dataset: {self.dataset}")
 
-        # Handle MD
         if self.dataset in [Datasets.md17, Datasets.rmd17, Datasets.tg80, Datasets.md22]:
-            if not self.multitask and self.molecule_type is not None:
-                if isinstance(self.molecule_type, list):
-                    self.molecule_type = [enum_type(mol) for mol in self.molecule_type]
-                else:
+            if self.multitask:
+                if self.train_molecules:
+                    self.train_molecules = [enum_type(mol) for mol in self.train_molecules]
+                if self.validation_molecules:
+                    self.validation_molecules = [enum_type(mol) for mol in self.validation_molecules]
+                if self.test_molecules:
+                    self.test_molecules = [enum_type(mol) for mol in self.test_molecules]
+            else:
+                if self.molecule_type:
                     self.molecule_type = enum_type(self.molecule_type)
-            # Convert multitask molecule lists
-            if self.train_molecules:
-                self.train_molecules = [enum_type(mol) for mol in self.train_molecules]
-            if self.validation_molecules:
-                self.validation_molecules = [enum_type(mol) for mol in self.validation_molecules]
-            if self.test_molecules:
-                self.test_molecules = [enum_type(mol) for mol in self.test_molecules]
 
         return self
 
@@ -167,9 +162,6 @@ class TrainingConfig(BaseModel):
     max_grad_norm: float
     learned_label_noise: bool
     label_noise_std: float
-
-    class Config:
-        arbitrary_types_allowed = True
 
     @model_validator(mode="before")
     @classmethod
@@ -236,7 +228,6 @@ class ATOMConfig(BaseModel):
     rope_base: float
     learnable_attention_denom: bool
     # Feature parameters
-    use_spherical_harmonics: bool
     equivariant_lifting_type: EquivariantLiftingType
     # Layer parameters
     norm: NormType
@@ -301,7 +292,7 @@ class Config(BaseModel):
         return self
 
     @classmethod
-    def from_toml(cls, path: Path, skip_model_naming: bool = False) -> "Config":
+    def from_toml(cls, path: Path) -> "Config":
         """
         Load configuration from a TOML file.
 
@@ -317,4 +308,4 @@ class Config(BaseModel):
         except IsADirectoryError:
             raise ValueError(f"Path '{path}' is a directory, not a file. Use --config <path> if you want to run multiple configurations.")
 
-        return cls(**config_dict)
+        return cls.model_validate(config_dict)

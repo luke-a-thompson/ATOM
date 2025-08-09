@@ -5,10 +5,9 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 import wandb
-from atom.training.load_config import Config
+from atom.training.create_config import Config
 
 
 def parse_train_args() -> argparse.Namespace:
@@ -192,19 +191,16 @@ def add_brownian_noise(
         Tuple[torch.Tensor, torch.Tensor]: Noised positions and velocities.
     """
     # Add noise to velocities
+    noise_pos = torch.randn_like(positions) * noise_std
     noise_vel = torch.randn_like(velocities) * noise_std
-    noisy_velocities = velocities + noise_vel
-
     noise_concat_feats = torch.randn_like(concat) * noise_std
 
     # Zero out the last entry along the last dimension
-    noise_concat_feats[..., -1] = 0
+    noise_concat_feats[..., 9:] = 0
 
     # Apply noise
-    noisy_concat_feats = concat + noise_concat_feats
-
-    # Optionally add noise to positions
-    noise_pos = torch.randn_like(positions) * noise_std
     noisy_positions = positions + noise_pos
+    noisy_velocities = velocities + noise_vel
+    noisy_concat_feats = concat + noise_concat_feats
 
     return noisy_positions, noisy_velocities, noisy_concat_feats

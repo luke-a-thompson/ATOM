@@ -3,7 +3,7 @@ import torch.nn as nn
 from atom.egno.egno_model import EGNO
 from atom.atom.atom_model import ATOM
 from atom.training.config_options import Datasets, ModelType
-from atom.training.load_config import Config
+from atom.training.create_config import Config
 
 
 def initialize_model(config: Config) -> nn.Module:
@@ -29,7 +29,6 @@ def initialize_model(config: Config) -> nn.Module:
                 num_timesteps=config.dataloader.num_timesteps,
                 positional_encoding=config.atom_config.positional_encoding,
                 rope_base=config.atom_config.rope_base,
-                use_spherical_harmonics=config.atom_config.use_spherical_harmonics,
                 use_equivariant_lifting=config.atom_config.equivariant_lifting_type,
                 rrwp_length=config.dataloader.rrwp_length,
                 value_residual_type=config.atom_config.value_residual_type,
