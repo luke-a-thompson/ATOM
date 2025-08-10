@@ -9,6 +9,8 @@ from tensordict import TensorDict
 from atom.atom.attentions import QuadraticHeterogenousCrossAttention, QuadraticSelfAttention
 from atom.atom.mlps import MLP
 from e3nn import o3
+from atom.atom.lifting_layers import StandardLift, EquivariantLift, EquivariantLiftTensorProduct
+from atom.atom.projection_layers import EquivariantProject, EquivariantMoEProject
 
 
 @final
@@ -89,7 +91,6 @@ class ATOMBlock(nn.Module):
                 )
             case AttentionType.GHCA:
                 self.attention = QuadraticHeterogenousCrossAttention(
-                    num_hetero_feats=3,
                     lifting_dim=lifting_dim,
                     num_heads=num_heads,
                     num_timesteps=self.num_timesteps,
@@ -236,39 +237,30 @@ class ATOM(nn.Module):
         self.output_heads = output_heads
         self.delta_update = delta_update
 
-        concat_irreps_1, concat_irreps_2 = self._get_concat_feature_irreps()
-        lifting_dim_irreps = get_lifting_dim_irreps(lifting_dim)
-
-        if self.rrwp_length > 0:
-            vz_irreps = f"1x1o + 1x0e + 1x0e + {self.rrwp_length}x0e"
-        else:
-            vz_irreps = "1x1o + 1x0e + 1x0e"
+        x_0_in_irreps, v_0_in_irreps, concat_feats_in_irreps = get_in_irreps(rrwp_length)
+        lifting_dim_irreps: str = get_lifting_dim_irreps(lifting_dim)
 
         match use_equivariant_lifting:
             case EquivariantLiftingType.EQUIVARIANT:
-                self.lifting_layers = nn.ModuleDict(
-                    {
-                        "x_0": o3.Linear("1x1o + 1x0e", lifting_dim_irreps),  # In: (x,y,z, ||x||)
-                        "v_0": o3.Linear("1x1o + 1x0e", lifting_dim_irreps),  # In: (vx,vy,vz, ||v||)
-                        "vz_0": o3.Linear(vz_irreps, lifting_dim_irreps),  # In: (vx, vy, vz, ||v||, Z). If rrwp_length > 0, then (vx, vy, vz, ||v||, Z, rrwp_length)
-                        "concatenated_features": o3.FullyConnectedTensorProduct(lifting_dim_irreps, lifting_dim_irreps, lifting_dim_irreps),
-                    }
+                self.lifting_layer = EquivariantLiftTensorProduct(
+                    x_0_in_irreps=x_0_in_irreps,
+                    v_0_in_irreps=v_0_in_irreps,
+                    concat_feats_in_irreps=concat_feats_in_irreps,
+                    lifting_dim_irreps=lifting_dim_irreps,
                 )
             case EquivariantLiftingType.NO_TP:
-                self.lifting_layers = nn.ModuleDict(
-                    {
-                        "x_0": o3.Linear("1x1o + 1x0e", lifting_dim_irreps),  # In: (x,y,z, ||x||)
-                        "v_0": o3.Linear("1x1o + 1x0e", lifting_dim_irreps),  # In: (vx,vy,vz, ||v||)
-                        "concatenated_features": o3.Linear(str(concat_irreps_1 + "+" + concat_irreps_2), lifting_dim_irreps),
-                    }
+                self.lifting_layer = EquivariantLift(
+                    x_0_in_irreps=x_0_in_irreps,
+                    v_0_in_irreps=v_0_in_irreps,
+                    concat_feats_in_irreps=concat_feats_in_irreps,
+                    lifting_dim_irreps=lifting_dim_irreps,
                 )
             case EquivariantLiftingType.NONE:
-                self.lifting_layers = nn.ModuleDict(
-                    {
-                        "x_0": nn.Linear(4, lifting_dim),
-                        "v_0": nn.Linear(4, lifting_dim),
-                        "concatenated_features": nn.Linear(9 + rrwp_length, lifting_dim),
-                    }
+                self.lifting_layer = StandardLift(
+                    x_0_in_features=4,
+                    v_0_in_features=4,
+                    concat_feats_in_features=9 + rrwp_length,
+                    lifting_dim=lifting_dim,
                 )
             case _:
                 raise ValueError(f"Invalid equivariant lifting type: {use_equivariant_lifting}, select from one of {bool.__members__.keys()}")
@@ -293,20 +285,9 @@ class ATOM(nn.Module):
 
         # Final projection to (x, y, z)
         if self.output_heads > 1:
-            # Router network outputs *logits* (no Softmax) so we can apply
-            # a Straight-Through Gumbel-Softmax later.
-            self.weight_pred_gate_net = MLP(
-                in_dim=lifting_dim,
-                hidden_dim=lifting_dim // 4,
-                out_dim=self.output_heads,
-                hidden_layers=2,
-                activation=SwiGLU(lifting_dim // 4),
-                dropout_p=0.1,
-            )
-
-            self.projection_layers = nn.ModuleList([o3.Linear(lifting_dim_irreps, "1x1o") for _ in range(self.output_heads)])
+            self.projection_layer = EquivariantMoEProject(lifting_dim, "1x1o", self.output_heads)
         else:
-            self.projection_layer = o3.Linear(lifting_dim_irreps, "1x1o")
+            self.projection_layer = EquivariantProject(lifting_dim_irreps, "1x1o")
 
         self._initialise_weights(self)
 
@@ -340,59 +321,21 @@ class ATOM(nn.Module):
             v_0: torch.Tensor = batch["v_0"]
             concat_features: torch.Tensor = batch["concatenated_features"]
 
-        # Lift the inputs
-        lifted_x_0: torch.Tensor = self.lifting_layers["x_0"](x_0)
-        lifted_v_0: torch.Tensor = self.lifting_layers["v_0"](v_0)
-        if self.use_equivariant_lifting == EquivariantLiftingType.EQUIVARIANT:
-            lifted_vz_0: torch.Tensor = self.lifting_layers["vz_0"](concat_features[..., 4:])
-            lifted_concat_features: torch.Tensor = self.lifting_layers["concatenated_features"](lifted_x_0, lifted_vz_0)
-        else:
-            lifted_concat_features: torch.Tensor = self.lifting_layers["concatenated_features"](concat_features)
+        ## Lift
+        lifted_x_0, lifted_v_0, lifted_concat_features = self.lifting_layer(x_0, v_0, concat_features)
 
+        ## Kernel integral
         initial_v: torch.Tensor | None = None  # Value residual: Starts as none, becomes x_0 the first layer
         for layer in self.transformer_blocks:
             lifted_x_0, initial_v = layer(lifted_x_0, lifted_v_0, lifted_concat_features, q_data=lifted_concat_features, mask=mask, initial_v=initial_v)
 
-        # Batch (x, y, z) + projection layer
-        if self.output_heads > 1:
-            gate_logits: torch.Tensor = self.weight_pred_gate_net(lifted_concat_features.mean(dim=(1, 2)))  # [B, H]
-
-            if self.training:
-                # Straight-Through Gumbel-Softmax gives a one-hot routing mask in the
-                # forward pass while keeping gradients on the soft probabilities.
-                routing_mask: torch.Tensor = F.gumbel_softmax(gate_logits, tau=1.0, hard=True, dim=-1)  # [B, H]
-
-                # Dense evaluation: compute every expert once then apply the mask.
-                expert_outputs = torch.stack([head(lifted_x_0) for head in self.projection_layers], dim=1)  # [B, H, T, N, 3]
-                routing_mask = routing_mask.view(*routing_mask.shape, 1, 1, 1)  # [B, H,1,1,1]
-                final_pred_pos = (expert_outputs * routing_mask).sum(dim=1)  # [B, T, N, 3]
-            else:
-                # Inference: pick top-1 expert and evaluate only that expert for efficiency.
-                top_expert_idx: torch.Tensor = torch.argmax(gate_logits, dim=-1)  # [B]
-
-                # Prepare tensor for results
-                final_pred_pos = torch.zeros(
-                    (*lifted_x_0.shape[:-1], 3),
-                    device=lifted_x_0.device,
-                    dtype=lifted_x_0.dtype,
-                )
-
-                for i, expert in enumerate(self.projection_layers):
-                    mask = top_expert_idx == i  # [B]
-                    if not torch.any(mask):
-                        continue
-                    expert_out = expert(lifted_x_0[mask])  # [b_selected, T, N, 3]
-                    final_pred_pos[mask] = expert_out
-        else:
-            # Single-head prediction
-            final_pred_pos: torch.Tensor = self.projection_layer(lifted_x_0)
+        ## Project
+        final_pred_pos: torch.Tensor = self.projection_layer(lifted_x_0, lifted_concat_features)
 
         if self.delta_update:
-            pred_pos = batch["x_0"][..., :3] + final_pred_pos
-        else:
-            pred_pos = final_pred_pos
+            final_pred_pos = batch["x_0"][..., :3] + final_pred_pos
 
-        return pred_pos  # Outputting the positions (x, y, z) for N nodes over T timesteps. Batched.
+        return final_pred_pos  # Outputting the positions (x, y, z) for N nodes over T timesteps. Batched.
 
     @staticmethod
     def _initialise_weights(model: nn.Module) -> None:
@@ -411,32 +354,52 @@ class ATOM(nn.Module):
                 if module.bias is not None:
                     _ = nn.init.zeros_(module.bias)
 
-    def _get_concat_feature_irreps(self) -> tuple[str, str]:
-        """
-        Returns the irreps for the concatenated features.
 
-        Returns
-        -------
-        tuple[str, str]
-            A tuple containing two strings representing the irreps
-            for the concatenated features. The first string is for
-            features derived from x_0 and v_0, and the second is for
-            features derived from v_0, Z, and optionally RRWP.
-        """
-        concat_irreps_1: str = "1x1o + 1x0e"  # (x,y,z, ||x||)
-        concat_irreps_2: str = "1x1o + 1x0e + 1x0e"  # (vx,vy,vz, ||v||, Z)
-        if self.rrwp_length > 0:
-            concat_irreps_2_rrwp: str = f"{concat_irreps_2} + {self.rrwp_length}x0e"
-        else:
-            concat_irreps_2_rrwp: str = concat_irreps_2
+#     def _get_concat_feature_irreps(self) -> tuple[str, str]:
+#         """
+#         Returns the irreps for the concatenated features.
 
-        return concat_irreps_1, concat_irreps_2_rrwp
+#         Returns
+#         -------
+#         tuple[str, str]
+#             A tuple containing two strings representing the irreps
+#             for the concatenated features. The first string is for
+#             features derived from x_0 and v_0, and the second is for
+#             features derived from v_0, Z, and optionally RRWP.
+#         """
+#         concat_irreps_1: str = "1x1o + 1x0e"  # (x,y,z, ||x||)
+#         concat_irreps_2: str = "1x1o + 1x0e + 1x0e"  # (vx,vy,vz, ||v||, Z)
+#         if self.rrwp_length > 0:
+#             concat_irreps_2_rrwp: str = f"{concat_irreps_2} + {self.rrwp_length}x0e"
+#         else:
+#             concat_irreps_2_rrwp: str = concat_irreps_2
+
+#         return concat_irreps_1, concat_irreps_2_rrwp
+
+
+# def get_lifting_dim_irreps(lifting_dim: int) -> str:
+#     """
+#     Returns the irreps for the lifting dimension.
+#     """
+#     vector_lifting_dim_irreps: int = lifting_dim // 3
+#     scalar_lifting_dim_irreps: int = lifting_dim - vector_lifting_dim_irreps * 3  # Remainder
+
+#     lifting_dim_irreps: str = f"{vector_lifting_dim_irreps}x1o + {scalar_lifting_dim_irreps}x0e"
+#     return lifting_dim_irreps
+
+
+def get_in_irreps(rrwp_length: int) -> tuple[str, str, str]:
+    x_0_in_irreps = "1x1o + 1x0e"  # (x,y,z, ||x||)
+    v_0_in_irreps = "1x1o + 1x0e"  # (vx,vy,vz, ||v||)
+
+    concat_feats_in_irreps = "1x1o + 1x0e + 1x1o + 1x0e + 1x0e"  # (x,y,z, ||x||, vx,vy,vz, ||v||, Z)
+    if rrwp_length > 0:
+        concat_feats_in_irreps += f" + {rrwp_length}x0e"
+
+    return x_0_in_irreps, v_0_in_irreps, concat_feats_in_irreps
 
 
 def get_lifting_dim_irreps(lifting_dim: int) -> str:
-    """
-    Returns the irreps for the lifting dimension.
-    """
     vector_lifting_dim_irreps: int = lifting_dim // 3
     scalar_lifting_dim_irreps: int = lifting_dim - vector_lifting_dim_irreps * 3  # Remainder
 

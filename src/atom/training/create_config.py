@@ -160,8 +160,10 @@ class TrainingConfig(BaseModel):
     batch_size: int
     epochs: int
     max_grad_norm: float
-    learned_label_noise: bool
     label_noise_std: float
+
+    class Config:
+        arbitrary_types_allowed = True
 
     @model_validator(mode="before")
     @classmethod

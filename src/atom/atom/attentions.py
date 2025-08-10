@@ -12,7 +12,6 @@ from atom.atom.positional_encodings import TemporalRoPE, RoPE, SinusoidalPositio
 class QuadraticHeterogenousCrossAttention(nn.Module):
     def __init__(
         self,
-        num_hetero_feats: int,
         lifting_dim: int,
         num_heads: int,
         num_timesteps: int,
@@ -74,7 +73,6 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         super().__init__()
 
         self.num_heads = num_heads
-        self.num_hetero_feats = num_hetero_feats
         self.lifting_dim = lifting_dim
         self.num_timesteps = num_timesteps
         self.rope_base = rope_base
@@ -102,7 +100,7 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         else:
             self.register_buffer("attention_denom", denom_init, persistent=False)
 
-        self.feature_weights = nn.Parameter(torch.randn(self.num_hetero_feats) * 0.1)
+        self.feature_weights = nn.Parameter(torch.randn(3) * 0.1)
 
         self.positional_encoding_type = positional_encoding
         self.positional_encoding: nn.Module | None = None
@@ -189,15 +187,14 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
 
         # Collect the features of shape [B, N*T, d]
         hetero_features: list[torch.Tensor | None] = [
-            x_0.view(B, T * N, d) if x_0 is not None else None,  # Flatten features if they exist
+            x_0.view(B, T * N, d) if x_0 is not None else None,
             v_0.view(B, T * N, d) if v_0 is not None else None,
             concatenated_features.view(B, T * N, d) if concatenated_features is not None else None,
         ]
-        assert len(hetero_features) == self.num_hetero_feats, f"Expected {self.num_hetero_feats} heterogeneous features but got {len(hetero_features)}"
 
         gates = F.softmax(self.feature_weights, dim=0)  # Precompute gates; ∑ gates = 1
         for i, h_feat_flat in enumerate(hetero_features):
-            if h_feat_flat is None:  # Skip if feature is None
+            if h_feat_flat is None:
                 continue
 
             # Apply sinusoidal PE to hetero features before projection
@@ -218,11 +215,13 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
             # 1) scores = Q·K^T / sqrt(d_head)
             scores = q_proj @ k_proj_i.transpose(-2, -1) / self.attention_denom.view(1, -1, 1, 1)  # Broadcasts over heads
             if key_mask_for_scores is not None:
+                pass
                 # scores shape is [B, heads, seq_q, seq_k] = [B, heads, T*N, T*N]
                 scores = scores.masked_fill(key_mask_for_scores == 0, float("-inf"))
 
             # 2) softmax over seq_k dimension (dim=-1)
             attn_weights: torch.Tensor = self.attention_dropout(F.softmax(scores, dim=-1))
+            # feat_i_out = F.scaled_dot_product_attention(q_proj, k_proj_i, v_proj_i, attn_mask=key_mask_for_scores, dropout_p=0.2, is_causal=False)
             # 3) multiply by V
             feat_i_out = attn_weights @ v_proj_i
 

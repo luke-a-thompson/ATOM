@@ -73,8 +73,8 @@ def main() -> None:
         print("=" * 80)
         print(f"Number of runs: {len(results)}")
         print(f"Molecule type: {results[0].molecule_type} ({results[0].inference_type})")
-        print(f"S2T Test Loss: {multi_results.s2t_mean*100:.2f}x10^-2 ± {multi_results.s2t_std*100:.2f}x10^-2")
         print(f"S2S Test Loss: {multi_results.s2s_mean*100:.2f}x10^-2 ± {multi_results.s2s_std*100:.2f}x10^-2")
+        print(f"S2T Test Loss: {multi_results.s2t_mean*100:.2f}x10^-2 ± {multi_results.s2t_std*100:.2f}x10^-2")
         print(f"Latency: {multi_results.latency_mean:.2f}s ± {multi_results.latency_std:.2f}s")
 
         print(f"\nIndividual results:")
@@ -86,8 +86,8 @@ def main() -> None:
         print("=" * 80)
         print(f"Model: {result.model_path.name}")
         print(f"Molecule type: {result.molecule_type} ({result.inference_type})")
-        print(f"S2T Test Loss: {result.s2t_test_loss*100:.2f}x10^-2")
         print(f"S2S Test Loss: {result.s2s_test_loss*100:.2f}x10^-2")
+        print(f"S2T Test Loss: {result.s2t_test_loss*100:.2f}x10^-2")
         print(f"Latency: {result.latency:.2f}s")
 
 

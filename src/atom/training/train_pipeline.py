@@ -35,6 +35,7 @@ def train_model(config: Config, model: nn.Module, benchmark_dir: Path, run_numbe
 
     optimizer = initialize_optimizer(config, model)
     scheduler = initialize_scheduler(config, optimizer)
+    torch.set_float32_matmul_precision("high")
 
     # Create a temporary directory for this run
     run_dir = benchmark_dir / f"run_{run_number+1}"

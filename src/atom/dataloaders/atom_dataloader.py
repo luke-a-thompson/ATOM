@@ -26,6 +26,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         molecule_type: MD17MoleculeType | RMD17MoleculeType | TG80MoleculeType | MD22MoleculeType,
         max_nodes: int | None,
         return_edge_data: bool,
+        center_data: bool = True,
         num_timesteps: int = 1,  # Number of timesteps to replicate
         explicit_hydrogen: bool = False,
         radius_graph_threshold: float = 1.6,
@@ -35,7 +36,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         train_par: float = 0.1,
         val_par: float = 0.05,
         test_par: float = 0.05,
-        seed: int = 100,
+        seed: int = 42,
         force_regenerate: bool = False,
         verbose: bool = False,
         max_edges: int | None = None,  # Maximum number of edges to pad to
@@ -59,6 +60,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         self.max_nodes: int | None = max_nodes
         self.delta_frame: int = delta_frame
         self.num_timesteps: int = num_timesteps
+        self.center_data: bool = center_data
         self.return_edge_data: bool = return_edge_data
         self.max_samples: int = max_samples
         self.verbose: bool = verbose
@@ -86,22 +88,19 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
                 positions_col = "coords"
                 charges_col = "nuclear_charges"
                 self.dft_imprecision_margin: int = 500
-                # Temp while dataset is small
                 train_par = 0.2
-                # val_par = 0.4  # Used in paper
-                # test_par = 0.4  # Used in paper
                 val_par = 0.1
                 test_par = 0.1
             case Datasets.md22:
                 full_dir = os.path.join(data_dir + "md22_npz/" + "md22_" + molecule_type + ".npz")
                 split_dir = os.path.join(split_dir + "md22_splits/" + "md22_" + molecule_type + "_split.pkl")
+                self.dft_imprecision_margin: int = 500
                 if molecule_type == MD22MoleculeType.STACHYOSE:
                     train_par = 0.2
                     val_par = 0.1
                     test_par = 0.1
                 positions_col = "R"
                 charges_col = "z"
-                self.dft_imprecision_margin: int = 500
             case _:
                 raise ValueError(f"Invalid MD17 version: {md17_version}")
 
@@ -192,8 +191,16 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
                 source_pad = torch.zeros(pad_len, dtype=self.edge_index[0].dtype)
                 target_pad = torch.zeros(pad_len, dtype=self.edge_index[1].dtype)
                 self.edge_index = (torch.cat([self.edge_index[0], source_pad], dim=0), torch.cat([self.edge_index[1], target_pad], dim=0))
+
         if self.rrwp_length > 0:
             self.rrwp: torch.Tensor = self.calculate_rrwp(one_hop_adjacency, self.rrwp_length)
+
+        if self.center_data:
+            self.x_0_mean = x_0.mean(dim=1, keepdim=True)
+            self.v_0_mean = v_0.mean(dim=1, keepdim=True)
+
+            x_0 = x_0 - self.x_0_mean
+            v_0 = v_0 - self.v_0_mean
 
         self.x_0: torch.Tensor = torch.cat([x_0, torch.norm(x_0, dim=-1, keepdim=True)], dim=-1)
         self.v_0: torch.Tensor = torch.cat([v_0, torch.norm(v_0, dim=-1, keepdim=True)], dim=-1)
@@ -734,6 +741,10 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
             sample["source_node_indices"] = self.edge_index[0].contiguous()
             sample["target_node_indices"] = self.edge_index[1].contiguous()
 
+        if self.center_data:
+            sample["x_0_mean"] = self.x_0_mean
+            sample["v_0_mean"] = self.v_0_mean
+
         return sample
 
     def __len__(self):
@@ -765,7 +776,7 @@ class MD17DynamicsDataset(MD17Dataset):
         radius_graph_threshold: float = 1.6,
         rrwp_length: int = 0,
         normalize_z: bool = False,
-        seed: int = 100,
+        seed: int = 42,
         force_regenerate: bool = False,
         egno_mode: bool = False,
         max_edges: int | None = None,
