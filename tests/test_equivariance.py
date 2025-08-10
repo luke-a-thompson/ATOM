@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 import numpy.typing as npt
-from scipy.spatial.transform import Rotation as R
+from scipy.spatial.transform import Rotation
 import pytest
 from pathlib import Path
 import argparse
@@ -13,12 +13,32 @@ from atom.training import Config, initialize_model, create_dataloaders_single, c
 from atom.inference.inference_utils import clean_state_dict_prefixes
 
 
+# Define the structure of features for rotation. This centralizes the logic and
+# makes the tests more robust to changes in feature representation.
+# It specifies which parts of the tensors are 3D vectors ("xyz") and which
+# are invariant scalars ("invariant").
+FEATURE_CONFIG: dict[str, dict[str, slice]] = {
+    "x_0": {"xyz": slice(0, 3), "invariant": slice(3, None)},
+    "v_0": {"xyz": slice(0, 3), "invariant": slice(3, None)},
+    "concatenated_features": {
+        "x_0_xyz": slice(0, 3),
+        "v_0_xyz": slice(4, 7),
+    },
+    "output": {"xyz": slice(0, 3), "invariant": slice(3, None)},
+}
+
+
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(description="Test model equivariance to 3D rotations")
-    parser.add_argument("--config", type=str, help="Path to the config file")
-    parser.add_argument("--model", type=str, help="Path to the model checkpoint")
-    parser.add_argument("--test_e3nn", action="store_true", help="Test with a simple E3NN linear layer")
+    _ = parser.add_argument("--config", type=str, help="Path to the config file", default="configs/ablations_atom/default.toml")
+    _ = parser.add_argument(
+        "--model",
+        type=str,
+        help="Path to the model checkpoint",
+        default="benchmark_runs/atom_default_singletask_09-Aug-2025_22-26-38/run_1/best_val_model.pth",
+    )
+    _ = parser.add_argument("--test_e3nn", action="store_true", help="Test with a simple E3NN linear layer")
     return parser.parse_args()
 
 
@@ -65,123 +85,90 @@ def setup_data() -> tuple[Config, torch.nn.Module, TensorDict]:
 
 def apply_rotation(data: TensorDict, rotation_matrix: npt.NDArray[np.float64]) -> TensorDict:
     """Applies a rotation matrix to the spatial components of the data dictionary."""
-    # Create a new TensorDict with the same structure
     rotated_data = data.clone()
 
-    # Rotate x_0 (positions) - shape [batch, timesteps, nodes, xyz_dim]
-    if "x_0" in rotated_data:
-        x_0 = rotated_data["x_0"]
-        # Extract the xyz coordinates (first 3 dimensions)
-        xyz = x_0[..., :3].cpu().numpy()
-        # Apply rotation to each node's coordinates
-        # Reshape to [batch*timesteps*nodes, 3] for easier rotation
-        batch_size, timesteps, nodes, _ = xyz.shape
+    def _rotate_slice(tensor: torch.Tensor, rot_mat: npt.NDArray[np.float64], xyz_slice: slice) -> torch.Tensor:
+        """Helper to rotate a specific slice of a tensor."""
+        xyz = tensor[..., xyz_slice].cpu().numpy()
+        original_shape = xyz.shape
         xyz_reshaped = xyz.reshape(-1, 3)
-        rotated_xyz = xyz_reshaped @ rotation_matrix.T
-        # Reshape back to original shape
-        rotated_xyz = rotated_xyz.reshape(batch_size, timesteps, nodes, 3)
-        # Reconstruct x_0 with rotated coordinates and original norm
-        rotated_data["x_0"] = torch.cat([torch.tensor(rotated_xyz, device=x_0.device, dtype=x_0.dtype), x_0[..., 3:]], dim=-1)  # Keep the norm part unchanged
+        rotated_xyz = xyz_reshaped @ rot_mat.T
+        rotated_xyz_tensor = torch.tensor(rotated_xyz.reshape(original_shape), device=tensor.device, dtype=tensor.dtype)
 
-    # Rotate v_0 (velocities) if present - shape [batch, timesteps, nodes, xyz_dim]
-    if "v_0" in rotated_data:
-        v_0 = rotated_data["v_0"]
-        # Extract the xyz coordinates (first 3 dimensions)
-        xyz = v_0[..., :3].cpu().numpy()
-        # Apply rotation to each node's coordinates
-        batch_size, timesteps, nodes, _ = xyz.shape
-        xyz_reshaped = xyz.reshape(-1, 3)
-        rotated_xyz = xyz_reshaped @ rotation_matrix.T
-        # Reshape back to original shape
-        rotated_xyz = rotated_xyz.reshape(batch_size, timesteps, nodes, 3)
-        # Reconstruct v_0 with rotated coordinates and original norm
-        rotated_data["v_0"] = torch.cat([torch.tensor(rotated_xyz, device=v_0.device, dtype=v_0.dtype), v_0[..., 3:]], dim=-1)  # Keep the norm part unchanged
+        new_tensor = tensor.clone()
+        new_tensor[..., xyz_slice] = rotated_xyz_tensor
+        return new_tensor
 
-    # Reconstruct concatenated_features if present
+    # Rotate simple features like x_0 and v_0
+    for key in ["x_0", "v_0"]:
+        if key in rotated_data:
+            xyz_slice = FEATURE_CONFIG[key]["xyz"]
+            rotated_data[key] = _rotate_slice(rotated_data[key], rotation_matrix, xyz_slice)
+
+    # Handle concatenated_features which may have multiple vectors
     if "concatenated_features" in rotated_data:
-        # Extract components from concatenated_features
-        # Assuming order: [x_0_xyz, x_0_norm, v_0_xyz, v_0_norm, Z]
-        features = rotated_data["concatenated_features"]
-        x_0_xyz = features[..., :3]
-        x_0_norm = features[..., 3:4]
-        v_0_xyz = features[..., 4:7]
-        v_0_norm = features[..., 7:8]
-        Z = features[..., 8:]
+        tensor = rotated_data["concatenated_features"]
+        feature_spec = FEATURE_CONFIG["concatenated_features"]
 
-        # Rotate x_0_xyz and v_0_xyz
-        x_0_xyz_np = x_0_xyz.cpu().numpy()
-        v_0_xyz_np = v_0_xyz.cpu().numpy()
+        # Create a new tensor to hold all rotated components
+        new_tensor = tensor.clone()
 
-        # Reshape for rotation
-        batch_size, timesteps, nodes, _ = x_0_xyz_np.shape
-        x_0_xyz_reshaped = x_0_xyz_np.reshape(-1, 3)
-        v_0_xyz_reshaped = v_0_xyz_np.reshape(-1, 3)
+        # Rotate each vector component specified in the config
+        for _, xyz_slice in feature_spec.items():
+            xyz = tensor[..., xyz_slice].cpu().numpy()
+            original_shape = xyz.shape
+            xyz_reshaped = xyz.reshape(-1, 3)
+            rotated_xyz = xyz_reshaped @ rotation_matrix.T
+            rotated_xyz_tensor = torch.tensor(rotated_xyz.reshape(original_shape), device=tensor.device, dtype=tensor.dtype)
+            new_tensor[..., xyz_slice] = rotated_xyz_tensor
 
-        rotated_x_0_xyz = x_0_xyz_reshaped @ rotation_matrix.T
-        rotated_v_0_xyz = v_0_xyz_reshaped @ rotation_matrix.T
-
-        # Reshape back
-        rotated_x_0_xyz = rotated_x_0_xyz.reshape(batch_size, timesteps, nodes, 3)
-        rotated_v_0_xyz = rotated_v_0_xyz.reshape(batch_size, timesteps, nodes, 3)
-
-        # Reconstruct concatenated_features
-        rotated_data["concatenated_features"] = torch.cat(
-            [
-                torch.tensor(rotated_x_0_xyz, device=features.device, dtype=features.dtype),
-                x_0_norm,
-                torch.tensor(rotated_v_0_xyz, device=features.device, dtype=features.dtype),
-                v_0_norm,
-                Z,
-            ],
-            dim=-1,
-        )
+        rotated_data["concatenated_features"] = new_tensor
 
     return rotated_data
 
 
 def test_rotation_equivariance(setup_data: tuple[Config, torch.nn.Module, TensorDict]) -> None:
     """Tests the model's equivariance to 3D rotations."""
-    config, model, data_sample = setup_data
-    device = config.training.device
+    _, model, data_sample = setup_data
 
     # 1. Get model output for the original input
     with torch.no_grad():
-        original_output = model(data_sample)  # Shape: [batch, timesteps, nodes, xyz_dim]
+        original_output = model(data_sample)
 
     # 2. Generate a random rotation matrix
-    random_rotation = R.random().as_matrix()
+    random_rotation: npt.NDArray[np.float64] = Rotation.random().as_matrix()
 
     # 3. Apply rotation to the input data
     rotated_data_sample = apply_rotation(data_sample, random_rotation)
 
     # 4. Get model output for the rotated input
     with torch.no_grad():
-        rotated_output = model(rotated_data_sample)  # Shape: [batch, timesteps, nodes, xyz_dim]
+        rotated_output = model(rotated_data_sample)
 
     # 5. Compare outputs
-    # For a model that is equivariant to rotations, the output should rotate with the input
-    # So if we rotate the input by R, the output should also rotate by R
+    output_spec = FEATURE_CONFIG["output"]
+    xyz_slice = output_spec["xyz"]
 
-    # Extract the xyz coordinates from the output tensors
-    original_xyz = original_output[..., :3].cpu().numpy()  # Shape: [batch, timesteps, nodes, 3]
-    rotated_xyz = rotated_output[..., :3].cpu().numpy()  # Shape: [batch, timesteps, nodes, 3]
+    original_xyz = original_output[..., xyz_slice].cpu().numpy()
+    rotated_xyz = rotated_output[..., xyz_slice].cpu().numpy()
 
     # Reshape for easier processing
     batch_size, timesteps, nodes, _ = original_xyz.shape
-    original_xyz_reshaped = original_xyz.reshape(-1, 3)  # Shape: [batch*timesteps*nodes, 3]
+    original_xyz_reshaped = original_xyz.reshape(-1, 3)
 
     # Apply the same rotation to the original output
-    expected_rotated_xyz = original_xyz_reshaped @ random_rotation.T  # Shape: [batch*timesteps*nodes, 3]
+    expected_rotated_xyz = original_xyz_reshaped @ random_rotation.T
     expected_rotated_xyz = expected_rotated_xyz.reshape(batch_size, timesteps, nodes, 3)
 
     # Compare the expected rotated output with the actual rotated output
     assert np.allclose(rotated_xyz, expected_rotated_xyz, atol=1e-6), "Output tensor did not rotate as expected. The model is not equivariant to rotations."
 
-    # Check if the norm part (if any) remains unchanged
-    if original_output.shape[-1] > 3:
-        original_norm = original_output[..., 3:].cpu().numpy()
-        rotated_norm = rotated_output[..., 3:].cpu().numpy()
-        assert np.allclose(original_norm, rotated_norm, atol=1e-6), "Norm part of the output changed after rotation, but should remain invariant."
+    # Check if the invariant part (if any) remains unchanged
+    invariant_slice = output_spec.get("invariant")
+    if invariant_slice and original_output.shape[-1] > xyz_slice.stop:
+        original_invariant = original_output[..., invariant_slice].cpu().numpy()
+        rotated_invariant = rotated_output[..., invariant_slice].cpu().numpy()
+        assert np.allclose(original_invariant, rotated_invariant, atol=1e-6), "Invariant part of the output changed after rotation."
 
     print("Equivariance test passed. The model is equivariant to 3D rotations.")
 
@@ -207,13 +194,13 @@ def test_e3nn_linear_equivariance() -> None:
         original_output = e3nn_linear(input_tensor)
 
     # 2. Generate a random rotation matrix
-    random_rotation = R.random().as_matrix()
+    random_rotation: npt.NDArray[np.float64] = Rotation.random().as_matrix()
 
     # 3. Apply rotation to the input
     # Reshape for easier processing
     input_reshaped = input_tensor.reshape(-1, 3).cpu().numpy()
-    rotated_input = input_reshaped @ random_rotation.T
-    rotated_input = torch.tensor(rotated_input.reshape(batch_size, timesteps, nodes, 3), device=device, dtype=input_tensor.dtype)
+    rotated_input_np = input_reshaped @ random_rotation.T
+    rotated_input = torch.tensor(rotated_input_np.reshape(batch_size, timesteps, nodes, 3), device=device, dtype=input_tensor.dtype)
 
     # 4. Get output for the rotated input
     with torch.no_grad():
