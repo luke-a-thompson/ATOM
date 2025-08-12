@@ -190,7 +190,7 @@ def plot_ablations(ablation_dir: Path, save_path: Path | None = None, error_bar_
     lower_bounds = lower_bounds * 100
     upper_bounds = upper_bounds * 100
 
-    fig, ax = plt.subplots(figsize=(5, 3))
+    fig, ax = plt.subplots(figsize=(6, 4))
 
     # Create horizontal bars with error bars
     bars = ax.barh(categories, values, color=red, alpha=0.8, edgecolor=grey, linewidth=0)

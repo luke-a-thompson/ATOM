@@ -87,6 +87,7 @@ explicit_hydrogen = false
 explicit_hydrogen_gradients = false
 radius_graph_threshold = 1.6
 rrwp_length = 0  # 0 for no RRWPs
+time_encoding_enabled = false
 normalize_z = false
 persistent_workers = true
 num_workers = 6
@@ -102,7 +103,6 @@ epochs = 1000
 use_amp = false
 amp_dtype = "bfloat16"
 max_grad_norm = 1.0
-learned_label_noise = false
 label_noise_std = 0.1
 
 [optimizer]
@@ -129,8 +129,8 @@ positional_encoding = "trope"
 rope_base = 1000
 learnable_attention_denom = false
 # Feature parameters
-use_spherical_harmonics = false
-equivariant_lifting_type = "equivariant"
+lifting_type = "equivariant"
+projection_type = "equivariant"
 # Layer parameters
 norm = "rms"
 activation = "swiglu"

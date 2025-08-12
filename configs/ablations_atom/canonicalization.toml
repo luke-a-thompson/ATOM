@@ -2,8 +2,8 @@
 use_wandb = false
 
 [benchmark]
-model_type = "EGNO"
-benchmark_name = "paper_rmd17"
+model_type = "atom"
+benchmark_name = "Fully Equivariant"
 compile = true
 compile_trace = false
 runs = 3
@@ -12,22 +12,23 @@ log_weights = false
 [dataloader]
 multitask = false
 delta_T = 3000
-dataset = "rmd17"
+dataset = "md17"
 num_timesteps = 8
 
 # Single-task dataloader parameters
-molecule_type = "azobenzene"  # Iterates through single-task learning on these molecules
+molecule_type = "aspirin"  # Iterates through single-task learning on these molecules
 
 # Multitask dataloader parameters
-train_molecules = ["benzene"]
-validation_molecules = ["benzene"]
-test_molecules = ["benzene"]
+# train_molecules = ["aspirin", "benzene", "ethanol", "toluene", "uracil", "salicylic", "malonaldehyde"]
+# validation_molecules = ["aspirin", "benzene", "ethanol", "toluene", "uracil", "salicylic", "malonaldehyde"]
+# test_molecules = ["naphthalene"]
 
 # Other dataloader parameters
 explicit_hydrogen = false
 explicit_hydrogen_gradients = false
 radius_graph_threshold = 1.6
 rrwp_length = 0  # 0 for no RRWPs
+time_encoding_enabled = false
 normalize_z = false
 persistent_workers = true
 num_workers = 4
@@ -38,19 +39,18 @@ force_regenerate = true
 [training]
 device = "cuda"
 seed = 42
-batch_size = 100
+batch_size = 128
 epochs = 1000
-use_amp = false
+use_amp = true
 amp_dtype = "bfloat16"
 max_grad_norm = 1.0
-learned_label_noise = false
 label_noise_std = 0.1
 
 [optimizer]
 type = "adamw"
 learning_rate = 1e-3
-weight_decay = 1e-5
-adam_betas = [0.9, 0.999]
+weight_decay = 1e-4
+adam_betas = [0.90, 0.999]
 adam_eps = 1e-10
 
 [scheduler]
@@ -58,7 +58,7 @@ type = "none"
 
 [atom_config]
 # Architecture parameters
-num_layers = 5
+num_layers = 6
 num_heads = 8
 lifting_dim = 128
 # Output parameters
@@ -70,8 +70,8 @@ positional_encoding = "trope"
 rope_base = 1000
 learnable_attention_denom = false
 # Feature parameters
-use_spherical_harmonics = false
-equivariant_lifting_type = "equivariant"
+lifting_type = "canonicalization"
+projection_type = "decanonicalization"
 # Layer parameters
 norm = "rms"
 activation = "swiglu"

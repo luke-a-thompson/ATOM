@@ -273,6 +273,15 @@ poetry run inference --runs \
 
 </details>
 
+<details>
+<summary>Commands to generate zero-shot results for ATOM with varying number of RRWP elements</summary>
+
+```bash
+uv run equivariance --config configs/ablations_atom/default.toml --model benchmark_runs/MD17_ablations/ablation_gtno_default_aspirin_07-Apr-2025_00-18-34/run_1/best_val_model.pth
+```
+
+</details>
+
 ## Pre-trained Models
 
 You can download pretrained models here:

@@ -9,6 +9,7 @@ from atom.atom.attentions import QuadraticHeterogenousCrossAttention, QuadraticS
 from atom.atom.mlps import MLP
 from atom.atom.lifting_layers import StandardLift, EquivariantLift, EquivariantLiftTensorProduct, CanonicalizationLift
 from atom.atom.projection_layers import EquivariantProject, EquivariantMoEProject, DecanonicalizationProject
+import math
 
 
 @final
@@ -184,6 +185,7 @@ class ATOM(nn.Module):
         lifting_type: LiftingType,
         projection_type: ProjectionType,
         rrwp_length: int,
+        time_encoding_enabled: bool,
         value_residual_type: ValueResidualType,
         learnable_attention_denom: bool,
     ) -> None:
@@ -237,6 +239,7 @@ class ATOM(nn.Module):
         self.rrwp_length = rrwp_length
         self.output_heads = output_heads
         self.delta_update = delta_update
+        self.time_encoding_enabled = time_encoding_enabled
 
         x_0_in_irreps, v_0_in_irreps, concat_feats_in_irreps = get_in_irreps(rrwp_length)
         lifting_dim_irreps: str = get_lifting_dim_irreps(lifting_dim)
@@ -346,6 +349,25 @@ class ATOM(nn.Module):
             so3_matrix = None  # type: ignore
             x_0_mean = None  # type: ignore
 
+        # Add sinusoidal time encoding to token features (standard PE as elementwise addition)
+        if self.time_encoding_enabled:
+            # Require absolute time indices in the batch when enabled
+            if "time_indices" not in batch:
+                raise ValueError("time_encoding_enabled=True but 'time_indices' not found in batch. Ensure dataloader provides absolute time indices.")
+            time_idx: torch.Tensor = batch["time_indices"].to(lifted_concat_features.device)
+            if time_idx.dim() == 1:
+                time_idx = time_idx.unsqueeze(0).expand(lifted_concat_features.shape[0], -1)
+
+            # Build sinusoid from absolute indices on-the-fly to avoid fixed max_len
+            bsz, tsteps = time_idx.shape
+            D = self.lifting_dim
+            position = time_idx.float().unsqueeze(-1)  # [B, T, 1]
+            div_term = torch.exp(torch.arange(0, D, 2, device=position.device).float() * (-math.log(10000.0) / D))  # [D/2]
+            pe = torch.zeros(bsz, tsteps, D, device=position.device)
+            pe[..., 0::2] = torch.sin(position * div_term)
+            pe[..., 1::2] = torch.cos(position * div_term)
+            lifted_concat_features = lifted_concat_features + pe.unsqueeze(2)
+
         ## Kernel integral
         initial_v: torch.Tensor | None = None  # Value residual: Starts as none, becomes x_0 the first layer
         for layer in self.transformer_blocks:
@@ -379,6 +401,18 @@ class ATOM(nn.Module):
                 _ = nn.init.kaiming_normal_(module.weight, nonlinearity="leaky_relu")
                 if module.bias is not None:
                     _ = nn.init.zeros_(module.bias)
+
+    def _build_time_positional_encoding(self, num_timesteps: int, dim: int) -> torch.Tensor:
+        """Classic transformer sinusoidal positional encoding for time indices.
+
+        Returns a tensor of shape [num_timesteps, dim].
+        """
+        pe = torch.zeros(num_timesteps, dim)
+        position = torch.arange(0, num_timesteps, dtype=torch.float32).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, dim, 2).float() * (-math.log(10000.0) / dim))
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        return pe
 
 
 #     def _get_concat_feature_irreps(self) -> tuple[str, str]:

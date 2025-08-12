@@ -82,6 +82,8 @@ class DataloaderConfig(BaseModel):
     explicit_hydrogen_gradients: bool
     radius_graph_threshold: float
     rrwp_length: int
+    # Time positional encoding (sinusoidal). When enabled, added inside model (no dim change)
+    time_encoding_enabled: bool
     normalize_z: bool
     persistent_workers: bool
     num_workers: int

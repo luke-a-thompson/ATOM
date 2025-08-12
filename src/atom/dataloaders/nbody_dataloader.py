@@ -167,6 +167,10 @@ class NBodyDynamicsDataset(Dataset[dict[str, torch.Tensor]]):
             "charges": self.replicated_charges[i],
             "x_t": trajectory_gt,
         }
+        # Provide absolute local time indices per-sample [T]
+        delta_frame = self.frame_T - self.frame_0
+        inc = torch.arange(1, self.num_timesteps + 1, dtype=torch.long)
+        sample["time_indices"] = self.frame_0 + delta_frame * inc // self.num_timesteps
         if self.return_edge_data:
             sample["source_node_indices"] = torch.tensor(self.edges[0], dtype=torch.long).contiguous()
             sample["target_node_indices"] = torch.tensor(self.edges[1], dtype=torch.long).contiguous()

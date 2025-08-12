@@ -19,15 +19,16 @@ num_timesteps = 8
 molecule_type = "aspirin"  # Iterates through single-task learning on these molecules
 
 # Multitask dataloader parameters
-train_molecules = ["aspirin", "benzene", "ethanol", "toluene", "uracil", "salicylic", "malonaldehyde"]
-validation_molecules = ["aspirin", "benzene", "ethanol", "toluene", "uracil", "salicylic", "malonaldehyde"]
-test_molecules = ["naphthalene"]
+# train_molecules = ["aspirin", "benzene", "ethanol", "toluene", "uracil", "salicylic", "malonaldehyde"]
+# validation_molecules = ["aspirin", "benzene", "ethanol", "toluene", "uracil", "salicylic", "malonaldehyde"]
+# test_molecules = ["naphthalene"]
 
 # Other dataloader parameters
 explicit_hydrogen = false
 explicit_hydrogen_gradients = false
 radius_graph_threshold = 1.6
 rrwp_length = 0  # 0 for no RRWPs
+time_encoding_enabled = false
 normalize_z = false
 persistent_workers = true
 num_workers = 4
@@ -38,19 +39,18 @@ force_regenerate = true
 [training]
 device = "cuda"
 seed = 42
-batch_size = 100
+batch_size = 128
 epochs = 1000
-use_amp = false
+use_amp = true
 amp_dtype = "bfloat16"
 max_grad_norm = 1.0
-learned_label_noise = false
 label_noise_std = 0.1
 
 [optimizer]
 type = "adamw"
 learning_rate = 1e-3
-weight_decay = 1e-5
-adam_betas = [0.9, 0.999]
+weight_decay = 1e-4
+adam_betas = [0.90, 0.999]
 adam_eps = 1e-10
 
 [scheduler]
@@ -58,7 +58,7 @@ type = "none"
 
 [atom_config]
 # Architecture parameters
-num_layers = 5
+num_layers = 6
 num_heads = 8
 lifting_dim = 128
 # Output parameters
@@ -67,10 +67,11 @@ delta_update = false
 # Attention parameters
 heterogenous_attention_type = "ghca"
 positional_encoding = "trope"
+rope_base = 1000
 learnable_attention_denom = false
 # Feature parameters
-use_spherical_harmonics = false
-equivariant_lifting_type = "none"
+lifting_type = "none"
+projection_type = "equivariant"
 # Layer parameters
 norm = "rms"
 activation = "swiglu"

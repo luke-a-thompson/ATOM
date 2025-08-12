@@ -721,6 +721,12 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
             "v_t": self.v_t[i].contiguous(),
         }
 
+        # Attach absolute time indices if available (computed in MD17DynamicsDataset)
+        if hasattr(self, "time_indices"):
+            sample["time_indices"] = self.time_indices[i].contiguous()
+
+        # No time PE concatenation here; time PE will be added inside the model if enabled
+
         if self.max_nodes is not None:
             mask = torch.cat(
                 [
@@ -828,6 +834,10 @@ class MD17DynamicsDataset(MD17Dataset):
             f"replicated_z_0.shape: {self.replicated_z_0.shape}\n"
             f"replicated_mole_idx.shape: {self.replicated_mole_idx.shape}"
         )
+
+        # Absolute time indices per sample and timestep [max_samples, T]
+        inc = (self.delta_frame * np.arange(1, self.num_timesteps + 1) // self.num_timesteps).astype(np.int64)
+        self.time_indices: torch.Tensor = torch.tensor(self.split_times[:, None] + inc[None, :], dtype=torch.long)
 
     def get_dynamic_target_frames(self) -> tuple[torch.Tensor, torch.Tensor]:
         split_times = self.split_times

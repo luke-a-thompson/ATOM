@@ -28,6 +28,7 @@ explicit_hydrogen = false
 explicit_hydrogen_gradients = false
 radius_graph_threshold = 1.6
 rrwp_length = 0  # 0 for no RRWPs
+time_encoding_enabled = false
 normalize_z = false
 persistent_workers = true
 num_workers = 4
@@ -49,7 +50,7 @@ label_noise_std = 0.1
 type = "adamw"
 learning_rate = 1e-3
 weight_decay = 1e-4
-adam_betas = [0.95, 0.999]
+adam_betas = [0.90, 0.999]
 adam_eps = 1e-10
 
 [scheduler]
@@ -69,8 +70,8 @@ positional_encoding = "trope"
 rope_base = 1000
 learnable_attention_denom = false
 # Feature parameters
-lifting_type = "canonicalization"
-projection_type = "decanonicalization"
+lifting_type = "equivariant"
+projection_type = "equivariant"
 # Layer parameters
 norm = "rms"
 activation = "swiglu"

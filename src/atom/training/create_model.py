@@ -32,6 +32,7 @@ def initialize_model(config: Config) -> nn.Module:
                 lifting_type=config.atom_config.lifting_type,
                 projection_type=config.atom_config.projection_type,
                 rrwp_length=config.dataloader.rrwp_length,
+                time_encoding_enabled=config.dataloader.time_encoding_enabled,
                 value_residual_type=config.atom_config.value_residual_type,
                 learnable_attention_denom=config.atom_config.learnable_attention_denom,
             )

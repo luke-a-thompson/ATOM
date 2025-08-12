@@ -35,6 +35,7 @@ dependencies = [
 [project.scripts]
 train = "atom.train:main"
 inference = "atom.inference:main"
+equivariance = "atom.cli.equivariance:main"
 
 [dependency-groups]
 dev = [
