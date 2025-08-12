@@ -2,15 +2,13 @@ from typing import final, override
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from atom.atom.activations import ReLU2, SwiGLU
-from atom.training.config_options import FFNActivation, NormType, ValueResidualType, AttentionType, EquivariantLiftingType, PositionalEncodingType
+from atom.training.config_options import FFNActivation, NormType, ValueResidualType, AttentionType, LiftingType, PositionalEncodingType, ProjectionType
 from tensordict import TensorDict
 from atom.atom.attentions import QuadraticHeterogenousCrossAttention, QuadraticSelfAttention
 from atom.atom.mlps import MLP
-from e3nn import o3
-from atom.atom.lifting_layers import StandardLift, EquivariantLift, EquivariantLiftTensorProduct
-from atom.atom.projection_layers import EquivariantProject, EquivariantMoEProject
+from atom.atom.lifting_layers import StandardLift, EquivariantLift, EquivariantLiftTensorProduct, CanonicalizationLift
+from atom.atom.projection_layers import EquivariantProject, EquivariantMoEProject, DecanonicalizationProject
 
 
 @final
@@ -183,7 +181,8 @@ class ATOM(nn.Module):
         num_timesteps: int,
         positional_encoding: PositionalEncodingType,
         rope_base: float,
-        use_equivariant_lifting: EquivariantLiftingType,
+        lifting_type: LiftingType,
+        projection_type: ProjectionType,
         rrwp_length: int,
         value_residual_type: ValueResidualType,
         learnable_attention_denom: bool,
@@ -218,7 +217,7 @@ class ATOM(nn.Module):
             Type of positional encoding to use.
         rope_base : float
             Base for rotary positional embeddings.
-        use_equivariant_lifting : EquivariantLiftingType
+        lifting_type : EquivariantLiftingType
             Type of equivariant lifting to use.
         rrwp_length : int
             Length of relative random walk positional encoding.
@@ -231,8 +230,10 @@ class ATOM(nn.Module):
 
         assert num_timesteps > 1, f"num_timesteps must be greater than 1. Got {num_timesteps}"
         self.num_timesteps = num_timesteps
-        self.use_equivariant_lifting = use_equivariant_lifting
+        self.use_equivariant_lifting = lifting_type
         self.lifting_dim = lifting_dim
+        self.lifting_type = lifting_type
+        self.projection_type = projection_type
         self.rrwp_length = rrwp_length
         self.output_heads = output_heads
         self.delta_update = delta_update
@@ -240,30 +241,37 @@ class ATOM(nn.Module):
         x_0_in_irreps, v_0_in_irreps, concat_feats_in_irreps = get_in_irreps(rrwp_length)
         lifting_dim_irreps: str = get_lifting_dim_irreps(lifting_dim)
 
-        match use_equivariant_lifting:
-            case EquivariantLiftingType.EQUIVARIANT:
+        match lifting_type:
+            case LiftingType.EQUIVARIANT:
                 self.lifting_layer = EquivariantLiftTensorProduct(
                     x_0_in_irreps=x_0_in_irreps,
                     v_0_in_irreps=v_0_in_irreps,
                     concat_feats_in_irreps=concat_feats_in_irreps,
                     lifting_dim_irreps=lifting_dim_irreps,
                 )
-            case EquivariantLiftingType.NO_TP:
+            case LiftingType.NO_TP:
                 self.lifting_layer = EquivariantLift(
                     x_0_in_irreps=x_0_in_irreps,
                     v_0_in_irreps=v_0_in_irreps,
                     concat_feats_in_irreps=concat_feats_in_irreps,
                     lifting_dim_irreps=lifting_dim_irreps,
                 )
-            case EquivariantLiftingType.NONE:
+            case LiftingType.NON_EQUIVARIANT:
                 self.lifting_layer = StandardLift(
                     x_0_in_features=4,
                     v_0_in_features=4,
                     concat_feats_in_features=9 + rrwp_length,
                     lifting_dim=lifting_dim,
                 )
+            case LiftingType.CANONICALIZATION:
+                self.lifting_layer = CanonicalizationLift(
+                    x_0_in_irreps=x_0_in_irreps,
+                    v_0_in_irreps=v_0_in_irreps,
+                    concat_feats_in_irreps=concat_feats_in_irreps,
+                    lifting_dim_irreps=lifting_dim_irreps,
+                )
             case _:
-                raise ValueError(f"Invalid equivariant lifting type: {use_equivariant_lifting}, select from one of {bool.__members__.keys()}")
+                raise ValueError(f"Invalid equivariant lifting type: {lifting_type}, select from one of {bool.__members__.keys()}")
 
         self.transformer_blocks = nn.Sequential(
             *[
@@ -284,10 +292,19 @@ class ATOM(nn.Module):
         )
 
         # Final projection to (x, y, z)
-        if self.output_heads > 1:
-            self.projection_layer = EquivariantMoEProject(lifting_dim, "1x1o", self.output_heads)
-        else:
-            self.projection_layer = EquivariantProject(lifting_dim_irreps, "1x1o")
+        match projection_type:
+            case ProjectionType.EQUIVARIANT:
+                if self.output_heads > 1:
+                    self.projection_layer = EquivariantMoEProject(lifting_dim, "1x1o", self.output_heads)
+                else:
+                    self.projection_layer = EquivariantProject(lifting_dim_irreps, "1x1o")
+            case ProjectionType.DECANONICALIZATION:
+                if self.output_heads > 1:
+                    raise ValueError("Decanonicalization projection does not support multiple output heads")
+                else:
+                    self.projection_layer = DecanonicalizationProject(lifting_dim_irreps, "1x1o")
+            case _:
+                raise ValueError(f"Invalid projection type: {projection_type}, select from one of {ProjectionType.__members__.keys()}")
 
         self._initialise_weights(self)
 
@@ -322,7 +339,12 @@ class ATOM(nn.Module):
             concat_features: torch.Tensor = batch["concatenated_features"]
 
         ## Lift
-        lifted_x_0, lifted_v_0, lifted_concat_features = self.lifting_layer(x_0, v_0, concat_features)
+        if self.lifting_type == LiftingType.CANONICALIZATION:
+            lifted_x_0, lifted_v_0, lifted_concat_features, so3_matrix, x_0_mean = self.lifting_layer(x_0, v_0, concat_features, mask=mask)
+        else:
+            lifted_x_0, lifted_v_0, lifted_concat_features = self.lifting_layer(x_0, v_0, concat_features)
+            so3_matrix = None  # type: ignore
+            x_0_mean = None  # type: ignore
 
         ## Kernel integral
         initial_v: torch.Tensor | None = None  # Value residual: Starts as none, becomes x_0 the first layer
@@ -330,7 +352,11 @@ class ATOM(nn.Module):
             lifted_x_0, initial_v = layer(lifted_x_0, lifted_v_0, lifted_concat_features, q_data=lifted_concat_features, mask=mask, initial_v=initial_v)
 
         ## Project
-        final_pred_pos: torch.Tensor = self.projection_layer(lifted_x_0, lifted_concat_features)
+        if self.projection_type == ProjectionType.DECANONICALIZATION:
+            assert so3_matrix is not None and x_0_mean is not None, "Decanonicalization requires canonicalization outputs (Q and x_0_mean)."
+            final_pred_pos: torch.Tensor = self.projection_layer(lifted_x_0, lifted_concat_features, so3_matrix, x_0_mean)
+        else:
+            final_pred_pos: torch.Tensor = self.projection_layer(lifted_x_0, lifted_concat_features)
 
         if self.delta_update:
             final_pred_pos = batch["x_0"][..., :3] + final_pred_pos

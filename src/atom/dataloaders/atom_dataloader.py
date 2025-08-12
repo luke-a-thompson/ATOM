@@ -26,7 +26,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         molecule_type: MD17MoleculeType | RMD17MoleculeType | TG80MoleculeType | MD22MoleculeType,
         max_nodes: int | None,
         return_edge_data: bool,
-        center_data: bool = True,
+        center_data: bool = False,
         num_timesteps: int = 1,  # Number of timesteps to replicate
         explicit_hydrogen: bool = False,
         radius_graph_threshold: float = 1.6,
@@ -151,6 +151,9 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         self.replicated_v_0: torch.Tensor = self._replicate_tensor(self.v_0)
         self.replicated_concatenated_features: torch.Tensor = self._replicate_tensor(self.concatenated_features)
         self.replicated_z_0: torch.Tensor = self._replicate_tensor(self.z_0)
+        if self.center_data:
+            self.replicated_x_0_mean = self.replicated_x_0[..., :3].mean(dim=(2), keepdim=True)
+            self.replicated_x_0[..., :3] = self.replicated_x_0[..., :3] - self.replicated_x_0_mean
 
         # Assert that self.replicated_x_0 contains identical data across all timesteps
         # This means for each sample, all timesteps should have the same initial positions
@@ -194,13 +197,6 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
 
         if self.rrwp_length > 0:
             self.rrwp: torch.Tensor = self.calculate_rrwp(one_hop_adjacency, self.rrwp_length)
-
-        if self.center_data:
-            self.x_0_mean = x_0.mean(dim=1, keepdim=True)
-            self.v_0_mean = v_0.mean(dim=1, keepdim=True)
-
-            x_0 = x_0 - self.x_0_mean
-            v_0 = v_0 - self.v_0_mean
 
         self.x_0: torch.Tensor = torch.cat([x_0, torch.norm(x_0, dim=-1, keepdim=True)], dim=-1)
         self.v_0: torch.Tensor = torch.cat([v_0, torch.norm(v_0, dim=-1, keepdim=True)], dim=-1)
@@ -742,8 +738,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
             sample["target_node_indices"] = self.edge_index[1].contiguous()
 
         if self.center_data:
-            sample["x_0_mean"] = self.x_0_mean
-            sample["v_0_mean"] = self.v_0_mean
+            sample["x_0_mean"] = self.replicated_x_0_mean[i].contiguous()
 
         return sample
 

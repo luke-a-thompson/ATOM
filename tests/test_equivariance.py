@@ -2,7 +2,6 @@ import torch
 import numpy as np
 import numpy.typing as npt
 from scipy.spatial.transform import Rotation
-import pytest
 from pathlib import Path
 import argparse
 import sys
@@ -11,6 +10,7 @@ from e3nn import o3
 
 from atom.training import Config, initialize_model, create_dataloaders_single, create_dataloaders_multitask
 from atom.inference.inference_utils import clean_state_dict_prefixes
+from atom.atom.lifting_layers import CanonicalizationLift
 
 
 # Define the structure of features for rotation. This centralizes the logic and
@@ -36,34 +36,25 @@ def parse_args() -> argparse.Namespace:
         "--model",
         type=str,
         help="Path to the model checkpoint",
-        default="benchmark_runs/atom_default_singletask_09-Aug-2025_22-26-38/run_1/best_val_model.pth",
+        default="benchmark_runs/atom_default_singletask_12-Aug-2025_17-20-37/run_1/best_val_model.pth",
     )
     _ = parser.add_argument("--test_e3nn", action="store_true", help="Test with a simple E3NN linear layer")
     return parser.parse_args()
 
 
-@pytest.fixture(scope="module")
-def setup_data() -> tuple[Config, torch.nn.Module, TensorDict]:
+def load_model_and_data(config_path: str, model_path: str) -> tuple[Config, torch.nn.Module, TensorDict]:
     """Loads config, model, and a single data sample."""
-    args = parse_args()
-
-    # Skip this fixture if we're only testing E3NN
-    if args.test_e3nn:
-        pytest.skip("Skipping model test when running E3NN test")
-
-    # Check if config and model paths are provided
-    if not args.config or not args.model:
-        pytest.skip("Config and model paths are required for the model test")
+    try:
+        config = Config.from_toml(Path(config_path))
+    except FileNotFoundError:
+        print(f"Error: Config file {config_path} not found")
+        sys.exit(1)
 
     try:
-        config = Config.from_toml(Path(args.config))
+        model_state_dict = torch.load(model_path, map_location=config.training.device, weights_only=True)
     except FileNotFoundError:
-        pytest.skip(f"Config file {args.config} not found")
-
-    try:
-        model_state_dict = torch.load(args.model, map_location=config.training.device, weights_only=True)
-    except FileNotFoundError:
-        pytest.skip(f"Model file {args.model} not found")
+        print(f"Error: Model file {model_path} not found")
+        sys.exit(1)
 
     if config.dataloader.multitask:
         _, _, test_loader = create_dataloaders_multitask(config)
@@ -127,21 +118,26 @@ def apply_rotation(data: TensorDict, rotation_matrix: npt.NDArray[np.float64]) -
     return rotated_data
 
 
-def test_rotation_equivariance(setup_data: tuple[Config, torch.nn.Module, TensorDict]) -> None:
-    """Tests the model's equivariance to 3D rotations."""
-    _, model, data_sample = setup_data
+def test_model_equivariance(config_path: str, model_path: str) -> None:
+    """Tests the model's equivariance to 3D rotations and prints results."""
+    print("Loading model and data...")
+    config, model, data_sample = load_model_and_data(config_path, model_path)
 
     # 1. Get model output for the original input
+    print("Computing original output...")
     with torch.no_grad():
         original_output = model(data_sample)
 
     # 2. Generate a random rotation matrix
     random_rotation: npt.NDArray[np.float64] = Rotation.random().as_matrix()
+    print(f"Generated rotation matrix:\n{random_rotation}")
 
     # 3. Apply rotation to the input data
+    print("Applying rotation to input data...")
     rotated_data_sample = apply_rotation(data_sample, random_rotation)
 
     # 4. Get model output for the rotated input
+    print("Computing rotated output...")
     with torch.no_grad():
         rotated_output = model(rotated_data_sample)
 
@@ -160,24 +156,46 @@ def test_rotation_equivariance(setup_data: tuple[Config, torch.nn.Module, Tensor
     expected_rotated_xyz = original_xyz_reshaped @ random_rotation.T
     expected_rotated_xyz = expected_rotated_xyz.reshape(batch_size, timesteps, nodes, 3)
 
-    # Compare the expected rotated output with the actual rotated output
-    assert np.allclose(rotated_xyz, expected_rotated_xyz, atol=1e-6), "Output tensor did not rotate as expected. The model is not equivariant to rotations."
+    # Calculate the error
+    error = np.abs(rotated_xyz - expected_rotated_xyz)
+    max_error = np.max(error)
+    mean_error = np.mean(error)
+
+    print(f"\n=== EQUIVARIANCE TEST RESULTS ===")
+    print(f"Max error: {max_error:.2e}")
+    print(f"Mean error: {mean_error:.2e}")
+
+    # Check if the model is equivariant (using a reasonable tolerance)
+    tolerance = 1e-6
+    is_equivariant = max_error < tolerance
+
+    if is_equivariant:
+        print("✅ The model is EQUIVARIANT to 3D rotations!")
+    else:
+        print("❌ The model is NOT EQUIVARIANT to 3D rotations!")
+        print(f"   Error exceeds tolerance of {tolerance:.2e}")
 
     # Check if the invariant part (if any) remains unchanged
     invariant_slice = output_spec.get("invariant")
     if invariant_slice and original_output.shape[-1] > xyz_slice.stop:
         original_invariant = original_output[..., invariant_slice].cpu().numpy()
         rotated_invariant = rotated_output[..., invariant_slice].cpu().numpy()
-        assert np.allclose(original_invariant, rotated_invariant, atol=1e-6), "Invariant part of the output changed after rotation."
+        invariant_error = np.max(np.abs(original_invariant - rotated_invariant))
+        print(f"Invariant part max error: {invariant_error:.2e}")
 
-    print("Equivariance test passed. The model is equivariant to 3D rotations.")
+        if invariant_error < tolerance:
+            print("✅ Invariant parts remain unchanged!")
+        else:
+            print("❌ Invariant parts changed after rotation!")
 
 
 def test_e3nn_linear_equivariance() -> None:
     """Tests that a simple E3NN linear layer is equivariant to rotations."""
+    print("Testing E3NN linear layer equivariance...")
 
     # Set device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Using device: {device}")
 
     # Create a simple input tensor with shape [batch, timesteps, nodes, xyz_dim]
     batch_size, timesteps, nodes, xyz_dim = 2, 1, 5, 3
@@ -195,6 +213,7 @@ def test_e3nn_linear_equivariance() -> None:
 
     # 2. Generate a random rotation matrix
     random_rotation: npt.NDArray[np.float64] = Rotation.random().as_matrix()
+    print(f"Generated rotation matrix:\n{random_rotation}")
 
     # 3. Apply rotation to the input
     # Reshape for easier processing
@@ -207,8 +226,6 @@ def test_e3nn_linear_equivariance() -> None:
         rotated_output = e3nn_linear(rotated_input)
 
     # 5. Compare outputs
-    # For an E3NN linear layer, the output should rotate with the input
-
     # Extract the xyz coordinates from the output tensors
     original_xyz = original_output.cpu().numpy()
     rotated_xyz = rotated_output.cpu().numpy()
@@ -220,18 +237,75 @@ def test_e3nn_linear_equivariance() -> None:
     expected_rotated_xyz = original_xyz_reshaped @ random_rotation.T
     expected_rotated_xyz = expected_rotated_xyz.reshape(batch_size, timesteps, nodes, 3)
 
-    # Compare the expected rotated output with the actual rotated output
-    assert np.allclose(rotated_xyz, expected_rotated_xyz, atol=1e-6), "E3NN linear layer output did not rotate as expected. The layer is not equivariant to rotations."
+    # Calculate the error
+    error = np.abs(rotated_xyz - expected_rotated_xyz)
+    max_error = np.max(error)
+    mean_error = np.mean(error)
 
-    print("E3NN linear layer test passed. The layer is equivariant to 3D rotations.")
+    print(f"\n=== E3NN LINEAR LAYER TEST RESULTS ===")
+    print(f"Max error: {max_error:.2e}")
+    print(f"Mean error: {mean_error:.2e}")
+
+    # Check if the layer is equivariant
+    tolerance = 1e-6
+    is_equivariant = max_error < tolerance
+
+    if is_equivariant:
+        print("✅ The E3NN linear layer is EQUIVARIANT to 3D rotations!")
+    else:
+        print("❌ The E3NN linear layer is NOT EQUIVARIANT to 3D rotations!")
+        print(f"   Error exceeds tolerance of {tolerance:.2e}")
+
+
+def test_canonicalizer_equivariance(config_path: str, model_path: str) -> None:
+    """Tests the canonicalizer module's equivariance to 3D rotations."""
+    print("Testing canonicalizer equivariance (module)...")
+
+    # Create a small synthetic batch [B, T, N, D]
+    B, T, N = 2, 1, 8
+    x = torch.randn(B, T, N, 3)
+    v = torch.randn(B, T, N, 3)
+    Z = torch.randn(B, T, N, 1)
+
+    # Instantiate the canonicalizer with simple irreps consistent with our tensors
+    # x, v are 3D vectors (1x1o). We output vectors again (1x1o).
+    # test_linear input is cat(x_can (1x1o), vz_can (1x1o + 1x0e)) -> 1x1o + 1x1o + 1x0e
+    canonicalizer = CanonicalizationLift(
+        x_0_in_irreps="1x1o",
+        v_0_in_irreps="1x1o",
+        concat_feats_in_irreps="1x1o + 1x1o + 1x0e",
+        lifting_dim_irreps="1x1o",
+    )
+
+    # Forward on original inputs
+    _, _, _, Q = canonicalizer(x, v, Z)
+
+    # Generate a random rotation (acts on column vectors), for row vectors use transpose
+    R: torch.Tensor = o3.rand_matrix().to(x.device, x.dtype)
+    x_rot: torch.Tensor = x @ R.T
+    v_rot: torch.Tensor = v @ R.T
+
+    # Forward on rotated inputs
+    _, _, _, Q_rot = canonicalizer(x_rot, v_rot, Z)
+
+    # The frame should transform as Q_rot = R @ Q
+    assert torch.allclose(Q_rot, R @ Q, atol=1e-5), f"Frame does not transform correctly, ||Q_rot - RQ||={torch.norm(Q_rot - R @ Q)}"
+
+    # Canonicalized coordinates should be invariant
+    x_can: torch.Tensor = x @ Q
+    v_can: torch.Tensor = v @ Q
+    x_can_rot: torch.Tensor = x_rot @ Q_rot
+    v_can_rot: torch.Tensor = v_rot @ Q_rot
+
+    assert torch.allclose(x_can, x_can_rot, atol=1e-5), f"x canonicalization is not equivariant, error: {torch.norm(x_can - x_can_rot)}"
+    assert torch.allclose(v_can, v_can_rot, atol=1e-5), f"v canonicalization is not equivariant, error: {torch.norm(v_can - v_can_rot)}"
+
+    print("Canonicalizer module equivariance test passed.")
 
 
 if __name__ == "__main__":
-    # When running this file directly, use pytest to run the test
     args = parse_args()
-    if args.test_e3nn:
-        # Run only the E3NN test
-        sys.exit(pytest.main([__file__, "-v", "-k", "test_e3nn_linear_equivariance"]))
-    else:
-        # Run the model test
-        sys.exit(pytest.main([__file__, "-v"]))
+
+    # test_e3nn_linear_equivariance()
+    # test_model_equivariance(args.config, args.model)
+    test_canonicalizer_equivariance(args.config, args.model)

@@ -7,7 +7,7 @@ import torch
 from atom.training.config_options import (
     FFNActivation,
     AttentionType,
-    EquivariantLiftingType,
+    LiftingType,
     Datasets,
     MD17MoleculeType,
     RMD17MoleculeType,
@@ -19,6 +19,7 @@ from atom.training.config_options import (
     SchedulerType,
     ValueResidualType,
     PositionalEncodingType,
+    ProjectionType,
 )
 
 
@@ -230,7 +231,8 @@ class ATOMConfig(BaseModel):
     rope_base: float
     learnable_attention_denom: bool
     # Feature parameters
-    equivariant_lifting_type: EquivariantLiftingType
+    lifting_type: LiftingType
+    projection_type: ProjectionType
     # Layer parameters
     norm: NormType
     activation: FFNActivation
@@ -252,6 +254,14 @@ class ATOMConfig(BaseModel):
     def validate_lifting_dim_and_num_heads(self) -> "ATOMConfig":
         if self.lifting_dim % self.num_heads != 0:
             raise ValueError("'lifting_dim' must be divisible by 'num_heads'.")
+        return self
+
+    @model_validator(mode="after")
+    def validate_lifting_type_and_projection_type(self) -> "ATOMConfig":
+        if self.lifting_type == LiftingType.CANONICALIZATION and self.projection_type != ProjectionType.DECANONICALIZATION:
+            raise ValueError("If 'lifting_type' is 'canonicalization', 'projection_type' must be 'decanonicalization'.")
+        elif self.lifting_type == LiftingType.NON_EQUIVARIANT and self.projection_type == ProjectionType.DECANONICALIZATION:
+            raise ValueError("If 'lifting_type' is 'none', 'projection_type' must be 'equivariant'.")
         return self
 
 

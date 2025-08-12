@@ -184,10 +184,17 @@ class AttentionType(StrEnum):
 
 
 @final
-class EquivariantLiftingType(StrEnum):
-    NONE = "none"
+class LiftingType(StrEnum):
+    NON_EQUIVARIANT = "non_equivariant"
     EQUIVARIANT = "equivariant"
     NO_TP = "no_tensor_product"
+    CANONICALIZATION = "canonicalization"
+
+
+@final
+class ProjectionType(StrEnum):
+    EQUIVARIANT = "equivariant"
+    DECANONICALIZATION = "decanonicalization"
 
 
 @final

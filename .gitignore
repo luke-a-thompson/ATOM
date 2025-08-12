@@ -1,7 +1,6 @@
 /.mypy_cache
 /.venv
 /__pycache__
-/data
 /trained_models
 /dist
 
@@ -19,3 +18,8 @@ __pycache__/
 /benchmark_runs
 /configs/old
 /data_raw
+/data/crossval_folds
+/data/molecule_images
+/data/similar_molecules_results.txt
+/data/*md*
+*.pkl
