@@ -35,7 +35,37 @@ def initialize_optimizer(config: Config, model: nn.Module) -> torch.optim.Optimi
         case OptimizerType.ADAM_MINI:
             return pt_optim.AdamMini(model.parameters(), lr=config.optimizer.learning_rate, weight_decay=config.optimizer.weight_decay)
         case OptimizerType.MUON:
-            return pt_optim.Muon(model.parameters(), lr=config.optimizer.learning_rate, weight_decay=config.optimizer.weight_decay)
+            # Muon requires explicit param groups with 'use_muon' set.
+            muon_params = [p for p in model.parameters() if getattr(p, "ndim", 0) >= 2]
+            non_muon_params = [p for p in model.parameters() if getattr(p, "ndim", 0) < 2]
+
+            param_groups = []
+            if len(muon_params) > 0:
+                param_groups.append(
+                    {
+                        "params": muon_params,
+                        "use_muon": True,
+                        "lr": config.optimizer.learning_rate,
+                        "weight_decay": config.optimizer.weight_decay,
+                    }
+                )
+
+            if len(non_muon_params) > 0:
+                param_groups.append(
+                    {
+                        "params": non_muon_params,
+                        "use_muon": False,
+                        # Use same LR unless specified otherwise in optimizer config
+                        "lr": config.optimizer.learning_rate,
+                        # Apply weight decay consistently
+                        "weight_decay": config.optimizer.weight_decay,
+                        # Respect user config for internal AdamW
+                        "betas": tuple(config.optimizer.adam_betas),
+                        "eps": config.optimizer.adam_eps,
+                    }
+                )
+
+            return pt_optim.Muon(param_groups)
         case _:
             raise ValueError(f"Invalid optimizer type: {config.optimizer.type}")
 
