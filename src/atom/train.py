@@ -1,3 +1,4 @@
+from pathlib import Path
 import wandb
 
 from atom.training import (
@@ -13,14 +14,15 @@ from atom.training import (
 def main() -> None:
     args = parse_train_args()
     if args.config:
-        config = Config.from_toml(args.config)
+        single_config_path: Path = Path(args.config)
+        config = Config.from_toml(single_config_path)
         _ = wandb.init(project="ATOM", name=config.benchmark.benchmark_name, config=dict(config), mode="disabled" if not config.wandb.use_wandb else "online")
         set_environment_variables(config)
 
         if config.dataloader.multitask:
-            multitask_benchmark(config)
+            multitask_benchmark(config, single_config_path)
         else:
-            singletask_benchmark(config)
+            singletask_benchmark(config, single_config_path)
     elif args.configs:
         for config_path in get_config_files(args.configs):
             try:
@@ -31,9 +33,9 @@ def main() -> None:
             set_environment_variables(config)
 
             if config.dataloader.multitask:
-                multitask_benchmark(config)
+                multitask_benchmark(config, config_path)
             else:
-                singletask_benchmark(config)
+                singletask_benchmark(config, config_path)
     else:
         raise ValueError("No config file or directory provided")
 

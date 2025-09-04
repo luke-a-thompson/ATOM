@@ -1,5 +1,6 @@
 from datetime import datetime
 from pathlib import Path
+from shutil import copy2
 
 import torch
 from tqdm.std import tqdm
@@ -15,7 +16,7 @@ from atom.training import (
 )
 
 
-def singletask_benchmark(config: Config) -> None:
+def singletask_benchmark(config: Config, config_path: Path | None = None) -> None:
     """
     Benchmarking function with JSON results logging.
 
@@ -31,6 +32,13 @@ def singletask_benchmark(config: Config) -> None:
     timestamp = datetime.now().strftime("%d-%b-%Y_%H-%M-%S")
     benchmark_dir = Path(f"benchmark_runs/{config.benchmark.benchmark_name}_singletask_{timestamp}")
     benchmark_dir.mkdir(parents=True, exist_ok=True)
+
+    # Save the exact TOML config used for this benchmark
+    if config_path is not None and config_path.exists():
+        try:
+            _ = copy2(config_path, benchmark_dir / "config.toml")
+        except Exception as e:
+            tqdm.write(f"Warning: failed to copy config TOML: {e}")
     single_run_results: list[SingleRunResults] = []
 
     runs_progress_bar = tqdm(range(config.benchmark.runs), leave=False, unit="run", position=1)
@@ -85,11 +93,18 @@ def singletask_benchmark(config: Config) -> None:
     tqdm.write(f"Total trainable params: {sum(p.numel() for p in model.parameters() if p.requires_grad):,}")
 
 
-def multitask_benchmark(config: Config) -> None:
+def multitask_benchmark(config: Config, config_path: Path | None = None) -> None:
     # Create a directory for this molecule's benchmark
     timestamp = datetime.now().strftime("%d-%b-%Y_%H-%M-%S")
     benchmark_dir = Path(f"benchmark_runs/{config.benchmark.benchmark_name}_multitask_{timestamp}")
     benchmark_dir.mkdir(parents=True, exist_ok=True)
+
+    # Save the exact TOML config used for this benchmark
+    if config_path is not None and config_path.exists():
+        try:
+            _ = copy2(config_path, benchmark_dir / "config.toml")
+        except Exception as e:
+            tqdm.write(f"Warning: failed to copy config TOML: {e}")
     run_results: list[SingleRunResults] = []
 
     runs_progress_bar = tqdm(range(config.benchmark.runs), leave=False, unit="run", position=1)
