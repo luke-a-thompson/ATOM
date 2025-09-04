@@ -1,8 +1,10 @@
 import importlib.util
 import tomllib
 from pathlib import Path
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, model_validator, field_validator, BeforeValidator
 import torch
+from typing import Annotated
+from pydantic import Field, PositiveInt, NonNegativeFloat, NonNegativeInt
 
 from atom.training.config_options import (
     FFNActivation,
@@ -23,6 +25,29 @@ from atom.training.config_options import (
 )
 
 
+def _to_torch_dtype(value: object) -> torch.dtype:
+    if isinstance(value, torch.dtype):
+        return value
+    if isinstance(value, str):
+        if value == "float16":
+            return torch.float16
+        if value == "bfloat16":
+            return torch.bfloat16
+        raise ValueError(f"Invalid dtype name: {value}")
+    raise ValueError(f"Invalid dtype value: {value}")
+
+
+def _to_torch_device(value: object) -> torch.device:
+    if isinstance(value, torch.device):
+        return value
+    if isinstance(value, (str, int)):
+        try:
+            return torch.device(value)
+        except (TypeError, ValueError) as e:
+            raise ValueError(f"Could not convert {value} to torch.device") from e
+    raise ValueError(f"Invalid device value: {value}")
+
+
 class WandbConfig(BaseModel):
     use_wandb: bool
 
@@ -32,7 +57,7 @@ class BenchmarkConfig(BaseModel):
     model_type: ModelType
     compile: bool
     compile_trace: bool
-    runs: int
+    runs: Annotated[PositiveInt, Field(description="Must be greater than 0.")]
     log_weights: bool
 
     @model_validator(mode="before")
@@ -45,24 +70,19 @@ class BenchmarkConfig(BaseModel):
             values["benchmark_name"] = user_input
         return values
 
-    @model_validator(mode="after")
-    def validate_compile(self) -> "BenchmarkConfig":
-        if self.compile and torch.cuda.get_device_capability() < (7, 0):
+    @field_validator("compile")
+    @classmethod
+    def check_compile(cls, value: bool) -> bool:
+        if value and torch.cuda.get_device_capability() < (7, 0):
             raise ValueError("CUDA 7.0 or higher is required to compile the model. We recommend CUDA 11.0 or higher.")
-        return self
+        return value
 
-    @model_validator(mode="after")
-    def validate_runs(self) -> "BenchmarkConfig":
-        if self.runs < 1:
-            raise ValueError("'runs' must be greater than 0.")
-        return self
-
-    @model_validator(mode="after")
-    def validate_log_weights(self) -> "BenchmarkConfig":
-        if self.log_weights:
-            if importlib.util.find_spec("matplotlib") is None:
-                raise ValueError("If 'log_weights' is True, matplotlib must be installed.")
-        return self
+    @field_validator("log_weights")
+    @classmethod
+    def check_log_weights(cls, value: bool) -> bool:
+        if value and importlib.util.find_spec("matplotlib") is None:
+            raise ValueError("If 'log_weights' is True, matplotlib must be installed.")
+        return value
 
 
 class DataloaderConfig(BaseModel):
@@ -76,50 +96,46 @@ class DataloaderConfig(BaseModel):
     validation_molecules: list[MD17MoleculeType | RMD17MoleculeType | TG80MoleculeType | MD22MoleculeType] | None = None
     test_molecules: list[MD17MoleculeType | RMD17MoleculeType | TG80MoleculeType | MD22MoleculeType] | None = None
 
-    num_timesteps: int
-    delta_T: int
+    num_timesteps: Annotated[PositiveInt, Field(description="Must be greater than 0.")]
+    delta_T: Annotated[PositiveInt, Field(description="Must be greater than 0.")]
     explicit_hydrogen: bool
     explicit_hydrogen_gradients: bool
-    radius_graph_threshold: float
-    rrwp_length: int
+    radius_graph_threshold: Annotated[NonNegativeFloat, Field(description="Must be greater than or equal to 0.0.")]
+    rrwp_length: Annotated[NonNegativeInt, Field(description="Must be greater than or equal to 0.")]
     # Time positional encoding (sinusoidal). When enabled, added inside model (no dim change)
     time_encoding_enabled: bool
     normalize_z: bool
     persistent_workers: bool
-    num_workers: int
+    num_workers: Annotated[NonNegativeInt, Field(description="Must be greater than or equal to 0.")]
     pin_memory: bool
-    prefetch_factor: int
+    prefetch_factor: Annotated[PositiveInt, Field(description="Must be greater than 0.")]
     force_regenerate: bool
 
     @model_validator(mode="after")
-    def validate_multitask(self) -> "DataloaderConfig":
-        if self.multitask and (not self.train_molecules or not self.validation_molecules or not self.test_molecules):
-            raise ValueError("If 'multitask' is True, 'train_molecules', 'validation_molecules', and 'test_molecules' must be specified.")
-        return self
+    def validate_consistency(self) -> "DataloaderConfig":
+        # explicit hydrogen gradients implies explicit hydrogen
+        if self.explicit_hydrogen_gradients and not self.explicit_hydrogen:
+            raise ValueError(
+                "If 'explicit_hydrogen_gradients' is True, 'explicit_hydrogen' must also be True. You cannot calculate the gradients for hydrogen atoms without them being present in the graph."
+            )
 
-    @model_validator(mode="after")
-    def validate_train_molecules(self) -> "DataloaderConfig":
-        if self.multitask and self.train_molecules and self.validation_molecules and self.test_molecules:
-            # Check for shared molecules between train, validation, and test sets
+        # multitask presence checks
+        if self.multitask:
+            if not self.train_molecules or not self.validation_molecules or not self.test_molecules:
+                raise ValueError("If 'multitask' is True, 'train_molecules', 'validation_molecules', and 'test_molecules' must be specified.")
+
+            # overlap checks
             train_set = set(self.train_molecules)
             val_set = set(self.validation_molecules)
             test_set = set(self.test_molecules)
             if train_set.intersection(val_set):
                 raise ValueError(f"Train and validation molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(val_set))}")
-
             if train_set.intersection(test_set):
                 raise ValueError(f"Train and test molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(test_set))}.")
-
             if val_set.intersection(test_set):
                 raise ValueError(f"Validation and test molecule sets overlap: {', '.join(str(mol) for mol in val_set.intersection(test_set))}")
 
-        return self
-
-    @model_validator(mode="after")
-    def validate_dataset(self) -> "DataloaderConfig":
-        """Validate that the molecule types match the MD17 version."""
-
-        # Convert string molecules to appropriate enum type based on version
+        # dataset-specific enum type enforcement
         match self.dataset:
             case Datasets.md17:
                 enum_type = MD17MoleculeType
@@ -146,45 +162,19 @@ class DataloaderConfig(BaseModel):
 
         return self
 
-    @model_validator(mode="after")
-    def validate_explicit_hydrogen_gradients(self) -> "DataloaderConfig":
-        if self.explicit_hydrogen_gradients and not self.explicit_hydrogen:
-            raise ValueError(
-                "If 'explicit_hydrogen_gradients' is True, 'explicit_hydrogen' must also be True. You cannot calculate the gradients for hydrogen atoms without them being present in the graph."
-            )
-        return self
-
 
 class TrainingConfig(BaseModel):
-    device: torch.device
+    device: Annotated[torch.device, BeforeValidator(_to_torch_device)]
     use_amp: bool
-    amp_dtype: torch.dtype
+    amp_dtype: Annotated[torch.dtype, BeforeValidator(_to_torch_dtype)]
     seed: int
-    batch_size: int
-    epochs: int
-    max_grad_norm: float
-    label_noise_std: float
+    batch_size: Annotated[PositiveInt, Field(description="Must be greater than 0.")]
+    epochs: Annotated[PositiveInt, Field(description="Must be greater than 0.")]
+    max_grad_norm: Annotated[NonNegativeFloat, Field(description="Must be greater than or equal to 0.0.")]
+    label_noise_std: Annotated[NonNegativeFloat, Field(description="Label noise standard deviation must be greater than or equal to 0.0.")]
 
     class Config:
-        arbitrary_types_allowed = True
-
-    @model_validator(mode="before")
-    @classmethod
-    def convert_dtype_to_torch_dtype(cls, values: dict[str, object]) -> dict[str, object]:
-        dtype_value = values.get("amp_dtype")
-        if dtype_value is not None:
-            if isinstance(dtype_value, str):
-                try:
-                    values["amp_dtype"] = getattr(torch, dtype_value)
-                except AttributeError:
-                    raise ValueError(f"Invalid dtype name: {dtype_value}. Must be a valid torch dtype like 'float16' or 'bfloat16'")
-        return values
-
-    @model_validator(mode="after")
-    def validate_brownian_noise_std(self) -> "TrainingConfig":
-        if self.label_noise_std < 0.0:
-            raise ValueError("'brownian_noise_std' must be 0.0 or greater.")
-        return self
+        arbitrary_types_allowed: bool = True
 
     @model_validator(mode="after")
     def validate_amp_dtype(self) -> "TrainingConfig":
@@ -192,27 +182,13 @@ class TrainingConfig(BaseModel):
             raise ValueError("'amp_dtype' must be 'float16' or 'bfloat16' if 'use_amp' is True.")
         return self
 
-    @model_validator(mode="before")
-    @classmethod
-    def convert_device_to_torch_device(cls, values: dict[str, object]) -> dict[str, object]:
-        device_value = values.get("device")
-        if device_value is not None:
-            if not isinstance(device_value, (str, int, torch.device)):
-                raise ValueError(f"Invalid type for device: {device_value}")
-
-            try:
-                values["device"] = torch.device(device_value)
-            except (TypeError, ValueError) as e:
-                raise ValueError(f"Could not convert {device_value} to torch.device: {e}")
-        return values
-
 
 class OptimizerConfig(BaseModel):
     type: OptimizerType
-    learning_rate: float
-    weight_decay: float
+    learning_rate: Annotated[NonNegativeFloat, Field(description="Must be greater than or equal to 0.0.")]
+    weight_decay: Annotated[NonNegativeFloat, Field(description="Must be greater than or equal to 0.0.")]
     adam_betas: tuple[float, float]
-    adam_eps: float
+    adam_eps: Annotated[NonNegativeFloat, Field(description="Must be greater than or equal to 0.0.")]
 
 
 class SchedulerConfig(BaseModel):
@@ -221,16 +197,16 @@ class SchedulerConfig(BaseModel):
 
 class ATOMConfig(BaseModel):
     # Architecture parameters
-    num_layers: int
-    num_heads: int
-    lifting_dim: int
+    num_layers: Annotated[PositiveInt, Field(description="Must be greater than 0.")]
+    num_heads: Annotated[PositiveInt, Field(description="Must be greater than 0.")]
+    lifting_dim: Annotated[int, Field(strict=True, ge=2, multiple_of=2, description="Must be even and greater than 2.")]
     # Output parameters
-    output_heads: int
+    output_heads: Annotated[PositiveInt, Field(description="Must be greater than 0.")]
     delta_update: bool
     # Attention parameters
     heterogenous_attention_type: AttentionType
     positional_encoding: PositionalEncodingType
-    rope_base: float
+    rope_base: Annotated[NonNegativeFloat, Field(description="Must be greater than or equal to 0.0.")]
     learnable_attention_denom: bool
     # Feature parameters
     lifting_type: LiftingType
@@ -241,19 +217,7 @@ class ATOMConfig(BaseModel):
     value_residual_type: ValueResidualType
 
     @model_validator(mode="after")
-    def validate_output_heads(self) -> "ATOMConfig":
-        if self.output_heads < 1:
-            raise ValueError("'output_heads' must be greater than 0.")
-        return self
-
-    @model_validator(mode="after")
-    def validate_rope_base(self) -> "ATOMConfig":
-        if self.rope_base <= 0.0:
-            raise ValueError("'rope_base' must be greater than 0.0.")
-        return self
-
-    @model_validator(mode="after")
-    def validate_lifting_dim_and_num_heads(self) -> "ATOMConfig":
+    def validate_lifting_dim(self) -> "ATOMConfig":
         if self.lifting_dim % self.num_heads != 0:
             raise ValueError("'lifting_dim' must be divisible by 'num_heads'.")
         return self
@@ -268,25 +232,13 @@ class ATOMConfig(BaseModel):
 
 
 class EGNOConfig(BaseModel):
-    num_layers: int
-    lifting_dim: int
+    num_layers: Annotated[PositiveInt, Field(description="Must be greater than 0.")]
+    lifting_dim: Annotated[int, Field(strict=True, ge=2, multiple_of=2, description="Must be even and greater than 2.")]
     activation: FFNActivation
     normalise_scalars: bool
     use_time_conv: bool
-    num_fourier_modes: int
+    num_fourier_modes: Annotated[PositiveInt, Field(description="Must be greater than 0.")]
     time_embed_dim: int
-
-    @model_validator(mode="after")
-    def validate_lifting_dim(self) -> "EGNOConfig":
-        if self.lifting_dim % 2 != 0:
-            raise ValueError("'lifting_dim' must be even.")
-        return self
-
-    @model_validator(mode="after")
-    def validate_num_fourier_modes(self) -> "EGNOConfig":
-        if self.num_fourier_modes < 1:
-            raise ValueError("'num_fourier_modes' must be greater than 0.")
-        return self
 
 
 class Config(BaseModel):
