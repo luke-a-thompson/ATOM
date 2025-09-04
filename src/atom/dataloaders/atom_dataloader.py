@@ -10,6 +10,19 @@ import torch.nn.functional as F
 from atom.training.config_options import DataPartition, Datasets, MD17MoleculeType, RMD17MoleculeType, TG80MoleculeType, MD22MoleculeType
 
 
+# Centralized stick definitions per molecule (indices assume no hydrogens)
+MOLECULE_STICKS: dict[str, list[tuple[int, int]]] = {
+    "benzene": [(0, 1), (2, 3), (4, 5)],
+    "aspirin": [(0, 2), (1, 3), (5, 6), (7, 10), (11, 12)],
+    "ethanol": [(0, 1)],
+    "malonaldehyde": [(1, 2)],
+    "naphthalene": [(0, 1), (2, 3), (4, 9), (5, 6), (7, 8)],
+    "salicylic": [(0, 9), (1, 2), (4, 5), (6, 7)],
+    "toluene": [(2, 3), (5, 6), (0, 1)],
+    "uracil": [(0, 1), (3, 4)],
+}
+
+
 class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
     """
     MD17 Dataset
@@ -69,22 +82,38 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         self.normalize_z: bool = normalize_z
         self.egno_mode: bool = egno_mode
         self.max_edges: int | None = max_edges
+        # Predeclare attributes for type checkers
+        self.split_times: npt.NDArray[np.int_] = np.array([], dtype=np.int_)
+        self.cfg: dict[str, list[tuple[int, int]] | list[list[int]]] = {}
+        self.replicated_x_0_mean: torch.Tensor = torch.empty(0)
+        self.edge_attr: torch.Tensor = torch.empty(0, 4, dtype=torch.float32)
+        self.edge_index: tuple[torch.Tensor, torch.Tensor] = (
+            torch.empty(0, dtype=torch.long),
+            torch.empty(0, dtype=torch.long),
+        )
+        self.time_indices: torch.Tensor = torch.empty(0, dtype=torch.long)
+        # Resolve molecule name from enum/value robustly
+        try:
+            molecule_name: str = str(molecule_type.value)
+        except Exception:
+            molecule_name = str(molecule_type)
+
         match md17_version:
             case Datasets.md17:
-                full_dir = os.path.join(data_dir + "md17_npz/" + "md17_" + molecule_type + ".npz")
-                split_dir = os.path.join(split_dir + "md17_splits/" + "md17_" + molecule_type + "_split.pkl")
+                full_dir = os.path.join(data_dir, "md17_npz", f"md17_{molecule_name}.npz")
+                split_dir = os.path.join(split_dir, "md17_splits", f"md17_{molecule_name}_split.pkl")
                 positions_col = "R"
                 charges_col = "z"
                 self.dft_imprecision_margin: int = 10_000
             case Datasets.rmd17:
-                full_dir = os.path.join(data_dir + "rmd17_npz/" + "rmd17_" + molecule_type + ".npz")
-                split_dir = os.path.join(split_dir + "rmd17_splits/" + "rmd17_" + molecule_type + "_split.pkl")
+                full_dir = os.path.join(data_dir, "rmd17_npz", f"rmd17_{molecule_name}.npz")
+                split_dir = os.path.join(split_dir, "rmd17_splits", f"rmd17_{molecule_name}_split.pkl")
                 positions_col = "coords"
                 charges_col = "nuclear_charges"
                 self.dft_imprecision_margin: int = 10_000
             case Datasets.tg80:
-                full_dir = os.path.join(data_dir + "tg80_npz/" + "tg80_" + molecule_type + ".npz")
-                split_dir = os.path.join(split_dir + "tg80_splits/" + "tg80_" + molecule_type + "_split.pkl")
+                full_dir = os.path.join(data_dir, "tg80_npz", f"tg80_{molecule_name}.npz")
+                split_dir = os.path.join(split_dir, "tg80_splits", f"tg80_{molecule_name}_split.pkl")
                 positions_col = "coords"
                 charges_col = "nuclear_charges"
                 self.dft_imprecision_margin: int = 500
@@ -92,8 +121,8 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
                 val_par = 0.1
                 test_par = 0.1
             case Datasets.md22:
-                full_dir = os.path.join(data_dir + "md22_npz/" + "md22_" + molecule_type + ".npz")
-                split_dir = os.path.join(split_dir + "md22_splits/" + "md22_" + molecule_type + "_split.pkl")
+                full_dir = os.path.join(data_dir, "md22_npz", f"md22_{molecule_name}.npz")
+                split_dir = os.path.join(split_dir, "md22_splits", f"md22_{molecule_name}_split.pkl")
                 self.dft_imprecision_margin: int = 500
                 if molecule_type == MD22MoleculeType.STACHYOSE:
                     train_par = 0.2
@@ -179,10 +208,20 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
 
         one_hop_adjacency, two_hop_adjacency = self._compute_adjacency_matrix(x, self.num_nodes, self.radius_graph_threshold)
 
-        if self.return_edge_data and not self.egno_mode:
-            self.edge_attr, self.edge_index = self._build_edge_attributes(one_hop_adjacency, two_hop_adjacency, torch.tensor(z), x_0)
-        elif self.egno_mode:
-            self.edge_attr, self.edge_index = self._build_edge_attributes_with_cfg(one_hop_adjacency, two_hop_adjacency, torch.tensor(z), x_0)
+        if self.return_edge_data:
+            stick_set: set[tuple[int, int]] | None = None
+            if self.egno_mode:
+                # Build stick set from cfg with explicit typing
+                if "Stick" in self.cfg:
+                    stick_pairs: list[tuple[int, int]] = []
+                    for pair in self.cfg["Stick"]:
+                        i = int(pair[0])
+                        j = int(pair[1])
+                        if i > j:
+                            i, j = j, i
+                        stick_pairs.append((i, j))
+                    stick_set = set(stick_pairs)
+            self.edge_attr, self.edge_index = self._build_edge_attributes(one_hop_adjacency, two_hop_adjacency, torch.tensor(z), x_0, stick_set)
         if self.max_edges is not None and self.egno_mode:
             current_edges = self.edge_attr.shape[0]
             if current_edges < self.max_edges:
@@ -253,7 +292,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         ]
 
         if self.rrwp_length > 0:
-            rrwp = self.rrwp.unsqueeze(0).expand(self.max_samples, -1, -1)  # Expand from [1, 6, 8] to [max_samples, 6, 8]
+            rrwp = self.rrwp.unsqueeze(0).expand(self.x_0.shape[0], -1, -1)  # Expand to match actual sample count
             features_to_concat.append(rrwp)
 
         concatenated_features = torch.cat(features_to_concat, dim=-1)
@@ -270,9 +309,9 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
             torch.Tensor: The replicated tensor.
         """
         # Add new time dimension
-        assert (
-            tensor.shape[0] == self.max_samples
-        ), f"Tensor shape: {tensor.shape}, max_samples: {self.max_samples}. Molecule type: {self.molecule_type} for split: {self.data_partition}"
+        assert tensor.shape[0] == len(
+            self.split_times
+        ), f"Tensor shape: {tensor.shape}, expected samples: {len(self.split_times)}. Molecule type: {self.molecule_type} for split: {self.data_partition}"
         tensor_with_time = tensor.unsqueeze(1)
 
         # Expand along time dimension to num_timesteps
@@ -449,20 +488,20 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
             )
 
         # Compute two-hop connections
-        two_hop_edges: torch.Tensor = (one_hop_edges @ one_hop_edges).clamp(max=1)
-        two_hop_edges.fill_diagonal_(0)
+        two_hop_all: torch.Tensor = (one_hop_edges @ one_hop_edges).clamp(max=1)
+        two_hop_all.fill_diagonal_(0)
+        # Exclude direct neighbors from two-hop set
+        two_hop_only: torch.Tensor = (two_hop_all - one_hop_edges).clamp(min=0)
 
-        assert one_hop_edges.shape == two_hop_edges.shape == (num_atoms, num_atoms)
+        assert one_hop_edges.shape == two_hop_only.shape == (num_atoms, num_atoms)
 
         if self.verbose and self.data_partition == DataPartition.train:
-            one_hop_edges = one_hop_edges.sum()
-            two_hop_only_adjacency = (two_hop_edges - one_hop_edges).clamp(min=0)
-            two_hop_edges = two_hop_only_adjacency.sum()
-            total_edges = one_hop_edges + two_hop_edges
+            one_hop_count = int(one_hop_edges.sum().item() // 2)
+            two_hop_count = int(two_hop_only.sum().item() // 2)
+            total_edges = one_hop_count + two_hop_count
+            print(f"[{self.molecule_type}] Total edges: {total_edges}. One-hop: {one_hop_count}, Two-hop: {two_hop_count}.")
 
-            print(f"[{self.molecule_type}] Total edges: {int(total_edges / 2)}. One-hop: {int(one_hop_edges / 2)}, Two-hop: {int(two_hop_edges / 2)}.")
-
-        return one_hop_edges, two_hop_edges
+        return one_hop_edges, two_hop_only
 
     def _build_edge_attributes(
         self,
@@ -470,129 +509,47 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         two_hop_adjacency: torch.Tensor,
         z: torch.Tensor,
         x_0: torch.Tensor,
+        stick_set: set[tuple[int, int]] | None = None,
     ) -> tuple[torch.Tensor, tuple[torch.Tensor, torch.Tensor]]:
         """
-        Args:
-            one_hop_adjacency: One-hop adjacency matrix
-            two_hop_adjacency: Two-hop adjacency matrix
-            z: Atom types
-            x_0: Atom positions (multiple frames; frame 0 is used for edge computation)
+        Vectorized edge attribute builder supporting optional stick indicators.
 
-        Returns:
-            edge_attr: Tensor of shape (num_edges, 4) where each row contains:
-                [source feature, target feature, edge type (1 for one-hop, 2 for two-hop), distance].
-            edge_index: Tuple of two torch.Tensor (sources, targets).
-
-        In EGNO parlance:
-            Source_indices: rows
-            Target_indices: cols
-            Edge_index: edges
+        Returns edge_attr with columns: [z_i, z_j, edge_type (1 or 2), stick_ind or distance]
+        If stick_set is provided, the 4th column is stick_ind (0/1). Otherwise it is distance.
         """
+        # Indices for one- and two-hop edges
+        one_idx = one_hop_adjacency.nonzero(as_tuple=False)
+        two_idx = two_hop_adjacency.nonzero(as_tuple=False)
 
-        n_node = z.shape[0]
-        edge_attr: list[list[float]] = []
-        source_indices: list[int] = []
-        target_indices: list[int] = []
+        if one_idx.numel() == 0 and two_idx.numel() == 0:
+            return torch.empty(0, 4, dtype=torch.float32), (
+                torch.empty(0, dtype=torch.long),
+                torch.empty(0, dtype=torch.long),
+            )
 
-        x_0_frame_one = x_0[0]  # use frame 0 to compute edges
-        for i in range(n_node):
-            for j in range(n_node):
-                if i == j:
-                    continue
-                else:
-                    first_frame_distance = np.linalg.norm(x_0_frame_one[i] - x_0_frame_one[j]).item()
-                    if one_hop_adjacency[i][j]:
-                        source_indices.append(i)
-                        target_indices.append(j)
-                        edge_attr.append([z[i].item(), z[j].item(), 1.0, first_frame_distance])
-                        assert not two_hop_adjacency[i, j], f"Conflict at ({i}, {j})"
-                    if two_hop_adjacency[i][j]:
-                        source_indices.append(i)
-                        target_indices.append(j)
-                        edge_attr.append([z[i].item(), z[j].item(), 2.0, first_frame_distance])
-                        assert not one_hop_adjacency[i, j], f"Conflict at ({i}, {j})"
+        sources = torch.cat([one_idx[:, 0], two_idx[:, 0]], dim=0).long()
+        targets = torch.cat([one_idx[:, 1], two_idx[:, 1]], dim=0).long()
 
-        edge_index = (
-            torch.Tensor(source_indices),
-            torch.Tensor(target_indices),
-        )
-        edge_attr_tensor = torch.Tensor(np.array(edge_attr))
-        return edge_attr_tensor, edge_index
+        # Edge type: 1 for one-hop, 2 for two-hop
+        edge_type = torch.cat([torch.ones(one_idx.size(0)), 2 * torch.ones(two_idx.size(0))], dim=0).float().unsqueeze(1)
 
-    def _build_edge_attributes_with_cfg(
-        self,
-        one_hop_adjacency: torch.Tensor,
-        two_hop_adjacency: torch.Tensor,
-        z: torch.Tensor,  # Use the processed z (potentially without H)
-        x_0: torch.Tensor,
-    ) -> tuple[torch.Tensor, tuple[torch.Tensor, torch.Tensor]]:
-        """
-        Args:
-            one_hop_adjacency: One-hop adjacency matrix
-            two_hop_adjacency: Two-hop adjacency matrix
-            z: Atom types (potentially filtered)
-            x_0: Atom positions (multiple frames; frame 0 is used for edge computation)
+        z_i = z[sources].float().unsqueeze(1)
+        z_j = z[targets].float().unsqueeze(1)
 
-        Returns:
-            edge_attr: Tensor of shape (num_edges, 4) where each row contains:
-                [source feature (z_i), target feature (z_j), edge type (1 or 2), stick_ind (0 or 1)].
-            edge_index: Tuple of two torch.Tensor (sources, targets).
-        """
+        if stick_set is None:
+            # Use distance as 4th feature
+            x0 = x_0[0]
+            d = (x0[sources] - x0[targets]).norm(dim=1, keepdim=True)
+            edge_attr = torch.cat([z_i, z_j, edge_type, d], dim=1)
+        else:
+            # Use stick indicator as 4th feature
+            pairs = torch.stack([sources, targets], dim=1)
+            is_stick = torch.tensor([tuple(sorted(p.tolist())) in stick_set for p in pairs], dtype=torch.float32).unsqueeze(1)
+            edge_attr = torch.cat([z_i, z_j, edge_type, is_stick], dim=1)
 
-        n_node = z.shape[0]  # Use the potentially filtered number of nodes
-        edge_attr_list: list[list[float]] = []
-        source_indices: list[int] = []
-        target_indices: list[int] = []
+        return edge_attr, (sources, targets)
 
-        # Convert sticks to a set of tuples for faster lookup
-        stick_set = set()
-        if "Stick" in self.cfg:
-            for stick in self.cfg["Stick"]:
-                # Add both orders to the set for easy checking
-                stick_set.add(tuple(sorted(stick)))
-
-        x_0_frame_one = x_0[0]  # use frame 0 for initial structure info
-        for i in range(n_node):
-            for j in range(n_node):
-                if i == j:
-                    continue
-
-                current_stick_ind = 0.0
-                # Check if this edge (i, j) is defined as a stick
-                if tuple(sorted((i, j))) in stick_set:
-                    current_stick_ind = 1.0
-
-                # Check one-hop connections
-                if one_hop_adjacency[i][j]:
-                    source_indices.append(i)
-                    target_indices.append(j)
-                    # edge_attr: [z_i, z_j, type=1.0, stick_ind]
-                    edge_attr_list.append([z[i].item(), z[j].item(), 1.0, current_stick_ind])
-                    if tuple(sorted((i, j))) in stick_set and not two_hop_adjacency[i, j]:
-                        # If it's a stick, it should *only* be one-hop according to original logic
-                        pass
-                    elif not tuple(sorted((i, j))) in stick_set and two_hop_adjacency[i, j]:
-                        # Should not be both 1-hop and 2-hop
-                        print(f"Warning: Edge ({i},{j}) is 1-hop but also 2-hop in adjacency matrix.")
-                    # Original code had asserts here checking mutual exclusivity, which might be too strict
-                    # depending on the graph definition. We'll omit them for now.
-
-                # Check two-hop connections (only add if not already added as one-hop)
-                elif two_hop_adjacency[i][j]:  # Use elif to ensure mutual exclusivity
-                    source_indices.append(i)
-                    target_indices.append(j)
-                    # edge_attr: [z_i, z_j, type=2.0, stick_ind=0.0] (sticks are usually 1-hop)
-                    # Assuming sticks won't be two-hop neighbours only.
-                    edge_attr_list.append([z[i].item(), z[j].item(), 2.0, 0.0])  # Stick ind is 0 for 2-hop
-
-        edge_index = (
-            torch.tensor(source_indices, dtype=torch.long),  # Use long for indices
-            torch.tensor(target_indices, dtype=torch.long),
-        )
-        # Ensure the final edge_attr has 4 features per edge
-        edge_attr_tensor = torch.tensor(np.array(edge_attr_list), dtype=torch.float)
-        assert edge_attr_tensor.shape[1] == 4, f"Edge attributes should have 4 features, but got shape {edge_attr_tensor.shape}"
-        return edge_attr_tensor, edge_index
+    # Removed: merged into unified _build_edge_attributes
 
     def _sample_cfg(self) -> dict[str, list[tuple[int, int]] | list[list[int]]]:
         """
@@ -601,31 +558,13 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         """
         cfg = {}
         n_node = self.z.shape[0]  # Get number of nodes *after* potential H removal
-
-        # Define sticks based on the molecule type (Indices are 0-based)
-        # These definitions are copied from the original's sample_cfg
-        # IMPORTANT: These indices assume NO hydrogens if explicit_hydrogen=False
-        mol_type_str = str(self.molecule_type)  # Use string representation for matching
-        if mol_type_str == "benzene":  # Assuming 'benzene' corresponds to 'benzene_old'
-            cfg["Stick"] = [(0, 1), (2, 3), (4, 5)]
-        elif mol_type_str == "aspirin":
-            cfg["Stick"] = [(0, 2), (1, 3), (5, 6), (7, 10), (11, 12)]
-        elif mol_type_str == "ethanol":
-            cfg["Stick"] = [(0, 1)]
-        elif mol_type_str == "malonaldehyde":
-            cfg["Stick"] = [(1, 2)]
-        elif mol_type_str == "naphthalene":
-            cfg["Stick"] = [(0, 1), (2, 3), (4, 9), (5, 6), (7, 8)]
-        elif mol_type_str == "salicylic":
-            cfg["Stick"] = [(0, 9), (1, 2), (4, 5), (6, 7)]
-        elif mol_type_str == "toluene":
-            cfg["Stick"] = [(2, 3), (5, 6), (0, 1)]
-        elif mol_type_str == "uracil":
-            cfg["Stick"] = [(0, 1), (3, 4)]
-        else:
-            # Default: No sticks defined, maybe add a warning or error?
+        try:
+            mol_type_str = str(self.molecule_type.value).lower()
+        except Exception:
+            mol_type_str = str(self.molecule_type).lower()
+        cfg["Stick"] = MOLECULE_STICKS.get(mol_type_str, [])
+        if not cfg["Stick"]:
             print(f"Warning: No specific 'Stick' configuration defined for molecule type: {self.molecule_type}. No stick indices will be used.")
-            cfg["Stick"] = []  # Ensure 'Stick' key exists even if empty
 
         # Calculate 'Isolated' nodes (nodes not part of any stick)
         cur_selected = []
