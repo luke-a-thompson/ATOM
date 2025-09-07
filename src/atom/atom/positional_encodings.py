@@ -111,8 +111,9 @@ class TemporalRoPE(nn.Module):
 
         # Avoid rotating padded nodes. Mask.shape = [B, T*N, 1]
         if mask is not None:
-            cos_t = torch.where(mask, cos_t, torch.ones_like(cos_t))
-            sin_t = torch.where(mask, sin_t, torch.zeros_like(sin_t))
+            mask_bool = mask.bool()
+            cos_t = torch.where(mask_bool, cos_t, torch.ones_like(cos_t))
+            sin_t = torch.where(mask_bool, sin_t, torch.zeros_like(sin_t))
 
         # 6) Apply the rotation to the last dimension of 'tensor'
         #    Even indices => [0::2], odd => [1::2]
@@ -186,12 +187,13 @@ class RoPE(nn.Module):
 
         if learnable_offset:
             # Each of n_heads gets its own offset, initialised to 0
-            self.offset = nn.Parameter(torch.zeros(n_heads, device="cuda"))
+            self.offset = nn.Parameter(torch.zeros(n_heads))
         else:
             # A fixed buffer, all zeros by default
-            self.register_buffer("offset", torch.zeros(n_heads, device="cuda"), persistent=False)
+            self.register_buffer("offset", torch.zeros(n_heads), persistent=False)
 
-        self.freqs = (1.0 / (self.base ** (2 * torch.arange(0, self.half_dim, device=self.offset.device).float() / d_head))).unsqueeze(0).unsqueeze(0)  # [1, 1, half_dim]
+        # Create freqs on CPU; move to the input device in forward
+        self.freqs = (1.0 / (self.base ** (2 * torch.arange(0, self.half_dim).float() / d_head))).unsqueeze(0).unsqueeze(0)  # [1, 1, half_dim]
 
     @override
     def forward(self, tensor: torch.Tensor, mask: torch.Tensor | None) -> torch.Tensor:
@@ -224,10 +226,10 @@ class RoPE(nn.Module):
         positions = torch.arange(seq_len, device=tensor.device)
 
         # 2) Construct angles per head: shape => [H, seq_len, half_dim].
-        offset_broadcast = self.offset.unsqueeze(-1)  # [H, 1], this adds the head dim
+        offset_broadcast = self.offset.to(tensor.device).unsqueeze(-1)  # [H, 1], this adds the head dim
         positions_broadcast = positions.unsqueeze(0)  # [1, seq_len]
         shifted_positions = positions_broadcast + offset_broadcast
-        angle = shifted_positions.unsqueeze(-1) * self.freqs
+        angle = shifted_positions.unsqueeze(-1) * self.freqs.to(tensor.device)
 
         # 3) cos, sin => each [1, H, seq_len, half_dim]
         cos_t = angle.cos().unsqueeze(0)
@@ -239,8 +241,9 @@ class RoPE(nn.Module):
 
         # Avoid rotating padded nodes. Mask.shape should be [B, 1, seq_len, 1] to broadcast
         if mask is not None:
-            cos_t = torch.where(mask, cos_t, torch.ones_like(cos_t))
-            sin_t = torch.where(mask, sin_t, torch.zeros_like(sin_t))
+            mask_bool = mask.bool()
+            cos_t = torch.where(mask_bool, cos_t, torch.ones_like(cos_t))
+            sin_t = torch.where(mask_bool, sin_t, torch.zeros_like(sin_t))
 
         # 5) Apply the rotation to the last dimension of 'tensor'
         t1 = tensor[..., 0::2]
