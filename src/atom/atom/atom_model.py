@@ -5,7 +5,7 @@ import torch.nn as nn
 from atom.atom.activations import ReLU2, SwiGLU
 from atom.training.config_options import FFNActivation, NormType, ValueResidualType, AttentionType, LiftingType, PositionalEncodingType, ProjectionType
 from tensordict import TensorDict
-from atom.atom.attentions import QuadraticHeterogenousCrossAttention, QuadraticSelfAttention
+from atom.atom.attentions import QuadraticHeterogenousCrossAttention, QuadraticSelfAttention, LinearHeterogenousCrossAttention
 from atom.atom.mlps import MLP
 from atom.atom.lifting_layers import StandardLift, EquivariantLift, EquivariantLiftTensorProduct, CanonicalizationLift
 from atom.atom.projection_layers import EquivariantProject, EquivariantMoEProject, DecanonicalizationProject
@@ -90,6 +90,15 @@ class ATOMBlock(nn.Module):
                 )
             case AttentionType.GHCA:
                 self.attention = QuadraticHeterogenousCrossAttention(
+                    lifting_dim=lifting_dim,
+                    num_heads=num_heads,
+                    num_timesteps=self.num_timesteps,
+                    positional_encoding=positional_encoding,
+                    rope_base=rope_base,
+                    learnable_attention_denom=learnable_attention_denom,
+                )
+            case AttentionType.LINEAR_GHCA:
+                self.attention = LinearHeterogenousCrossAttention(
                     lifting_dim=lifting_dim,
                     num_heads=num_heads,
                     num_timesteps=self.num_timesteps,
