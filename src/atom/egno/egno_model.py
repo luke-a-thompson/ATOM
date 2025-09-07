@@ -22,17 +22,17 @@ class EGNO(nn.Module):
         num_fourier_modes: int,
         time_embed_dim: int,
         num_timesteps: int,
-    ):
+    ) -> None:
         super().__init__()
-        self.num_layers = num_layers
-        self.num_fourier_modes = num_fourier_modes
-        self.time_embed_dim = time_embed_dim
-        self.use_time_conv = use_time_conv
-        self.lifting_dim = lifting_dim
+        self.num_layers: int = num_layers
+        self.num_fourier_modes: int = num_fourier_modes
+        self.time_embed_dim: int = time_embed_dim
+        self.use_time_conv: bool = use_time_conv
+        self.lifting_dim: int = lifting_dim
 
-        self.in_dim = num_node_features + time_embed_dim
+        self.in_dim: int = num_node_features + time_embed_dim
 
-        self.egnn = EGNN(
+        self.egnn: EGNN = EGNN(
             in_dim=self.in_dim,
             num_edge_features=num_edge_features,
             lifting_dim=lifting_dim,
@@ -44,8 +44,8 @@ class EGNO(nn.Module):
         )
 
         if use_time_conv:
-            self.time_conv_modules = nn.ModuleList()
-            self.time_conv_x_modules = nn.ModuleList()
+            self.time_conv_modules: nn.ModuleList = nn.ModuleList()
+            self.time_conv_x_modules: nn.ModuleList = nn.ModuleList()
             for _ in range(num_layers):
                 _ = self.time_conv_modules.append(
                     TimeConv(
@@ -70,8 +70,8 @@ class EGNO(nn.Module):
     def forward(
         self,
         batch: TensorDict,
-    ):
-        B, T, N, D = batch["x_0"].shape
+    ) -> torch.Tensor:
+        B, T, N, _ = batch["x_0"].shape
         E = batch["source_node_indices"].shape[1]
 
         time_emb = self._timestep_embedding(T, self.time_embed_dim).to(batch["x_0"].device)
@@ -87,34 +87,62 @@ class EGNO(nn.Module):
         x: torch.Tensor = batch["x_0"][..., :3].reshape(B * T * N, -1)
         v: torch.Tensor = batch["v_0"][..., :3].reshape(B * T * N, -1)
 
-        if "concatenated_features" in batch:
-            h = batch["concatenated_features"][..., -2:]  # ||v||, Z
+        # Build scalar node features h
+        if "nodes" in batch:
+            # N-Body style datasets provide precomputed scalar node features
+            h = batch["nodes"]  # [B, T, N, K]
             h = h.view(B * T * N, -1)
-            h = torch.cat((h, time_emb), dim=-1)  # [B * T * N, H]
-            h: torch.Tensor = self.egnn.embedding(h)
+        elif "concatenated_features" in batch:
+            # MD17-style: concatenated features layout = [x_xyz(3), x_norm(1), v_xyz(3), v_norm(1), Z(1), rrwp(L)...]
+            cf = batch["concatenated_features"]
+            x_norm = cf[..., 3:4]
+            Z = cf[..., 8:9]
+            h = torch.cat((x_norm, Z), dim=-1).view(B * T * N, -1)
         else:
-            h = batch["nodes"]
-            h = h.view(B * T * N, -1)
-            h = torch.cat((h, time_emb), dim=-1)  # [B * T * N, H]
-            h: torch.Tensor = self.egnn.embedding(h)
+            # Fallback to zeros if nothing provided (should not happen in normal configs)
+            h = torch.zeros(B * T * N, 2, device=batch["x_0"].device, dtype=batch["x_0"].dtype)
 
-        # Handle distances
-        loc = batch["x_0"][:, 0, :, :3].reshape(B * N, 3)  # Ignoring norm for distances
-        # Pre-duplicated edge indices already have shape [B*T*E]
-        rows = batch["source_node_indices"].reshape(B * E)
-        cols = batch["target_node_indices"].reshape(B * E)
+        # Append time embedding then lift to hidden dim
+        h = torch.cat((h, time_emb), dim=-1)  # [B*T*N, K + H_t]
+        h = self.egnn.embedding(h)
 
-        # Compute squared distances for each edge
-        loc_dist = torch.sum((loc[rows.to(torch.long)] - loc[cols.to(torch.long)]) ** 2, dim=-1, keepdim=True)  # [B*E, 1]
-        loc_dist = loc_dist.repeat(T, 1)  # [T*B*E, 1]
+        # Handle distances and build batched, time-expanded edge indices/attributes
+        device = batch["x_0"].device
 
-        time_offsets = (torch.arange(T, device=batch["x_0"].device) * N).repeat_interleave(B * E)
-        edge_index = (
-            batch["source_node_indices"].reshape(B * E).repeat(T) + time_offsets,
-            batch["target_node_indices"].reshape(B * E).repeat(T) + time_offsets,
-        )
-        edge_attr = batch["edge_attr"].reshape(B * E, -1).repeat(T, 1)  # [T*B*E, feat_dim]
-        edge_attr = torch.cat((edge_attr, loc_dist), dim=-1)  # [T*B*E, feat_dim + 1]
+        # Base node positions at t=0 used for static distance feature (kept as in original, but properly batched)
+        loc0 = batch["x_0"][:, 0, :, :3]  # [B, N, 3]
+        loc0_flat = loc0.reshape(B * N, 3)  # [B*N, 3]
+
+        src = batch["source_node_indices"].to(torch.long)  # [B, E]
+        tgt = batch["target_node_indices"].to(torch.long)  # [B, E]
+
+        # Compute per-batch offsets for node indexing at t=0
+        batch_node_offsets = (torch.arange(B, device=device) * N).unsqueeze(1)  # [B, 1]
+        rows0 = src + batch_node_offsets  # [B, E]
+        cols0 = tgt + batch_node_offsets  # [B, E]
+
+        # Squared distances per (batch, edge) at t=0, then expand across time
+        loc_dist0 = torch.sum((loc0_flat[rows0] - loc0_flat[cols0]) ** 2, dim=-1, keepdim=True)  # [B, E, 1]
+        loc_dist = loc_dist0.unsqueeze(1).expand(B, T, E, 1).reshape(B * T * E, 1)  # [B*T*E, 1]
+
+        # Build edge_index across (batch, time); flatten order matches x/h reshaping
+        src_bte = src.unsqueeze(1).expand(B, T, E)  # [B, T, E]
+        tgt_bte = tgt.unsqueeze(1).expand(B, T, E)  # [B, T, E]
+        bt_index = torch.arange(B * T, device=device).view(B, T)  # [B, T]
+        base_nodes = (bt_index * N).unsqueeze(-1)  # [B, T, 1]
+        row = (src_bte + base_nodes).reshape(B * T * E)
+        col = (tgt_bte + base_nodes).reshape(B * T * E)
+        edge_index = (row, col)
+
+        # Expand edge attributes across time and concatenate distance feature
+        edge_attr_base = batch["edge_attr"]  # [B, E, F]
+        edge_attr = edge_attr_base.unsqueeze(1).expand(B, T, E, edge_attr_base.shape[-1]).reshape(B * T * E, -1)
+        edge_attr = torch.cat((edge_attr, loc_dist), dim=-1)  # [B*T*E, F+1]
+
+        # Build edge mask if present (true for valid edges; padded zeros are invalid)
+        edge_mask_b: torch.Tensor | None = None
+        if "edge_mask" in batch:
+            edge_mask_b = batch["edge_mask"].unsqueeze(1).expand(B, T, E).reshape(B * T * E)
 
         for i in range(self.num_layers):
             if self.use_time_conv:
@@ -131,12 +159,9 @@ class EGNO(nn.Module):
                 x = temp[..., 0].view(B * T * N, 3) + loc_mean  # Shape [B*T*N, 3] matches
                 v = temp[..., 1].view(B * T * N, 3)  # Shape [B*T*N, 3] matches
 
-            loc_pred, vel_pred, h = self.egnn.layers[i](x.detach(), h, edge_index, edge_attr.detach(), v)
+            x, v, h = self.egnn.layers[i](x, h, edge_index, edge_attr, v, edge_mask_b)
 
-        if v is not None:
-            return loc_pred.reshape(B, T, N, 3)
-        else:
-            return loc_pred.reshape(B, T, N, 3), h.reshape(B, T, N, self.lifting_dim)
+        return x.reshape(B, T, N, 3)
 
     def _timestep_embedding(self, num_timesteps: int, lifting_dim: int, max_positions: int = 10_000) -> torch.Tensor:
         half_dim = lifting_dim // 2
