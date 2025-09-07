@@ -32,7 +32,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         self,
         partition: DataPartition,
         max_samples: int,
-        delta_frame: int,
+        delta_frame: int | tuple[int, int],
         data_dir: str,
         split_dir: str,
         md17_version: Datasets,
@@ -71,7 +71,17 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         self.md17_version: Datasets = md17_version
         self.molecule_type: MD17MoleculeType | RMD17MoleculeType | TG80MoleculeType | MD22MoleculeType = molecule_type
         self.max_nodes: int | None = max_nodes
-        self.delta_frame: int = delta_frame
+        # Support fixed or ranged delta frame. Use max for indexing safety and eval.
+        if isinstance(delta_frame, tuple):
+            self.delta_frame_min: int = int(delta_frame[0])
+            self.delta_frame_max: int = int(delta_frame[1])
+            if self.delta_frame_min <= 0 or self.delta_frame_max <= 0:
+                raise ValueError(f"delta_frame bounds must be positive, got {delta_frame}")
+            if self.delta_frame_min > self.delta_frame_max:
+                raise ValueError(f"delta_frame min must be <= max, got {delta_frame}")
+        else:
+            self.delta_frame_min = int(delta_frame)
+            self.delta_frame_max = int(delta_frame)
         self.num_timesteps: int = num_timesteps
         self.center_data: bool = center_data
         self.return_edge_data: bool = return_edge_data
@@ -325,8 +335,8 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         return x_0, v_0
 
     def get_target_frames(self, split_times: npt.NDArray[np.int_], x: npt.NDArray[np.float64], v: npt.NDArray[np.float64]) -> tuple[torch.Tensor, torch.Tensor]:
-        x_t = torch.Tensor(x[split_times + self.delta_frame])
-        v_t = torch.Tensor(v[split_times + self.delta_frame])
+        x_t = torch.Tensor(x[split_times + self.delta_frame_max])
+        v_t = torch.Tensor(v[split_times + self.delta_frame_max])
         return x_t, v_t
 
     def _get_or_generate_split(
@@ -356,7 +366,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         """
         # Calculate valid frame range considering margins
         start = self.dft_imprecision_margin
-        end = x.shape[0] - self.dft_imprecision_margin - self.delta_frame + 1
+        end = x.shape[0] - self.dft_imprecision_margin - self.delta_frame_max + 1
 
         # Try to load existing split file
         if not force_regenerate:
@@ -701,7 +711,7 @@ class MD17DynamicsDataset(MD17Dataset):
         self,
         partition: DataPartition,
         max_samples: int,
-        delta_frame: int,
+        delta_frame: int | tuple[int, int],
         data_dir: str,
         split_dir: str,
         md17_version: Datasets,
@@ -775,12 +785,12 @@ class MD17DynamicsDataset(MD17Dataset):
         )
 
         # Absolute time indices per sample and timestep [max_samples, T]
-        inc = (self.delta_frame * np.arange(1, self.num_timesteps + 1) // self.num_timesteps).astype(np.int64)
+        inc = (self.delta_frame_max * np.arange(1, self.num_timesteps + 1) // self.num_timesteps).astype(np.int64)
         self.time_indices: torch.Tensor = torch.tensor(self.split_times[:, None] + inc[None, :], dtype=torch.long)
 
     def get_dynamic_target_frames(self) -> tuple[torch.Tensor, torch.Tensor]:
         split_times = self.split_times
-        delta_frame = self.delta_frame
+        delta_frame = self.delta_frame_max
         num_timesteps = self.num_timesteps
 
         x_t_list = [self.x[split_times + delta_frame * i // num_timesteps] for i in range(1, num_timesteps + 1)]
@@ -791,6 +801,40 @@ class MD17DynamicsDataset(MD17Dataset):
         x_t = torch.Tensor(x_t)
         v_t = torch.Tensor(v_t)
         return x_t, v_t
+
+    @override
+    def __getitem__(self, i: int) -> dict[str, torch.Tensor]:
+        sample = super().__getitem__(i)
+
+        # Randomize during training if a range was supplied
+        if self.data_partition == DataPartition.train and (self.delta_frame_min != self.delta_frame_max):
+            # Log-uniform sampling over [delta_min, delta_max]
+            log_min = float(np.log(max(1, self.delta_frame_min)))
+            log_max = float(np.log(self.delta_frame_max))
+            u = float(np.random.uniform(low=log_min, high=log_max))
+            delta_i = int(np.floor(np.exp(u)))
+            delta_i = max(1, min(delta_i, self.delta_frame_max))
+
+            inc = (delta_i * np.arange(1, self.num_timesteps + 1) // self.num_timesteps).astype(np.int64)
+            frame_idx = (int(self.split_times[i]) + inc).astype(np.int64)
+
+            x_t_np = self.x[frame_idx]
+            v_t_np = self.v[frame_idx]
+            # Use Tensor() to keep float32 consistency with precomputed tensors
+            x_t_t = torch.Tensor(x_t_np)
+            v_t_t = torch.Tensor(v_t_np)
+
+            if self.max_nodes is not None:
+                pad_amt = self.max_nodes - x_t_t.shape[-2]
+                if pad_amt > 0:
+                    x_t_t = F.pad(x_t_t, (0, 0, 0, pad_amt))
+                    v_t_t = F.pad(v_t_t, (0, 0, 0, pad_amt))
+
+            sample["x_t"] = x_t_t.contiguous()
+            sample["v_t"] = v_t_t.contiguous()
+            sample["time_indices"] = torch.tensor(frame_idx, dtype=torch.long).contiguous()
+
+        return sample
 
 
 if __name__ == "__main__":

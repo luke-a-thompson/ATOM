@@ -300,6 +300,13 @@ def _pad_edges_to_uniform_length(batch: list[dict[str, torch.Tensor]]) -> dict[s
                 padded_sample[key] = value
             else:
                 padded_sample[key] = value
+        # Provide an explicit boolean edge mask for padded vs real edges
+        edge_count = sample["edge_attr"].shape[0]
+        edge_mask = torch.ones(edge_count, dtype=torch.bool)
+        if edge_count < max_edges:
+            pad_len = max_edges - edge_count
+            edge_mask = torch.cat([edge_mask, torch.zeros(pad_len, dtype=torch.bool)], dim=0)
+        padded_sample["edge_mask"] = edge_mask
         padded_batch.append(padded_sample)
 
     # Delegate the heavy lifting of stacking to the default collate implementation

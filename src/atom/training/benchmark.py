@@ -1,6 +1,8 @@
 from datetime import datetime
 from pathlib import Path
 from shutil import copy2
+import shutil
+from tempfile import TemporaryDirectory
 
 import torch
 from tqdm.std import tqdm
@@ -16,7 +18,11 @@ from atom.training import (
 )
 
 
-def singletask_benchmark(config: Config, config_path: Path | None = None) -> None:
+def singletask_benchmark(
+    config: Config,
+    config_path: Path | None = None,
+    benchmark_dir: Path | None = None,
+) -> None:
     """
     Benchmarking function with JSON results logging.
 
@@ -28,35 +34,54 @@ def singletask_benchmark(config: Config, config_path: Path | None = None) -> Non
     Returns:
         None
     """
-    # Create a directory for this molecule's benchmark
-    timestamp = datetime.now().strftime("%d-%b-%Y_%H-%M-%S")
-    benchmark_dir = Path(f"benchmark_runs/{config.benchmark.benchmark_name}_singletask_{timestamp}")
-    benchmark_dir.mkdir(parents=True, exist_ok=True)
+    # Determine final destination directory but do not create it yet
+    if benchmark_dir is None:
+        timestamp = datetime.now().strftime("%d-%b-%Y_%H-%M-%S")
+        benchmark_dir = Path(f"benchmark_runs/{config.benchmark.benchmark_name}_singletask_{timestamp}")
 
-    # Save the exact TOML config used for this benchmark
-    if config_path is not None and config_path.exists():
-        try:
-            _ = copy2(config_path, benchmark_dir / "config.toml")
-        except Exception as e:
-            tqdm.write(f"Warning: failed to copy config TOML: {e}")
+    created_final_dir: bool = False
     single_run_results: list[SingleRunResults] = []
 
     runs_progress_bar = tqdm(range(config.benchmark.runs), leave=False, unit="run", position=1)
-    for run in runs_progress_bar:
-        set_seeds(config.training.seed + run)
-        runs_progress_bar.set_description(f"Run {run+1}/{config.benchmark.runs}")
-        model = initialize_model(config).to(config.training.device)
-        if config.benchmark.compile:
-            model = torch.compile(model)
+    with TemporaryDirectory() as tmp_root_str:
+        tmp_root: Path = Path(tmp_root_str)
+        for run in runs_progress_bar:
+            set_seeds(config.training.seed + run)
+            runs_progress_bar.set_description(f"Run {run+1}/{config.benchmark.runs}")
+            model = initialize_model(config).to(config.training.device)
+            if config.benchmark.compile:
+                model = torch.compile(model)
 
-        # Pass the weights directory to main function
-        single_run_result = train_model(
-            config,
-            model,
-            benchmark_dir,
-            run,
-        )
-        single_run_results.append(single_run_result)
+            # Train into a temporary location first
+            single_run_result = train_model(
+                config,
+                model,
+                tmp_root,
+                run,
+            )
+            single_run_results.append(single_run_result)
+
+            # On first successful run completion, create final dir and copy config(s)
+            if not created_final_dir:
+                benchmark_dir.mkdir(parents=True, exist_ok=True)
+                if config_path is not None and config_path.exists():
+                    try:
+                        # Name the inner config after the experiment directory
+                        inner_config_path: Path = benchmark_dir / f"{benchmark_dir.name}.toml"
+                        _ = copy2(config_path, inner_config_path)
+                    except Exception as e:
+                        tqdm.write(f"Warning: failed to copy config TOML: {e}")
+                created_final_dir = True
+
+            # Move the completed run directory into the final benchmark dir
+            try:
+                shutil.move(str(tmp_root / f"run_{run+1}"), str(benchmark_dir / f"run_{run+1}"))
+            except Exception as e:
+                tqdm.write(f"Warning: failed to move run directory for run {run+1}: {e}")
+
+    # If no runs completed successfully, avoid creating output
+    if not created_final_dir:
+        return None
 
     multi_run_results = MultiRunResults(single_run_results=single_run_results, config=config)
 
@@ -93,25 +118,26 @@ def singletask_benchmark(config: Config, config_path: Path | None = None) -> Non
     tqdm.write(f"Total trainable params: {sum(p.numel() for p in model.parameters() if p.requires_grad):,}")
 
 
-def multitask_benchmark(config: Config, config_path: Path | None = None) -> None:
-    # Create a directory for this molecule's benchmark
-    timestamp = datetime.now().strftime("%d-%b-%Y_%H-%M-%S")
-    benchmark_dir = Path(f"benchmark_runs/{config.benchmark.benchmark_name}_multitask_{timestamp}")
-    benchmark_dir.mkdir(parents=True, exist_ok=True)
+def multitask_benchmark(
+    config: Config,
+    config_path: Path | None = None,
+    benchmark_dir: Path | None = None,
+) -> None:
+    # Determine final destination directory but do not create it yet
+    if benchmark_dir is None:
+        timestamp = datetime.now().strftime("%d-%b-%Y_%H-%M-%S")
+        benchmark_dir = Path(f"benchmark_runs/{config.benchmark.benchmark_name}_multitask_{timestamp}")
 
-    # Save the exact TOML config used for this benchmark
-    if config_path is not None and config_path.exists():
-        try:
-            _ = copy2(config_path, benchmark_dir / "config.toml")
-        except Exception as e:
-            tqdm.write(f"Warning: failed to copy config TOML: {e}")
+    created_final_dir: bool = False
     run_results: list[SingleRunResults] = []
 
     runs_progress_bar = tqdm(range(config.benchmark.runs), leave=False, unit="run", position=1)
-    for run in runs_progress_bar:
-        set_seeds(config.training.seed + run)
-        runs_progress_bar.set_description(f"Run {run+1}/{config.benchmark.runs}")
-        model = initialize_model(config).to(config.training.device)
+    with TemporaryDirectory() as tmp_root_str:
+        tmp_root: Path = Path(tmp_root_str)
+        for run in runs_progress_bar:
+            set_seeds(config.training.seed + run)
+            runs_progress_bar.set_description(f"Run {run+1}/{config.benchmark.runs}")
+            model = initialize_model(config).to(config.training.device)
         # Calculate and print model parameter counts
         total_params: int = sum(p.numel() for p in model.parameters())
         trainable_params: int = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -140,14 +166,35 @@ def multitask_benchmark(config: Config, config_path: Path | None = None) -> None
                     tqdm.write("\n--- Non-MoE Model ---")
                     tqdm.write(f"Final projection layer params: {projection_params:,}")
                     tqdm.write("-----------------------")
-        # assert False, "stop"
-        single_run_results = train_model(
-            config,
-            model,
-            benchmark_dir,
-            run,
-        )
-        run_results.append(single_run_results)
+            # Train into a temporary location first
+            single_run_results = train_model(
+                config,
+                model,
+                tmp_root,
+                run,
+            )
+            run_results.append(single_run_results)
+
+            # On first successful run completion, create final dir and copy config(s)
+            if not created_final_dir:
+                benchmark_dir.mkdir(parents=True, exist_ok=True)
+                if config_path is not None and config_path.exists():
+                    try:
+                        inner_config_path = benchmark_dir / f"{benchmark_dir.name}.toml"
+                        _ = copy2(config_path, inner_config_path)
+                    except Exception as e:
+                        tqdm.write(f"Warning: failed to copy config TOML: {e}")
+                created_final_dir = True
+
+            # Move the completed run directory into the final benchmark dir
+            try:
+                shutil.move(str(tmp_root / f"run_{run+1}"), str(benchmark_dir / f"run_{run+1}"))
+            except Exception as e:
+                tqdm.write(f"Warning: failed to move run directory for run {run+1}: {e}")
+
+    # If no runs completed successfully, avoid creating output
+    if not created_final_dir:
+        return None
 
     multi_run_results = MultiRunResults(single_run_results=run_results, config=config)
 

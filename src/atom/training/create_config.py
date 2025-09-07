@@ -97,7 +97,8 @@ class DataloaderConfig(BaseModel):
     test_molecules: list[MD17MoleculeType | RMD17MoleculeType | TG80MoleculeType | MD22MoleculeType] | None = None
 
     num_timesteps: Annotated[PositiveInt, Field(description="Must be greater than 0.")]
-    delta_T: Annotated[PositiveInt, Field(description="Must be greater than 0.")]
+    # Accept either a fixed integer lag or a (min, max) tuple for stochastic sampling
+    delta_T: int | tuple[int, int]
     explicit_hydrogen: bool
     explicit_hydrogen_gradients: bool
     radius_graph_threshold: Annotated[NonNegativeFloat, Field(description="Must be greater than or equal to 0.0.")]
@@ -110,6 +111,19 @@ class DataloaderConfig(BaseModel):
     pin_memory: bool
     prefetch_factor: Annotated[PositiveInt, Field(description="Must be greater than 0.")]
     force_regenerate: bool
+
+    @field_validator("delta_T", mode="before")
+    @classmethod
+    def coerce_delta_T(cls, value: object) -> int | tuple[int, int]:
+        # Allow TOML arrays to become tuples
+        if isinstance(value, list):
+            if len(value) != 2:
+                raise ValueError("If 'delta_T' is a list, it must have exactly two elements.")
+            try:
+                return (int(value[0]), int(value[1]))
+            except Exception as e:
+                raise ValueError("Could not coerce 'delta_T' list elements to integers.") from e
+        return value  # int or already a tuple
 
     @model_validator(mode="after")
     def validate_consistency(self) -> "DataloaderConfig":
@@ -159,6 +173,19 @@ class DataloaderConfig(BaseModel):
             else:
                 if self.molecule_type:
                     self.molecule_type = enum_type(self.molecule_type)
+
+        # Validate delta_T semantics
+        if isinstance(self.delta_T, tuple):
+            if len(self.delta_T) != 2:
+                raise ValueError("'delta_T' tuple must have exactly two elements.")
+            dt_min, dt_max = int(self.delta_T[0]), int(self.delta_T[1])
+            if dt_min <= 0 or dt_max <= 0:
+                raise ValueError("Both elements of 'delta_T' must be positive integers.")
+            if dt_min > dt_max:
+                raise ValueError("'delta_T' lower bound must be <= upper bound.")
+        else:
+            if int(self.delta_T) <= 0:
+                raise ValueError("'delta_T' must be a positive integer.")
 
         return self
 

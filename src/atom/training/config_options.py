@@ -181,6 +181,7 @@ class PositionalEncodingType(StrEnum):
 class AttentionType(StrEnum):
     SELF = "self"
     GHCA = "ghca"
+    LINEAR_GHCA = "linear_ghca"
 
 
 @final
