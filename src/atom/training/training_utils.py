@@ -27,19 +27,19 @@ def parse_train_args() -> argparse.Namespace:
 
 
 def get_config_files(directory: str) -> list[Path]:
-    """Get all .toml configuration files from a directory.
+    """Recursively collect all .toml configuration files under a directory.
 
     Args:
-        directory (str): Path to directory containing config files
+        directory (str): Path to directory containing config files (searched recursively)
 
     Returns:
-        list[Path]: List of paths to .toml config files, sorted alphabetically
+        list[Path]: Sorted list of .toml config file paths discovered with rglob
     """
     dir_path = Path(directory)
     if not dir_path.is_dir():
         raise NotADirectoryError(f"The path {directory} is not a directory")
 
-    config_files = sorted(dir_path.glob("*.toml"))
+    config_files: list[Path] = sorted(p for p in dir_path.rglob("*.toml") if p.is_file())
     if not config_files:
         raise FileNotFoundError(f"No .toml files found in directory {directory}")
 
