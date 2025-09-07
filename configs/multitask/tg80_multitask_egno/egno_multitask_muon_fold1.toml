@@ -36,7 +36,6 @@ train_molecules = [
     "oxalicacid",
     "indole",
     "aniline",
-    "biphenyl",
     "1.2-dichloroethane",
     "malonicacid",
     "salicylicacid2",

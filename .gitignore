@@ -16,7 +16,8 @@ __pycache__/
 *.drawio*
 /torch_compiler
 /benchmark_runs
-/configs/old
+/benchmark_runs_old
+/configs_old
 /data_raw
 /data/crossval_folds
 /data/molecule_images

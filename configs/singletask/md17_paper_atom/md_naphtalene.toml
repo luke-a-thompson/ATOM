@@ -3,8 +3,8 @@ use_wandb = false
 
 [benchmark]
 model_type = "atom"
-benchmark_name = "paper_md17"
-compile = true
+benchmark_name = "paper_md17_atom"
+compile = false
 compile_trace = false
 runs = 3
 log_weights = false
@@ -16,7 +16,7 @@ dataset = "md17"
 num_timesteps = 8
 
 # Single-task dataloader parameters
-molecule_type = "aspirin"  # Iterates through single-task learning on these molecules
+molecule_type = "naphthalene"  # Iterates through single-task learning on these molecules
 
 # Multitask dataloader parameters
 train_molecules = ["aspirin", "benzene", "ethanol", "toluene", "uracil", "salicylic", "malonaldehyde"]
