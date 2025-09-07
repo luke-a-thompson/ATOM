@@ -382,6 +382,28 @@ def build_combined_table_with_two_sections(grouped: dict[str, dict[str, Experime
     return "\n".join(lines)
 
 
+def _collect_results(egno_dir: Path, atom_dir: Path) -> list[ExperimentResult]:
+    """Collect all parsed results from EGNO and ATOMS directories."""
+    all_results: list[ExperimentResult] = []
+    for d in [egno_dir, atom_dir]:
+        results_files: list[Path] = find_results_files(d)
+        results_maybe: list[ExperimentResult | None] = [load_experiment_result(p) for p in results_files]
+        all_results.extend([r for r in results_maybe if r is not None])
+    return all_results
+
+
+def _infer_dataset_token_from_results(results: list[ExperimentResult]) -> str:
+    """Infer dataset token (e.g., 'md17' or 'md22') from molecules present."""
+    molecules: set[str] = {r.molecule for r in results}
+    if len(molecules) == 0:
+        return "results"
+    if molecules.issubset(set(MD17_MOLECULE_ORDER)):
+        return "md17"
+    if molecules.issubset(set(MD22_MOLECULE_ORDER)):
+        return "md22"
+    return "results"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Build LaTeX tables from MD17 results.json files.")
     _ = parser.add_argument(
@@ -398,7 +420,11 @@ def main() -> int:
         "--out",
         type=str,
         default=None,
-        help="Optional path to write the LaTeX output (e.g., Z_paper_content/md17_tables.tex). If omitted, writes alongside input_dir as tables.tex.",
+        help=(
+            "Optional path to write the LaTeX output. If omitted, writes to "
+            "Z_paper_content/tables/<dataset>_tables.tex when dataset is detectable (md17/md22), "
+            "else Z_paper_content/tables/tables.tex."
+        ),
     )
 
     args = parser.parse_args()
@@ -416,7 +442,12 @@ def main() -> int:
     if args.out is not None:
         out_path: Path = Path(args.out).expanduser().resolve()
     else:
-        out_path = Path.cwd() / "tables.tex"
+        # Mirror create_runtime_tables.py: default into Z_paper_content/tables/
+        results: list[ExperimentResult] = _collect_results(egno_dir, atom_dir)
+        dataset_token: str = _infer_dataset_token_from_results(results)
+        base_dir: Path = (Path(__file__).resolve().parent / "tables").resolve()
+        filename: str = f"{dataset_token}_tables.tex" if dataset_token in {"md17", "md22"} else "tables.tex"
+        out_path = (base_dir / filename).resolve()
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(latex_text, encoding="utf-8")
