@@ -283,7 +283,7 @@ class ATOM(nn.Module):
                     lifting_dim_irreps=lifting_dim_irreps,
                 )
             case _:
-                raise ValueError(f"Invalid equivariant lifting type: {lifting_type}, select from one of {bool.__members__.keys()}")
+                raise ValueError(f"Invalid equivariant lifting type: {lifting_type}, select from one of {LiftingType.__members__.keys()}")
 
         self.transformer_blocks = nn.Sequential(
             *[
@@ -307,7 +307,7 @@ class ATOM(nn.Module):
         match projection_type:
             case ProjectionType.EQUIVARIANT:
                 if self.output_heads > 1:
-                    self.projection_layer = EquivariantMoEProject(lifting_dim, "1x1o", self.output_heads)
+                    self.projection_layer = EquivariantMoEProject(lifting_dim_irreps, "1x1o", self.output_heads)
                 else:
                     self.projection_layer = EquivariantProject(lifting_dim_irreps, "1x1o")
             case ProjectionType.DECANONICALIZATION:
