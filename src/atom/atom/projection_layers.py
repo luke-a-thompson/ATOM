@@ -3,7 +3,6 @@ from typing import final, override
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from atom.atom.activations import SwiGLU
 from atom.atom.mlps import MLP
 from e3nn import o3
 
@@ -22,15 +21,15 @@ class EquivariantProject(nn.Module):
 
 @final
 class EquivariantMoEProject(nn.Module):
-    def __init__(self, lifting_dim: int, out_irreps: str, num_experts: int) -> None:
+    def __init__(self, lifting_dim_irreps: str, out_irreps: str, num_experts: int) -> None:
         super().__init__()
-        self.experts = nn.ModuleList([o3.Linear(lifting_dim, out_irreps) for _ in range(num_experts)])
+        self.experts = nn.ModuleList([o3.Linear(lifting_dim_irreps, out_irreps) for _ in range(num_experts)])
         self.gate_net = MLP(
-            in_dim=lifting_dim,
-            hidden_dim=lifting_dim // 8,
+            in_dim=o3.Irreps(lifting_dim_irreps).dim,
+            hidden_dim=max(1, o3.Irreps(lifting_dim_irreps).dim // 8),
             out_dim=num_experts,
             hidden_layers=2,
-            activation=SwiGLU(lifting_dim // 4),
+            activation=nn.SiLU(),
             dropout_p=0.1,
         )
 
