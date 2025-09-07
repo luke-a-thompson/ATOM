@@ -92,7 +92,7 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
 
         self.attention_dropout = nn.Dropout(attention_dropout)
 
-        denom_init = torch.full((num_heads,), float(self.d_head))
+        denom_init = torch.full((num_heads,), float(self.d_head) ** 0.5)
         if learnable_attention_denom:
             self.attention_denom = nn.Parameter(denom_init)
         else:
@@ -191,7 +191,14 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         ]
 
         gates = F.softmax(self.feature_weights, dim=0)  # Precompute gates; ∑ gates = 1
-        for i, h_feat_flat in enumerate(hetero_features):
+        # Re-normalize gates over available (non-None) features to keep total contribution consistent
+        available_indices = [i for i, feat in enumerate(hetero_features) if feat is not None]
+        if len(available_indices) > 0:
+            total_gate = gates[available_indices].sum()
+            renorm = (gates[available_indices] / (total_gate + 1e-8)).tolist()
+        else:
+            renorm = []
+        for idx_enum, (i, h_feat_flat) in enumerate([(i, hetero_features[i]) for i in available_indices]):
             if h_feat_flat is None:
                 continue
 
@@ -224,7 +231,7 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
             feat_i_out = attn_weights @ v_proj_i
 
             # Gate
-            accumulated_out = accumulated_out + gates[i] * feat_i_out
+            accumulated_out = accumulated_out + renorm[idx_enum] * feat_i_out
 
         permuted_accumulated_out = accumulated_out.permute(0, 2, 1, 3).reshape(B, T * N, self.lifting_dim)
         final_out_projection: torch.Tensor = self.out_proj(permuted_accumulated_out)
@@ -264,7 +271,7 @@ class LinearHeterogenousCrossAttention(nn.Module):
 
         self.attention_dropout = nn.Dropout(attention_dropout)
 
-        denom_init = torch.full((num_heads,), float(self.d_head))
+        denom_init = torch.full((num_heads,), float(self.d_head) ** 0.5)
         if learnable_attention_denom:
             self.attention_denom = nn.Parameter(denom_init)
         else:
@@ -333,7 +340,13 @@ class LinearHeterogenousCrossAttention(nn.Module):
         ]
 
         gates = F.softmax(self.feature_weights, dim=0)
-        for i, h_feat_flat in enumerate(hetero_features):
+        available_indices = [i for i, feat in enumerate(hetero_features) if feat is not None]
+        if len(available_indices) > 0:
+            total_gate = gates[available_indices].sum()
+            renorm = (gates[available_indices] / (total_gate + 1e-8)).tolist()
+        else:
+            renorm = []
+        for idx_enum, (i, h_feat_flat) in enumerate([(i, hetero_features[i]) for i in available_indices]):
             if h_feat_flat is None:
                 continue
 
@@ -363,7 +376,7 @@ class LinearHeterogenousCrossAttention(nn.Module):
             out_i = (q_lin @ (k_lin.transpose(-2, -1) @ v_proj_i)) * D_inv
             out_i = self.attention_dropout(out_i)
 
-            accumulated_out = accumulated_out + gates[i] * out_i
+            accumulated_out = accumulated_out + renorm[idx_enum] * out_i
 
         permuted_accumulated_out = accumulated_out.permute(0, 2, 1, 3).reshape(B, T * N, self.lifting_dim)
         final_out_projection: torch.Tensor = self.out_proj(permuted_accumulated_out)
