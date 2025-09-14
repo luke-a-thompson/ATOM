@@ -28,6 +28,7 @@ explicit_hydrogen = false
 explicit_hydrogen_gradients = false
 radius_graph_threshold = 1.6
 rrwp_length = 0  # 0 for no RRWPs
+time_lag_mode = "uniform"
 time_encoding_enabled = false
 normalize_z = false
 persistent_workers = true
@@ -68,6 +69,7 @@ delta_update = false
 heterogenous_attention_type = "ghca"
 positional_encoding = "trope"
 rope_base = 1000
+rope_tau = 10000
 learnable_attention_denom = false
 # Feature parameters
 lifting_type = "canonicalization"

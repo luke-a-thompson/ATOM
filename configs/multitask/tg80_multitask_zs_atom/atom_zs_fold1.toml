@@ -16,7 +16,7 @@ dataset = "tg80"
 num_timesteps = 8
 
 # Single-task dataloader parameters
-molecule_type = "uracil"  # Iterates through single-task learning on these molecules
+molecule_type = "1.4-dioxane"  # Iterates through single-task learning on these molecules
 
 # Multitask dataloader parameters
 train_molecules = [
@@ -127,6 +127,7 @@ delta_update = false
 heterogenous_attention_type = "ghca"
 positional_encoding = "trope"
 rope_base = 1000
+rope_tau = 10000
 learnable_attention_denom = false
 # Feature parameters
 lifting_type = "equivariant"
