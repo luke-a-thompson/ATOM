@@ -47,7 +47,7 @@ class TemporalRoPE(nn.Module):
     Output tensor shape: `[B, n_heads, seq_len, d_head]`
     """
 
-    def __init__(self, num_timesteps: int, d_head: int, n_heads: int, base: float = 1000.0):
+    def __init__(self, num_timesteps: int, d_head: int, n_heads: int, base: float = 1000.0, tau: float = 1000.0):
         super().__init__()
         assert d_head % 2 == 0, "d_head must be even for standard RoPE."
 
@@ -55,13 +55,14 @@ class TemporalRoPE(nn.Module):
         self.d_head = d_head
         self.n_heads = n_heads
         self.base = base
+        self.tau = float(tau)
 
         self.half_dim = d_head // 2
 
         self.freqs = (1.0 / (self.base ** (2 * torch.arange(0, self.half_dim).float() / d_head))).unsqueeze(0).unsqueeze(0)  # [1, 1, half_dim]
 
     @override
-    def forward(self, tensor: torch.Tensor, mask: torch.Tensor | None) -> torch.Tensor:
+    def forward(self, tensor: torch.Tensor, mask: torch.Tensor | None, time_increments: torch.Tensor | None = None) -> torch.Tensor:
         """
         Apply RoPE to the input tensor.
 
@@ -90,24 +91,33 @@ class TemporalRoPE(nn.Module):
         assert d_head == self.d_head, f"Expected d_head={self.d_head}, got {d_head}"
         assert seq_len % self.num_timesteps == 0, f"seq_len={seq_len} must be divisible by num_timesteps={self.num_timesteps}."
 
-        # 1) Create integer time indices for each chunk of num_nodes => shape [seq_len]
-        #    e.g., times = [0,0,...,0,1,1,...,1,..., T-1, T-1,..., T-1], each repeated num_nodes times.
-        times = torch.arange(self.num_timesteps, device=tensor.device).unsqueeze(1)  # [T,1]
-        positions = torch.repeat_interleave(times, num_nodes, dim=1).flatten(0, 1)  # [N*T=seq_len]
+        # 1) Build cumulative times per timestep from increments, then repeat per node
+        # time_increments expected shape: [B, T] of per-step increments Δt_i
+        # Use exclusive cumsum to get times: [0, Δt_1, Δt_1+Δt_2, ...]
+        if time_increments is None:
+            # Fallback to unit increments => times = [0,1,2,...,T-1]
+            B = tensor.shape[0]
+            times_exclusive = torch.arange(self.num_timesteps, device=tensor.device, dtype=torch.float32).unsqueeze(0).expand(B, -1)  # [B,T]
+        else:
+            # Ensure float for angle computation
+            times_exclusive = torch.cumsum(time_increments.to(tensor.device).float(), dim=1) - time_increments.to(tensor.device).float()  # [B,T]
 
-        # 3) Construct angles. The same angles are used for all heads.
-        #    angle = positions * freqs
-        #    positions: [seq_len], freqs: [1, 1, half_dim]
-        #    angle broadcasts to [1, seq_len, half_dim]
-        angle = positions.reshape(1, -1, 1) * self.freqs.to(tensor.device)
+        # Repeat each timestep time across nodes, then flatten
+        # times_grid: [B, T, N]
+        times_grid = times_exclusive.unsqueeze(-1).expand(-1, -1, num_nodes)
+        positions = times_grid.reshape(times_grid.shape[0], -1)  # [B, seq_len]
 
-        # 4) cos, sin => each [1, seq_len, half_dim]
+        # 2) Construct angles with scaling by tau and frequencies
+        #    angle[b, pos, k] = (positions[b, pos] / tau) * freqs[k]
+        angle = (positions / max(self.tau, 1e-12)).unsqueeze(-1) * self.freqs.to(tensor.device)  # [B, seq_len, half_dim]
+
+        # 3) cos, sin => each [B, seq_len, half_dim]
         cos_t = angle.cos()
         sin_t = angle.sin()
 
-        # 5) Expand cos_t/sin_t to [B, H, seq_len, half_dim]
-        cos_t = cos_t.expand(B, H, -1, -1)
-        sin_t = sin_t.expand(B, H, -1, -1)
+        # 4) Expand cos_t/sin_t to [B, H, seq_len, half_dim]
+        cos_t = cos_t.unsqueeze(1).expand(-1, H, -1, -1)
+        sin_t = sin_t.unsqueeze(1).expand(-1, H, -1, -1)
 
         # Avoid rotating padded nodes. Mask.shape = [B, T*N, 1]
         if mask is not None:

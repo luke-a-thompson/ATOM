@@ -58,8 +58,10 @@ class EquivariantLiftTensorProduct(nn.Module):
     def forward(self, x_0: torch.Tensor, v_0: torch.Tensor, concatenated_features: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         lifted_x_0 = self.x_0_linear(x_0)
         lifted_v_0 = self.v_0_linear(v_0)
-
-        lifted_vz_0 = self.vz_0_linear(concatenated_features[..., 4:])
+        # Use velocity channels plus atomic number Z only; exclude any RRWP extras
+        # v_0 contains (vx, vy, vz, ||v||); concatenated_features[..., 8] is Z regardless of RRWP length
+        vz_0: torch.Tensor = torch.cat([v_0, concatenated_features[..., 8:9]], dim=-1)
+        lifted_vz_0 = self.vz_0_linear(vz_0)
         # assert False, (x_0.shape, v_0.shape, vz_0.shape, concatenated_features.shape)
         lifted_concat_features = self.concat_feats_linear(lifted_x_0, lifted_vz_0)
         return lifted_x_0, lifted_v_0, lifted_concat_features

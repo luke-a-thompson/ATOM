@@ -26,6 +26,7 @@ class ATOMBlock(nn.Module):
         rope_base: float,
         value_residual_type: ValueResidualType,
         learnable_attention_denom: bool,
+        rope_tau: float,
     ) -> None:
         super().__init__()
 
@@ -104,6 +105,7 @@ class ATOMBlock(nn.Module):
                     num_timesteps=self.num_timesteps,
                     positional_encoding=positional_encoding,
                     rope_base=rope_base,
+                    rope_tau=rope_tau,
                     learnable_attention_denom=learnable_attention_denom,
                 )
             case _:
@@ -130,6 +132,7 @@ class ATOMBlock(nn.Module):
         concatenated_features: torch.Tensor,
         q_data: torch.Tensor,
         mask: torch.Tensor | None,
+        time_increments: torch.Tensor | None = None,
         initial_v: torch.Tensor | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor | None]:  # None when value residual not yet set
         """Forward pass for the ATOM block.
@@ -157,12 +160,13 @@ class ATOMBlock(nn.Module):
         x_0 = self.pre_norm(x_0)
         v_0 = self.pre_norm(v_0)
         concatenated_features = self.pre_norm(concatenated_features)
+
         # q_data = self.pre_norm(q_data)
 
         if self.attention_type == AttentionType.SELF:
-            attended_nodes: torch.Tensor = x_0 + self.attention(tensor=x_0, mask=mask)
+            attended_nodes: torch.Tensor = x_0 + self.attention(tensor=x_0, mask=mask, time_increments=time_increments)
         else:
-            attended_nodes: torch.Tensor = x_0 + self.attention(x_0, v_0, concatenated_features, q_data=q_data, mask=mask)
+            attended_nodes: torch.Tensor = x_0 + self.attention(x_0, v_0, concatenated_features, q_data=q_data, mask=mask, time_increments=time_increments)
         x_0 = attended_nodes + self.ffn(attended_nodes, mask)
 
         if self.value_residual_type == ValueResidualType.LEARNABLE:
@@ -191,10 +195,10 @@ class ATOM(nn.Module):
         num_timesteps: int,
         positional_encoding: PositionalEncodingType,
         rope_base: float,
+        rope_tau: float,
         lifting_type: LiftingType,
         projection_type: ProjectionType,
         rrwp_length: int,
-        time_encoding_enabled: bool,
         value_residual_type: ValueResidualType,
         learnable_attention_denom: bool,
     ) -> None:
@@ -248,7 +252,8 @@ class ATOM(nn.Module):
         self.rrwp_length = rrwp_length
         self.output_heads = output_heads
         self.delta_update = delta_update
-        self.time_encoding_enabled = time_encoding_enabled
+        self.positional_encoding_type = positional_encoding
+        # Removed FiLM modulation
 
         x_0_in_irreps, v_0_in_irreps, concat_feats_in_irreps = get_in_irreps(rrwp_length)
         lifting_dim_irreps: str = get_lifting_dim_irreps(lifting_dim)
@@ -298,6 +303,7 @@ class ATOM(nn.Module):
                     rope_base,
                     value_residual_type,
                     learnable_attention_denom,
+                    rope_tau,
                 )
                 for _ in range(num_layers)
             ]
@@ -358,29 +364,28 @@ class ATOM(nn.Module):
             so3_matrix = None  # type: ignore
             x_0_mean = None  # type: ignore
 
-        # Add sinusoidal time encoding to token features (standard PE as elementwise addition)
-        if self.time_encoding_enabled:
-            # Require absolute time indices in the batch when enabled
-            if "time_indices" not in batch:
-                raise ValueError("time_encoding_enabled=True but 'time_indices' not found in batch. Ensure dataloader provides absolute time indices.")
-            time_idx: torch.Tensor = batch["time_indices"].to(lifted_concat_features.device)
-            if time_idx.dim() == 1:
-                time_idx = time_idx.unsqueeze(0).expand(lifted_concat_features.shape[0], -1)
-
-            # Build sinusoid from absolute indices on-the-fly to avoid fixed max_len
-            bsz, tsteps = time_idx.shape
-            D = self.lifting_dim
-            position = time_idx.float().unsqueeze(-1)  # [B, T, 1]
-            div_term = torch.exp(torch.arange(0, D, 2, device=position.device).float() * (-math.log(10000.0) / D))  # [D/2]
-            pe = torch.zeros(bsz, tsteps, D, device=position.device)
-            pe[..., 0::2] = torch.sin(position * div_term)
-            pe[..., 1::2] = torch.cos(position * div_term)
+        # Add sinusoidal PE with local positions within the batch window
+        if self.positional_encoding_type == PositionalEncodingType.SINUSOIDAL:
+            B, T, N, D = lifted_concat_features.shape
+            pos = torch.arange(T, device=lifted_concat_features.device, dtype=torch.float32).unsqueeze(0).unsqueeze(-1).expand(B, -1, -1)
+            div_term = torch.exp(torch.arange(0, D, 2, device=lifted_concat_features.device).float() * (-math.log(10000.0) / D))
+            pe = torch.zeros(B, T, D, device=lifted_concat_features.device)
+            pe[..., 0::2] = torch.sin(pos * div_term)
+            pe[..., 1::2] = torch.cos(pos * div_term)
             lifted_concat_features = lifted_concat_features + pe.unsqueeze(2)
 
         ## Kernel integral
         initial_v: torch.Tensor | None = None  # Value residual: Starts as none, becomes x_0 the first layer
         for layer in self.transformer_blocks:
-            lifted_x_0, initial_v = layer(lifted_x_0, lifted_v_0, lifted_concat_features, q_data=lifted_concat_features, mask=mask, initial_v=initial_v)
+            lifted_x_0, initial_v = layer(
+                lifted_x_0,
+                lifted_v_0,
+                lifted_concat_features,
+                q_data=lifted_concat_features,
+                mask=mask,
+                time_increments=batch.get("time_increments", None),
+                initial_v=initial_v,
+            )
 
         ## Project
         if self.projection_type == ProjectionType.DECANONICALIZATION:
