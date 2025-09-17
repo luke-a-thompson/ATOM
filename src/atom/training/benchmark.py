@@ -7,6 +7,7 @@ from tempfile import TemporaryDirectory
 import torch
 from tqdm.std import tqdm
 import wandb
+import typing
 
 from atom.training import (
     Config,
@@ -49,13 +50,14 @@ def singletask_benchmark(
             set_seeds(config.training.seed + run)
             runs_progress_bar.set_description(f"Run {run+1}/{config.benchmark.runs}")
             model = initialize_model(config).to(config.training.device)
+            model_for_training: torch.nn.Module = model
             if config.benchmark.compile:
-                model = torch.compile(model)
+                model_for_training = typing.cast(torch.nn.Module, torch.compile(model))
 
             # Train into a temporary location first
             single_run_result = train_model(
                 config,
-                model,
+                model_for_training,
                 tmp_root,
                 run,
             )
@@ -71,11 +73,16 @@ def singletask_benchmark(
                         _ = copy2(config_path, inner_config_path)
                     except Exception as e:
                         tqdm.write(f"Warning: failed to copy config TOML: {e}")
+                # Print model parameter counts once (computed before compilation)
+                total_params: int = sum(p.numel() for p in model.parameters())
+                trainable_params: int = sum(p.numel() for p in model.parameters() if p.requires_grad)
+                tqdm.write(f"Total params: {total_params:,}")
+                tqdm.write(f"Total trainable params: {trainable_params:,}")
                 created_final_dir = True
 
             # Move the completed run directory into the final benchmark dir
             try:
-                shutil.move(str(tmp_root / f"run_{run+1}"), str(benchmark_dir / f"run_{run+1}"))
+                _ = shutil.move(str(tmp_root / f"run_{run+1}"), str(benchmark_dir / f"run_{run+1}"))
             except Exception as e:
                 tqdm.write(f"Warning: failed to move run directory for run {run+1}: {e}")
 
@@ -104,6 +111,8 @@ def singletask_benchmark(
             "mean_test_loss_final": multi_run_results.s2s_test_loss_mean,
             "mean_secs_per_run": multi_run_results.mean_secs_per_run,
             "mean_secs_per_epoch": multi_run_results.mean_secs_per_epoch,
+            "mean_s2t_test_loss": multi_run_results.s2t_test_loss_mean,
+            "std_s2t_test_loss": multi_run_results.s2t_test_loss_std,
         }
     )
 
@@ -111,11 +120,9 @@ def singletask_benchmark(
     tqdm.write(f"Benchmark Results ({config.benchmark.runs} runs, {config.training.epochs} epochs/run):")
     tqdm.write(f"  Average S2S Test Loss Final Timestep: {multi_run_results.s2s_test_loss_mean*100:.2f}x10^-2 ± {multi_run_results.s2s_test_loss_std*100:.2f}x10^-2")  # type: ignore
     tqdm.write(f"  Average S2T Test Loss: {multi_run_results.s2t_test_loss_mean*100:.2f}x10^-2 ± {multi_run_results.s2t_test_loss_std*100:.2f}x10^-2")  # type: ignore
-    tqdm.write(f"  Average Time per Run: {multi_run_results.mean_secs_per_run:.1f}x10^-2s")
-    tqdm.write(f"  Average Time per Epoch: {multi_run_results.mean_secs_per_epoch:.1f}x10^-2s")
+    tqdm.write(f"  Average Time per Run: {multi_run_results.mean_secs_per_run:.1f}s")
+    tqdm.write(f"  Average Time per Epoch: {multi_run_results.mean_secs_per_epoch:.1f}s")
     tqdm.write(f"  Average Best Val Loss Epoch: {multi_run_results.mean_best_val_loss_epoch:.1f}")
-    tqdm.write(f"Total params: {sum(p.numel() for p in model.parameters()):,}")
-    tqdm.write(f"Total trainable params: {sum(p.numel() for p in model.parameters() if p.requires_grad):,}")
 
 
 def multitask_benchmark(
@@ -138,38 +145,14 @@ def multitask_benchmark(
             set_seeds(config.training.seed + run)
             runs_progress_bar.set_description(f"Run {run+1}/{config.benchmark.runs}")
             model = initialize_model(config).to(config.training.device)
-        # Calculate and print model parameter counts
-        total_params: int = sum(p.numel() for p in model.parameters())
-        trainable_params: int = sum(p.numel() for p in model.parameters() if p.requires_grad)
-        tqdm.write(f"Total params: {total_params:,}")
-        tqdm.write(f"Total trainable params: {trainable_params:,}")
+            model_for_training: torch.nn.Module = model
+            if config.benchmark.compile:
+                model_for_training = typing.cast(torch.nn.Module, torch.compile(model))
 
-        from atom.atom.atom_model import ATOM
-
-        if isinstance(model, ATOM):
-            if model.output_heads > 1:
-                gating_params = sum(p.numel() for p in model.weight_pred_gate_net.parameters())
-                single_expert_params = sum(p.numel() for p in model.projection_layers[0].parameters())
-                active_params = gating_params + single_expert_params
-                total_expert_params = sum(p.numel() for p in model.projection_layers.parameters())
-
-                tqdm.write("\n--- MoE Expert Layer Analysis ---")
-                tqdm.write(f"Gating network params: {gating_params:,}")
-                tqdm.write(f"Params per expert: {single_expert_params:,}")
-                tqdm.write(f"Total params for all experts: {total_expert_params:,}")
-                tqdm.write(f"Active params per inference (gate + 1 expert): {active_params:,}")
-                tqdm.write(f"A non-MoE model would have {single_expert_params:,} params in its final projection layer.")
-                tqdm.write("------------------------------------")
-            else:
-                if hasattr(model, "projection_layer"):
-                    projection_params = sum(p.numel() for p in model.projection_layer.parameters())
-                    tqdm.write("\n--- Non-MoE Model ---")
-                    tqdm.write(f"Final projection layer params: {projection_params:,}")
-                    tqdm.write("-----------------------")
             # Train into a temporary location first
             single_run_results = train_model(
                 config,
-                model,
+                model_for_training,
                 tmp_root,
                 run,
             )
@@ -184,11 +167,16 @@ def multitask_benchmark(
                         _ = copy2(config_path, inner_config_path)
                     except Exception as e:
                         tqdm.write(f"Warning: failed to copy config TOML: {e}")
+                # Print model parameter counts once (computed before compilation)
+                total_params: int = sum(p.numel() for p in model.parameters())
+                trainable_params: int = sum(p.numel() for p in model.parameters() if p.requires_grad)
+                tqdm.write(f"Total params: {total_params:,}")
+                tqdm.write(f"Total trainable params: {trainable_params:,}")
                 created_final_dir = True
 
             # Move the completed run directory into the final benchmark dir
             try:
-                shutil.move(str(tmp_root / f"run_{run+1}"), str(benchmark_dir / f"run_{run+1}"))
+                _ = shutil.move(str(tmp_root / f"run_{run+1}"), str(benchmark_dir / f"run_{run+1}"))
             except Exception as e:
                 tqdm.write(f"Warning: failed to move run directory for run {run+1}: {e}")
 
@@ -216,15 +204,15 @@ def multitask_benchmark(
             "mean_test_loss_final": multi_run_results.s2s_test_loss_mean,
             "mean_secs_per_run": multi_run_results.mean_secs_per_run,
             "mean_secs_per_epoch": multi_run_results.mean_secs_per_epoch,
+            "mean_s2t_test_loss": multi_run_results.s2t_test_loss_mean,
+            "std_s2t_test_loss": multi_run_results.s2t_test_loss_std,
         }
     )
 
     tqdm.write(f"\nSaved benchmark results to {results_filename}")
     tqdm.write(f"Benchmark Results ({config.benchmark.runs} runs, {config.training.epochs} epochs/run):")
-    tqdm.write(f"  Average Test Loss: {multi_run_results.s2s_test_loss_mean*100:.2f}x10^-2 ± {multi_run_results.s2s_test_loss_std*100:.2f}x10^-2")
-    tqdm.write(f"  Average Test Loss Final Timestep: {multi_run_results.s2s_test_loss_mean*100:.2f}x10^-2 ± {multi_run_results.s2s_test_loss_std*100:.2f}x10^-2")
+    tqdm.write(f"  Average S2S Test Loss: {multi_run_results.s2s_test_loss_mean*100:.2f}x10^-2 ± {multi_run_results.s2s_test_loss_std*100:.2f}x10^-2")
+    tqdm.write(f"  Average S2T Test Loss: {multi_run_results.s2t_test_loss_mean*100:.2f}x10^-2 ± {multi_run_results.s2t_test_loss_std*100:.2f}x10^-2")
     tqdm.write(f"  Average Time per Run: {multi_run_results.mean_secs_per_run:.1f}s")
     tqdm.write(f"  Average Time per Epoch: {multi_run_results.mean_secs_per_epoch:.1f}s")
     tqdm.write(f"  Average Best Val Loss Epoch: {multi_run_results.mean_best_val_loss_epoch:.1f}")
-    tqdm.write(f"Total params: {sum(p.numel() for p in model.parameters()):,}")
-    tqdm.write(f"Total trainable params: {sum(p.numel() for p in model.parameters() if p.requires_grad):,}")
