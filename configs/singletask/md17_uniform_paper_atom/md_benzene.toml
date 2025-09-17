@@ -59,12 +59,12 @@ type = "none"
 
 [atom_config]
 # Architecture parameters
-num_layers = 5
+num_layers = 6
 num_heads = 8
-lifting_dim = 128
+lifting_dim = 256
 # Output parameters
 output_heads = 1
-delta_update = false
+delta_update = true
 # Attention parameters
 heterogenous_attention_type = "ghca"
 positional_encoding = "trope"

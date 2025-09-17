@@ -2,8 +2,8 @@
 use_wandb = false
 
 [benchmark]
-model_type = "atom"
-benchmark_name = "atom_std_att_no_rope"
+model_type = "EGNO"
+benchmark_name = "paper_md17_egno"
 compile = true
 compile_trace = false
 runs = 3
@@ -16,7 +16,7 @@ dataset = "md17"
 num_timesteps = 8
 
 # Single-task dataloader parameters
-molecule_type = "aspirin"  # Iterates through single-task learning on these molecules
+molecule_type = "malonaldehyde"  # Iterates through single-task learning on these molecules
 
 # Multitask dataloader parameters
 train_molecules = ["aspirin", "benzene", "ethanol", "toluene", "uracil", "salicylic", "malonaldehyde"]
@@ -28,7 +28,7 @@ explicit_hydrogen = false
 explicit_hydrogen_gradients = false
 radius_graph_threshold = 1.6
 rrwp_length = 0  # 0 for no RRWPs
-time_lag_mode = "uniform"
+time_lag_mode = "last"
 time_encoding_enabled = false
 normalize_z = false
 persistent_workers = true
@@ -66,8 +66,10 @@ lifting_dim = 128
 output_heads = 1
 delta_update = false
 # Attention parameters
-heterogenous_attention_type = "self"
-use_rope = false
+heterogenous_attention_type = "ghca"
+positional_encoding = "trope"
+rope_base = 1000
+rope_tau = 10000
 learnable_attention_denom = false
 # Feature parameters
 lifting_type = "equivariant"

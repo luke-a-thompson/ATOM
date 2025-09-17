@@ -6,7 +6,7 @@ model_type = "atom"
 benchmark_name = "paper_md17_atom"
 compile = true
 compile_trace = false
-runs = 1
+runs = 3
 log_weights = false
 
 [dataloader]
@@ -16,7 +16,7 @@ dataset = "md17"
 num_timesteps = 8
 
 # Single-task dataloader parameters
-molecule_type = "aspirin"  # Iterates through single-task learning on these molecules
+molecule_type = "benzene"  # Iterates through single-task learning on these molecules
 
 # Multitask dataloader parameters
 train_molecules = ["aspirin", "benzene", "ethanol", "toluene", "uracil", "salicylic", "malonaldehyde"]
@@ -28,7 +28,8 @@ explicit_hydrogen = false
 explicit_hydrogen_gradients = false
 radius_graph_threshold = 1.6
 rrwp_length = 0  # 0 for no RRWPs
-time_lag_mode = "uniform"
+time_lag_mode = "last"
+time_encoding_enabled = false
 normalize_z = false
 persistent_workers = true
 num_workers = 4
@@ -58,12 +59,12 @@ type = "none"
 
 [atom_config]
 # Architecture parameters
-num_layers = 5
+num_layers = 6
 num_heads = 8
-lifting_dim = 128
+lifting_dim = 256
 # Output parameters
 output_heads = 1
-delta_update = false
+delta_update = true
 # Attention parameters
 heterogenous_attention_type = "ghca"
 positional_encoding = "trope"

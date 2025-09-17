@@ -6,7 +6,7 @@ model_type = "atom"
 benchmark_name = "atom_linear_att"
 compile = true
 compile_trace = false
-runs = 1
+runs = 3
 log_weights = false
 
 [dataloader]

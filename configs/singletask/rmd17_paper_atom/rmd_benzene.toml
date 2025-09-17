@@ -6,7 +6,7 @@ model_type = "atom"
 benchmark_name = "paper_rmd17"
 compile = true
 compile_trace = false
-runs = 3
+runs = 1
 log_weights = false
 
 [dataloader]
@@ -28,7 +28,6 @@ explicit_hydrogen = false
 explicit_hydrogen_gradients = false
 radius_graph_threshold = 1.6
 rrwp_length = 0  # 0 for no RRWPs
-time_lag_mode = "uniform"
 time_encoding_enabled = false
 normalize_z = false
 persistent_workers = true

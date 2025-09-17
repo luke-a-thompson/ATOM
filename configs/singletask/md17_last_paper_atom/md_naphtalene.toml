@@ -3,32 +3,32 @@ use_wandb = false
 
 [benchmark]
 model_type = "atom"
-benchmark_name = "paper_rmd17"
-compile = true
+benchmark_name = "paper_md17_atom"
+compile = false
 compile_trace = false
-runs = 1
+runs = 3
 log_weights = false
 
 [dataloader]
 multitask = false
 delta_T = 3000
-dataset = "rmd17"
+dataset = "md17"
 num_timesteps = 8
 
 # Single-task dataloader parameters
-molecule_type = "azobenzene"  # Iterates through single-task learning on these molecules
+molecule_type = "naphthalene"  # Iterates through single-task learning on these molecules
 
 # Multitask dataloader parameters
-train_molecules = ["benzene"]
-validation_molecules = ["benzene"]
-test_molecules = ["benzene"]
+train_molecules = ["aspirin", "benzene", "ethanol", "toluene", "uracil", "salicylic", "malonaldehyde"]
+validation_molecules = ["aspirin", "benzene", "ethanol", "toluene", "uracil", "salicylic", "malonaldehyde"]
+test_molecules = ["naphthalene"]
 
 # Other dataloader parameters
 explicit_hydrogen = false
 explicit_hydrogen_gradients = false
 radius_graph_threshold = 1.6
 rrwp_length = 0  # 0 for no RRWPs
-time_lag_mode = "uniform"
+time_lag_mode = "last"
 time_encoding_enabled = false
 normalize_z = false
 persistent_workers = true
