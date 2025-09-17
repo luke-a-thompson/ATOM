@@ -194,12 +194,16 @@ def create_dataloaders_multitask(
     assert config.dataloader.validation_molecules is not None
     assert config.dataloader.test_molecules is not None
     for molecule_type in config.dataloader.train_molecules + config.dataloader.validation_molecules + config.dataloader.test_molecules:
-        max_nodes_finder, _, _ = create_datasets(config, molecule_type, max_nodes=None)
-        max_nodes = max(max_nodes, max_nodes_finder.num_nodes)
-        # Compute max edges for this molecule
-        one_hop_adjacency, _ = max_nodes_finder._compute_adjacency_matrix(max_nodes_finder.x, max_nodes_finder.num_nodes, max_nodes_finder.radius_graph_threshold)
-        num_edges = one_hop_adjacency.sum().item()
-        max_edges = max(max_edges, num_edges)
+        try:
+            max_nodes_finder, _, _ = create_datasets(config, molecule_type, max_nodes=None)
+            max_nodes = max(max_nodes, max_nodes_finder.num_nodes)
+            # Compute max edges for this molecule
+            one_hop_adjacency, _ = max_nodes_finder._compute_adjacency_matrix(max_nodes_finder.x, max_nodes_finder.num_nodes, max_nodes_finder.radius_graph_threshold)
+            num_edges = one_hop_adjacency.sum().item()
+            max_edges = max(max_edges, num_edges)
+        except Exception as e:
+            tqdm.write(f"Skipping molecule {molecule_type} due to dataset/graph error: {e}")
+            continue
 
     tqdm.write(f"Inferred max_nodes across all molecules as: {max_nodes}")
     tqdm.write(f"Inferred max_edges across all molecules as: {max_edges}")
@@ -208,15 +212,26 @@ def create_dataloaders_multitask(
     test_loaders: list[MD17DynamicsDataset] = []
 
     for train_molecule_type in config.dataloader.train_molecules:
-        train_dataset, _, _ = create_datasets(config, train_molecule_type, max_nodes=max_nodes, max_edges=max_edges)
-        train_loaders.append(train_dataset)
+        try:
+            train_dataset, _, _ = create_datasets(config, train_molecule_type, max_nodes=max_nodes, max_edges=max_edges)
+            train_loaders.append(train_dataset)
+        except Exception as e:
+            tqdm.write(f"Skipping train molecule {train_molecule_type} due to dataset/graph error: {e}")
     for validation_molecule_type in config.dataloader.validation_molecules:
-        _, val_dataset, _ = create_datasets(config, validation_molecule_type, max_nodes=max_nodes, max_edges=max_edges)
-        val_loaders.append(val_dataset)
+        try:
+            _, val_dataset, _ = create_datasets(config, validation_molecule_type, max_nodes=max_nodes, max_edges=max_edges)
+            val_loaders.append(val_dataset)
+        except Exception as e:
+            tqdm.write(f"Skipping validation molecule {validation_molecule_type} due to dataset/graph error: {e}")
     for test_molecule_type in config.dataloader.test_molecules:
-        _, _, test_dataset = create_datasets(config, test_molecule_type, max_nodes=max_nodes, max_edges=max_edges)
-        test_loaders.append(test_dataset)
+        try:
+            _, _, test_dataset = create_datasets(config, test_molecule_type, max_nodes=max_nodes, max_edges=max_edges)
+            test_loaders.append(test_dataset)
+        except Exception as e:
+            tqdm.write(f"Skipping test molecule {test_molecule_type} due to dataset/graph error: {e}")
 
+    if len(train_loaders) == 0 or len(val_loaders) == 0 or len(test_loaders) == 0:
+        raise RuntimeError("No valid datasets remained after skipping failing molecules. Check your data/configs.")
     multitask_train_dataset: torch.utils.data.ConcatDataset[MD17DynamicsDataset] = torch.utils.data.ConcatDataset(train_loaders)
     multitask_val_dataset: torch.utils.data.ConcatDataset[MD17DynamicsDataset] = torch.utils.data.ConcatDataset(val_loaders)
     multitask_test_dataset: torch.utils.data.ConcatDataset[MD17DynamicsDataset] = torch.utils.data.ConcatDataset(test_loaders)
