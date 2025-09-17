@@ -22,6 +22,7 @@ from atom.training.config_options import (
     ValueResidualType,
     PositionalEncodingType,
     ProjectionType,
+    TimeLagMode,
 )
 
 
@@ -103,8 +104,7 @@ class DataloaderConfig(BaseModel):
     explicit_hydrogen_gradients: bool
     radius_graph_threshold: Annotated[NonNegativeFloat, Field(description="Must be greater than or equal to 0.0.")]
     rrwp_length: Annotated[NonNegativeInt, Field(description="Must be greater than or equal to 0.")]
-    # Time positional encoding (sinusoidal). When enabled, added inside model (no dim change)
-    time_encoding_enabled: bool
+    time_lag_mode: TimeLagMode
     normalize_z: bool
     persistent_workers: bool
     num_workers: Annotated[NonNegativeInt, Field(description="Must be greater than or equal to 0.")]
@@ -234,6 +234,7 @@ class ATOMConfig(BaseModel):
     heterogenous_attention_type: AttentionType
     positional_encoding: PositionalEncodingType
     rope_base: Annotated[NonNegativeFloat, Field(description="Must be greater than or equal to 0.0.")]
+    rope_tau: Annotated[NonNegativeFloat, Field(description="Must be greater than or equal to 0.0.")]
     learnable_attention_denom: bool
     # Feature parameters
     lifting_type: LiftingType
@@ -245,8 +246,11 @@ class ATOMConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate_lifting_dim(self) -> "ATOMConfig":
+        # Ensure lifting_dim divisible by num_heads and that d_head is even
         if self.lifting_dim % self.num_heads != 0:
             raise ValueError("'lifting_dim' must be divisible by 'num_heads'.")
+        if (self.lifting_dim // self.num_heads) % 2 != 0:
+            raise ValueError("'lifting_dim' / 'num_heads' (d_head) must be even.")
         return self
 
     @model_validator(mode="after")

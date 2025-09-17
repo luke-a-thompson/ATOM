@@ -7,7 +7,7 @@ import os
 from typing import final, override
 from pathlib import Path
 import torch.nn.functional as F
-from atom.training.config_options import DataPartition, Datasets, MD17MoleculeType, RMD17MoleculeType, TG80MoleculeType, MD22MoleculeType
+from atom.training.config_options import DataPartition, Datasets, MD17MoleculeType, RMD17MoleculeType, TG80MoleculeType, MD22MoleculeType, TimeLagMode
 
 
 # Centralized stick definitions per molecule (indices assume no hydrogens)
@@ -53,6 +53,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         force_regenerate: bool = False,
         verbose: bool = False,
         max_edges: int | None = None,  # Maximum number of edges to pad to
+        time_lag_mode: TimeLagMode = TimeLagMode.LAST,
     ):
         """
         Args:
@@ -92,6 +93,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         self.normalize_z: bool = normalize_z
         self.egno_mode: bool = egno_mode
         self.max_edges: int | None = max_edges
+        self.time_lag_mode: TimeLagMode = time_lag_mode
         # Predeclare attributes for type checkers
         self.split_times: npt.NDArray[np.int_] = np.array([], dtype=np.int_)
         self.cfg: dict[str, list[tuple[int, int]] | list[list[int]]] = {}
@@ -101,7 +103,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
             torch.empty(0, dtype=torch.long),
             torch.empty(0, dtype=torch.long),
         )
-        self.time_indices: torch.Tensor = torch.empty(0, dtype=torch.long)
+        # Removed absolute time indices; model uses local time only
         # Resolve molecule name from enum/value robustly
         try:
             molecule_name: str = str(molecule_type.value)
@@ -494,7 +496,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
 
         if one_hop_edges.sum() == 0:
             raise ValueError(
-                f"Could not find any edges even with threshold {current_threshold}. This suggests the molecule data may be corrupted.  Molecule type: {self.molecule_type}"
+                f"Could not find any edges even with threshold {current_threshold:.2f}. This suggests the molecule data may be corrupted.  Molecule type: {self.molecule_type}"
             )
 
         # Compute two-hop connections
@@ -573,7 +575,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         except Exception:
             mol_type_str = str(self.molecule_type).lower()
         cfg["Stick"] = MOLECULE_STICKS.get(mol_type_str, [])
-        if not cfg["Stick"]:
+        if not cfg["Stick"] and self.verbose:
             print(f"Warning: No specific 'Stick' configuration defined for molecule type: {self.molecule_type}. No stick indices will be used.")
 
         # Calculate 'Isolated' nodes (nodes not part of any stick)
@@ -670,9 +672,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
             "v_t": self.v_t[i].contiguous(),
         }
 
-        # Attach absolute time indices if available (computed in MD17DynamicsDataset)
-        if hasattr(self, "time_indices"):
-            sample["time_indices"] = self.time_indices[i].contiguous()
+        # Removed delta_t and absolute time indices; model handles local time encoding
 
         # No time PE concatenation here; time PE will be added inside the model if enabled
 
@@ -730,6 +730,7 @@ class MD17DynamicsDataset(MD17Dataset):
         force_regenerate: bool = False,
         egno_mode: bool = False,
         max_edges: int | None = None,
+        time_lag_mode: TimeLagMode = TimeLagMode.LAST,
     ):
         super().__init__(
             partition=partition,
@@ -753,6 +754,7 @@ class MD17DynamicsDataset(MD17Dataset):
             normalize_z=normalize_z,
             egno_mode=egno_mode,
             max_edges=max_edges,
+            time_lag_mode=time_lag_mode,
         )
         x_t, v_t = self.get_dynamic_target_frames()
         self.x_t = self._pad_tensor(x_t)
@@ -784,18 +786,20 @@ class MD17DynamicsDataset(MD17Dataset):
             f"replicated_mole_idx.shape: {self.replicated_mole_idx.shape}"
         )
 
-        # Absolute time indices per sample and timestep [max_samples, T]
-        inc = (self.delta_frame_max * np.arange(1, self.num_timesteps + 1) // self.num_timesteps).astype(np.int64)
-        self.time_indices: torch.Tensor = torch.tensor(self.split_times[:, None] + inc[None, :], dtype=torch.long)
+        # Removed absolute time indices; not needed for local sinusoidal PE
 
     def get_dynamic_target_frames(self) -> tuple[torch.Tensor, torch.Tensor]:
         split_times = self.split_times
         delta_frame = self.delta_frame_max
         num_timesteps = self.num_timesteps
 
-        x_t_list = [self.x[split_times + delta_frame * i // num_timesteps] for i in range(1, num_timesteps + 1)]
+        if self.time_lag_mode == TimeLagMode.UNIFORM:
+            x_t_list = [self.x[split_times + delta_frame * i // num_timesteps] for i in range(1, num_timesteps + 1)]
+            v_t_list = [self.v[split_times + delta_frame * i // num_timesteps] for i in range(1, num_timesteps + 1)]
+        else:
+            x_t_list = [self.x[split_times + delta_frame] for _ in range(1, num_timesteps + 1)]
+            v_t_list = [self.v[split_times + delta_frame] for _ in range(1, num_timesteps + 1)]
         x_t = np.stack(x_t_list, axis=1)
-        v_t_list = [self.v[split_times + delta_frame * i // num_timesteps] for i in range(1, num_timesteps + 1)]
         v_t = np.stack(v_t_list, axis=1)
 
         x_t = torch.Tensor(x_t)
@@ -815,7 +819,10 @@ class MD17DynamicsDataset(MD17Dataset):
             delta_i = int(np.floor(np.exp(u)))
             delta_i = max(1, min(delta_i, self.delta_frame_max))
 
-            inc = (delta_i * np.arange(1, self.num_timesteps + 1) // self.num_timesteps).astype(np.int64)
+            if self.time_lag_mode == TimeLagMode.UNIFORM:
+                inc = (delta_i * np.arange(1, self.num_timesteps + 1) // self.num_timesteps).astype(np.int64)
+            else:
+                inc = delta_i * np.ones(self.num_timesteps, dtype=np.int64)
             frame_idx = (int(self.split_times[i]) + inc).astype(np.int64)
 
             x_t_np = self.x[frame_idx]
@@ -832,7 +839,15 @@ class MD17DynamicsDataset(MD17Dataset):
 
             sample["x_t"] = x_t_t.contiguous()
             sample["v_t"] = v_t_t.contiguous()
-            sample["time_indices"] = torch.tensor(frame_idx, dtype=torch.long).contiguous()
+            # Removed absolute time indices and delta_t; only targets are updated
+
+        # Provide per-step time increments for T-RoPE if using dynamics
+        # Shape: [T], values equal to (delta / T) so cumulative gives [0, Δ, 2Δ, ...]
+        if hasattr(self, "num_timesteps") and self.num_timesteps > 0:
+            # Use configured max horizon for uniform per-step increments; keeps T-RoPE relative
+            dt_val = float(self.delta_frame_max)
+            per_step = dt_val / float(self.num_timesteps)
+            sample["time_increments"] = torch.full((self.num_timesteps,), per_step, dtype=torch.float32)
 
         return sample
 

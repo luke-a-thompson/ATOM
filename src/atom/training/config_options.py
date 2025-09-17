@@ -19,6 +19,12 @@ class Datasets(StrEnum):
 
 
 @final
+class TimeLagMode(StrEnum):
+    UNIFORM = "uniform"
+    LAST = "last"
+
+
+@final
 class MD17MoleculeType(StrEnum):
     aspirin = "aspirin"
     benzene = "benzene"
