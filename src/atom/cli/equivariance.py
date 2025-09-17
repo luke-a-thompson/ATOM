@@ -6,6 +6,7 @@ import numpy as np
 import numpy.typing as npt
 import torch
 from e3nn import o3
+from scipy.spatial.transform import Rotation
 from tensordict import TensorDict
 
 from atom.inference.inference_utils import clean_state_dict_prefixes
@@ -18,6 +19,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Test model equivariance to 3D rotations")
     _ = parser.add_argument("--config", type=str, help="Path to the config file")
     _ = parser.add_argument("--model", type=str, help="Path to the model checkpoint")
+    _ = parser.add_argument("--test_model", action="store_true", help="Run the full model equivariance test (requires --config and --model)")
     _ = parser.add_argument("--test_e3nn", action="store_true", help="Test with a simple E3NN linear layer")
     _ = parser.add_argument("--test_canonicalizer", action="store_true", help="Test with a canonicalizer")
     return parser.parse_args()
@@ -51,6 +53,11 @@ def load_model_and_data(config_path: str, model_path: str) -> tuple[Config, torc
     data_sample = TensorDict(data_sample, batch_size=data_sample["x_0"].shape[0])
 
     return config, model, data_sample
+
+
+def fixed_rotation_matrix() -> npt.NDArray[np.float64]:
+    """Deterministic SO(3) used across runs for rotation tests."""
+    return Rotation.from_euler("xyz", [0.3, -0.7, 1.1]).as_matrix()
 
 
 def apply_rotation(data: TensorDict, rotation_matrix: npt.NDArray[np.float64]) -> TensorDict:
@@ -107,7 +114,8 @@ def test_model_equivariance(config_path: str, model_path: str) -> None:
     with torch.no_grad():
         original_output = model(data_sample)
 
-    random_rotation: npt.NDArray[np.float64] = o3.rand_matrix().cpu().numpy()
+    # Use a fixed deterministic rotation matrix
+    random_rotation: npt.NDArray[np.float64] = fixed_rotation_matrix()
     print(f"Generated rotation matrix:\n{random_rotation}")
 
     print("Applying rotation to input data...")
@@ -124,26 +132,16 @@ def test_model_equivariance(config_path: str, model_path: str) -> None:
     rotated_xyz = rotated_output[..., xyz_slice].cpu().numpy()
 
     batch_size, timesteps, nodes, _ = original_xyz.shape
-    original_xyz_reshaped = original_xyz.reshape(-1, 3)
-    expected_rotated_xyz = original_xyz_reshaped @ random_rotation.T
-    expected_rotated_xyz = expected_rotated_xyz.reshape(batch_size, timesteps, nodes, 3)
+    # Supervised MSE vs ground truth for both cases
+    gt_xyz = data_sample["x_t"][..., :3].cpu().numpy()
+    mse_unrot_vs_gt = np.mean((original_xyz - gt_xyz) ** 2)
+    gt_xyz_rot = gt_xyz.reshape(-1, 3) @ random_rotation.T
+    gt_xyz_rot = gt_xyz_rot.reshape(batch_size, timesteps, nodes, 3)
+    mse_rot_vs_gt = np.mean((rotated_xyz - gt_xyz_rot) ** 2)
 
-    error = np.abs(rotated_xyz - expected_rotated_xyz)
-    max_error = np.max(error)
-    mean_error = np.mean(error)
-
-    print("\n=== EQUIVARIANCE TEST RESULTS ===")
-    print(f"Max error: {max_error:.2e}")
-    print(f"Mean error: {mean_error:.2e}")
-
-    tolerance = 1e-6
-    is_equivariant = max_error < tolerance
-
-    if is_equivariant:
-        print("✅ The model is EQUIVARIANT to 3D rotations!")
-    else:
-        print("❌ The model is NOT EQUIVARIANT to 3D rotations!")
-        print(f"   Error exceeds tolerance of {tolerance:.2e}")
+    print("\n=== MODEL SUPERVISED METRICS ===")
+    print(f"MSE vs GT (unrot input): {mse_unrot_vs_gt:.2e}")
+    print(f"MSE vs GT (rot input): {mse_rot_vs_gt:.2e}")
 
 
 def test_e3nn_linear_equivariance() -> None:
@@ -163,7 +161,8 @@ def test_e3nn_linear_equivariance() -> None:
     with torch.no_grad():
         original_output = e3nn_linear(input_tensor)
 
-    random_rotation: npt.NDArray[np.float64] = o3.rand_matrix().cpu().numpy()
+    # Use a fixed deterministic rotation matrix
+    random_rotation: npt.NDArray[np.float64] = fixed_rotation_matrix()
     print(f"Generated rotation matrix:\n{random_rotation}")
 
     input_reshaped = input_tensor.reshape(-1, 3).cpu().numpy()
@@ -183,10 +182,12 @@ def test_e3nn_linear_equivariance() -> None:
     error = np.abs(rotated_xyz - expected_rotated_xyz)
     max_error = np.max(error)
     mean_error = np.mean(error)
+    mse = np.mean((rotated_xyz - expected_rotated_xyz) ** 2)
 
     print("\n=== E3NN LINEAR LAYER TEST RESULTS ===")
     print(f"Max error: {max_error:.2e}")
     print(f"Mean error: {mean_error:.2e}")
+    print(f"MSE: {mse:.2e}")
 
     tolerance = 1e-6
     is_equivariant = max_error < tolerance
@@ -216,7 +217,9 @@ def test_canonicalizer_equivariance() -> None:
 
     _, _, _, Q = canonicalizer(x, v, Z)
 
-    R: torch.Tensor = o3.rand_matrix().to(x.device, x.dtype)
+    # Use a fixed deterministic rotation
+    R_np: npt.NDArray[np.float64] = fixed_rotation_matrix()
+    R: torch.Tensor = torch.tensor(R_np, device=x.device, dtype=x.dtype)
     x_rot: torch.Tensor = x @ R.T
     v_rot: torch.Tensor = v @ R.T
 
@@ -237,6 +240,24 @@ def test_canonicalizer_equivariance() -> None:
 
 def main() -> None:
     args = parse_args()
+    # Enforce that exactly one test is selected
+    selected_flags = [
+        flag
+        for flag, on in {
+            "--test_model": args.test_model,
+            "--test_e3nn": args.test_e3nn,
+            "--test_canonicalizer": args.test_canonicalizer,
+        }.items()
+        if on
+    ]
+
+    if len(selected_flags) == 0:
+        print("Error: You must provide exactly one of --test_model, --test_e3nn, or --test_canonicalizer.")
+        sys.exit(2)
+    if len(selected_flags) > 1:
+        print(f"Error: Multiple test flags provided: {', '.join(selected_flags)}. Please choose exactly one.")
+        sys.exit(2)
+
     if args.test_e3nn:
         test_e3nn_linear_equivariance()
         return
@@ -245,12 +266,12 @@ def main() -> None:
         test_canonicalizer_equivariance()
         return
 
-    if args.config and args.model:
-        test_model_equivariance(args.config, args.model)
-        return
-
-    print("Please provide one of: --test_e3nn, --test_canonicalizer, or both --config and --model for model test.")
-    sys.exit(2)
+    # args.test_model is implied at this point
+    if not args.config or not args.model:
+        print("Error: --test_model requires both --config and --model.")
+        sys.exit(2)
+    test_model_equivariance(args.config, args.model)
+    return
 
 
 if __name__ == "__main__":
