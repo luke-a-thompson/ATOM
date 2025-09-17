@@ -52,6 +52,7 @@ class ExperimentResult:
     latex_s2t: str
     s2s_mean: float
     s2t_mean: float
+    time_lag_mode: str
 
 
 def find_results_files(root: Path) -> list[Path]:
@@ -72,20 +73,11 @@ def find_results_files(root: Path) -> list[Path]:
             if results_path.is_file():
                 results_files.append(results_path)
 
-    # Also include aggregated EGNO-style files: *MoleculeType.*_results.json at root
-    for child in sorted(root.iterdir()):
-        if child.is_file() and child.suffix == ".json" and child.name.endswith("_results.json") and "MoleculeType." in child.name:
-            results_files.append(child)
     return results_files
 
 
 def load_experiment_result(results_path: Path) -> ExperimentResult | None:
     """Load a single ExperimentResult from a results.json file, or None if invalid."""
-    # Special-case aggregated EGNO-style files
-    if results_path.name != "results.json" and results_path.name.endswith("_results.json") and "MoleculeType." in results_path.name:
-        agg = _load_aggregated_results(results_path)
-        if agg is not None:
-            return agg
     try:
         with results_path.open("r", encoding="utf-8") as f:
             obj: object = json.load(f)
@@ -136,6 +128,10 @@ def load_experiment_result(results_path: Path) -> ExperimentResult | None:
         else:
             s2t_mean = float("nan")
 
+        # Extract time lag mode from config (e.g., "uniform" or "last")
+        tlm_obj: object = dataloader_cfg.get("time_lag_mode", "last")
+        time_lag_mode: str = str(tlm_obj).strip().lower()
+
         return ExperimentResult(
             model_type=model_type,
             molecule=molecule,
@@ -143,66 +139,10 @@ def load_experiment_result(results_path: Path) -> ExperimentResult | None:
             latex_s2t=latex_s2t,
             s2s_mean=s2s_mean,
             s2t_mean=s2t_mean,
+            time_lag_mode=time_lag_mode,
         )
     except Exception:
         return None
-
-
-def _parse_molecule_from_aggregated_filename(path: Path) -> str | None:
-    name: str = path.name
-    try:
-        after_tag: str = name.split("MoleculeType.", 1)[1]
-        molecule_part: str = after_tag.split("_num_timesteps", 1)[0]
-        return molecule_part.strip().lower()
-    except Exception:
-        return None
-
-
-def _format_latex_from_mean_std(mean_value: float, std_value: float) -> str:
-    # Scale by 100 to match existing latex formatting in MD17 results.json
-    mean_scaled: float = mean_value * 100.0
-    std_scaled: float = std_value * 100.0
-    return f"\\({mean_scaled:.2f}{{\\scriptstyle \\pm{std_scaled:.2f}}}\\)"
-
-
-def _load_aggregated_results(results_path: Path) -> ExperimentResult | None:
-    try:
-        with results_path.open("r", encoding="utf-8") as f:
-            obj: object = json.load(f)
-    except Exception:
-        return None
-    if not isinstance(obj, dict):
-        return None
-    data: dict[str, object] = obj
-
-    molecule: str | None = _parse_molecule_from_aggregated_filename(results_path)
-    if molecule is None:
-        return None
-
-    model_type: str = "EGNO"
-
-    s2t_mean_obj: object = data.get("mean_test_final_loss", float("nan"))
-    s2s_mean_obj: object = data.get("mean_test_all_loss", float("nan"))
-    # Prefer std_test_* if present, else fall back to test_loss_std
-    s2t_std_obj: object = data.get("std_test_final_loss", data.get("test_loss_std", float("nan")))
-    s2s_std_obj: object = data.get("std_test_all_loss", data.get("test_loss_std", float("nan")))
-
-    s2t_mean: float = float(s2t_mean_obj) if isinstance(s2t_mean_obj, (int, float)) else float("nan")
-    s2s_mean: float = float(s2s_mean_obj) if isinstance(s2s_mean_obj, (int, float)) else float("nan")
-    s2t_std: float = float(s2t_std_obj) if isinstance(s2t_std_obj, (int, float)) else float("nan")
-    s2s_std: float = float(s2s_std_obj) if isinstance(s2s_std_obj, (int, float)) else float("nan")
-
-    latex_s2t: str = _format_latex_from_mean_std(s2t_mean, s2t_std) if s2t_mean == s2t_mean and s2t_std == s2t_std else "-"
-    latex_s2s: str = _format_latex_from_mean_std(s2s_mean, s2s_std) if s2s_mean == s2s_mean and s2s_std == s2s_std else "-"
-
-    return ExperimentResult(
-        model_type=model_type,
-        molecule=molecule,
-        latex_s2s=latex_s2s,
-        latex_s2t=latex_s2t,
-        s2s_mean=s2s_mean,
-        s2t_mean=s2t_mean,
-    )
 
 
 def group_results_by_model(results: list[ExperimentResult]) -> dict[str, dict[str, ExperimentResult]]:
@@ -276,11 +216,12 @@ def _best_model_for_each_molecule(grouped: dict[str, dict[str, ExperimentResult]
     return best_model_for_molecule
 
 
-def build_tables(egno_dir: Path, atom_dir: Path) -> str:
-    """Build LaTeX text containing two tables: top S2S and lower S2T.
+def build_tables(egno_dir: Path, atom_dir: Path) -> dict[str, str]:
+    """Build LaTeX tables per time_lag_mode and return {mode: latex_str}.
 
     Two directories are required: one for EGNO runs and one for ATOMS (GTNO) runs.
-    The rows will include both models if present.
+    Results are split by `time_lag_mode` (e.g., 'uniform' or 'last') so each mode
+    produces a separate table.
     """
     all_results: list[ExperimentResult] = []
     for d in [egno_dir, atom_dir]:
@@ -288,14 +229,24 @@ def build_tables(egno_dir: Path, atom_dir: Path) -> str:
         results_maybe: list[ExperimentResult | None] = [load_experiment_result(p) for p in results_files]
         all_results.extend([r for r in results_maybe if r is not None])
 
-    grouped: dict[str, dict[str, ExperimentResult]] = group_results_by_model(all_results)
+    outputs: dict[str, str] = {}
+    if len(all_results) == 0:
+        return outputs
 
-    sections: list[str] = []
-    if len(grouped) == 0:
-        return "% No results found under: " + str(egno_dir) + ", " + str(atom_dir)
+    mode_to_grouped: dict[str, dict[str, dict[str, ExperimentResult]]] = {}
+    for r in all_results:
+        mode_key: str = r.time_lag_mode if r.time_lag_mode in {"uniform", "last"} else str(r.time_lag_mode)
+        mode_map: dict[str, dict[str, ExperimentResult]] = mode_to_grouped.setdefault(mode_key, {})
+        canonical_model: str = _canonicalize_model_type(r.model_type)
+        model_map: dict[str, ExperimentResult] = mode_map.setdefault(canonical_model, {})
+        model_map[r.molecule] = r
 
-    sections.append(build_combined_table_with_two_sections(grouped))
-    return "\n".join(sections) + "\n"
+    for mode_key, grouped in mode_to_grouped.items():
+        if len(grouped) == 0:
+            continue
+        outputs[mode_key] = build_combined_table_with_two_sections(grouped)
+
+    return outputs
 
 
 def _canonicalize_model_type(name: str) -> str:
@@ -308,7 +259,7 @@ def _canonicalize_model_type(name: str) -> str:
 
 
 def _format_percent_value(value: float) -> str:
-    return f"\\({value:.2f}\\%\\)"
+    return f"\\({value:+.2f}\\%\\)"
 
 
 def _build_rows_for_metric(grouped: dict[str, dict[str, ExperimentResult]], molecule_order: list[str], metric: str) -> list[str]:
@@ -328,7 +279,6 @@ def _build_rows_for_metric(grouped: dict[str, dict[str, ExperimentResult]], mole
                 if best_per_molecule.get(molecule) == model:
                     cell = _bold_latex_value(cell)
                 row_cells.append(cell)
-        row_cells.append("")
         lines.append("    " + " & ".join(row_cells) + " \\")
     return lines
 
@@ -353,18 +303,17 @@ def _build_improvement_row(grouped: dict[str, dict[str, ExperimentResult]], mole
         imp: float = (base_mean - tgt_mean) / base_mean * 100.0
         improvements.append(_format_percent_value(imp))
         values.append(imp)
-    mean_cell: str = "-"
     if len(values) > 0:
         mean_val: float = sum(values) / float(len(values))
-        mean_cell = _format_percent_value(mean_val)
-    return "    " + "\\rowcolor{gray!20} Improvement (\\%)" + " & " + " & ".join(improvements) + " & " + mean_cell + " \\"
+        print(f"Mean {metric.upper()} Gap: {mean_val:+.2f}%")
+    return "    " + "\\rowcolor{gray!20} Gap" + " & " + " & ".join(improvements) + " \\"
 
 
 def build_combined_table_with_two_sections(grouped: dict[str, dict[str, ExperimentResult]]) -> str:
     molecule_order: list[str] = _compute_molecule_order(grouped)
-    headers: list[str] = ["", *[_display_molecule_name(m) for m in molecule_order], "Mean %"]
+    headers: list[str] = ["", *[_display_molecule_name(m) for m in molecule_order]]
     lines: list[str] = []
-    lines.append("\\begin{tabular}{l" + ("c" * len(molecule_order)) + " c}")
+    lines.append("\\begin{tabular}{l" + ("c" * len(molecule_order)) + "}")
     lines.append("    \\toprule")
     lines.append("    " + " & ".join(headers) + " \\")
     lines.append("    \\midrule")
@@ -416,16 +365,6 @@ def main() -> int:
         type=str,
         help="Directory containing ATOMS/GTNO experiment folders (each with results.json)",
     )
-    _ = parser.add_argument(
-        "--out",
-        type=str,
-        default=None,
-        help=(
-            "Optional path to write the LaTeX output. If omitted, writes to "
-            "Z_paper_content/tables/<dataset>_tables.tex when dataset is detectable (md17/md22), "
-            "else Z_paper_content/tables/tables.tex."
-        ),
-    )
 
     args = parser.parse_args()
 
@@ -436,23 +375,21 @@ def main() -> int:
     if not atom_dir.exists():
         raise SystemExit(f"ATOMS directory does not exist: {atom_dir}")
 
-    latex_text: str = build_tables(egno_dir, atom_dir)
+    tables_by_mode: dict[str, str] = build_tables(egno_dir, atom_dir)
 
-    # Determine output path
-    if args.out is not None:
-        out_path: Path = Path(args.out).expanduser().resolve()
-    else:
-        # Mirror create_runtime_tables.py: default into Z_paper_content/tables/
-        results: list[ExperimentResult] = _collect_results(egno_dir, atom_dir)
-        dataset_token: str = _infer_dataset_token_from_results(results)
-        base_dir: Path = (Path(__file__).resolve().parent / "tables").resolve()
-        filename: str = f"{dataset_token}_tables.tex" if dataset_token in {"md17", "md22"} else "tables.tex"
-        out_path = (base_dir / filename).resolve()
+    # Determine output path base (always under Z_paper_content/tables/)
+    results: list[ExperimentResult] = _collect_results(egno_dir, atom_dir)
+    dataset_token: str = _infer_dataset_token_from_results(results)
+    base_dir: Path = (Path(__file__).resolve().parent / "tables").resolve()
+    base_dir.mkdir(parents=True, exist_ok=True)
 
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(latex_text, encoding="utf-8")
+    # Write a file per mode (e.g., md17_uniform_tables.tex, md17_last_tables.tex)
+    for mode_key, latex_text in tables_by_mode.items():
+        suffix: str = f"{dataset_token}_{mode_key}_tables.tex" if dataset_token in {"md17", "md22"} else f"tables_{mode_key}.tex"
+        out_path: Path = (base_dir / suffix).resolve()
+        out_path.write_text(latex_text, encoding="utf-8")
+        # Do not print LaTeX table to stdout; means are printed during construction
 
-    print(latex_text, end="")
     return 0
 
 

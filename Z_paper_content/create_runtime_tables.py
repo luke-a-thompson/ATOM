@@ -8,7 +8,7 @@ import re
 import argparse
 
 ## Example usage:
-# uv run python -m Z_paper_content.get_runtimes /home/luke/gtno_py/benchmark_runs/tg80_egno_st /home/luke/gtno_py/benchmark_runs/tg80_atom_st --dataset tg80 --out /home/luke/gtno_py/Z_paper_content/tables/runtime_tg80.tex
+# uv run tables /path/to/EGNO /path/to/ATOM
 
 
 def get_run_times(directory: Path) -> dict[str, dict[str, list[float]]]:
@@ -362,12 +362,6 @@ def runtime_table_cli() -> int:
     _ = parser.add_argument("egno_dir", type=str, help="Directory with EGNO runs (contains results.json files)")
     _ = parser.add_argument("atom_dir", type=str, help="Directory with ATOMS/GTNO runs (contains results.json files)")
     _ = parser.add_argument("--dataset", type=str, default="md17", help="Dataset key to aggregate (e.g., md17, rmd17, tg80)")
-    _ = parser.add_argument(
-        "--out",
-        type=str,
-        default=None,
-        help="Optional explicit output .tex path. Defaults to Z_paper_content/tables/runtime_<dataset>.tex",
-    )
     _ = parser.add_argument("--f-peak", type=float, default=15.0, help="Peak TFLOPS of the GPU (default: 15.0)")
 
     args = parser.parse_args()
@@ -380,13 +374,9 @@ def runtime_table_cli() -> int:
 
     latex_text: str = build_runtime_table(egno_dir=egno_dir, atom_dir=atom_dir, dataset=str(args.dataset), f_peak_tflops=float(args.f_peak))
 
-    if args.out is not None:
-        out_path: Path = Path(args.out).expanduser().resolve()
-    else:
-        out_path = (Path(__file__).resolve().parent / "tables" / f"runtime_{args.dataset}.tex").resolve()
+    out_path: Path = (Path(__file__).resolve().parent / "tables" / f"runtime_{args.dataset}.tex").resolve()
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(latex_text, encoding="utf-8")
-    print(latex_text, end="")
     return 0
 
 

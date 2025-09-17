@@ -206,10 +206,11 @@ def plot_ablations(ablation_dir: Path, save_path: Path | None = None, error_bar_
     value_text = f"{highest_value:.2f}"
 
     # Position the text slightly to the right of the bar end
-    text_x_position = 10.25
+    text_x_position = 10.50
 
-    # Add the text annotation
-    _ = ax.text(x=text_x_position, y=highest_category, s=value_text, verticalalignment="center", ha="left", color=grey, fontsize=10, fontweight="bold")
+    # Add the text annotation using a fontdict for font properties
+    fontdict = {"fontsize": 10, "fontweight": "bold"}
+    _ = ax.text(x=text_x_position, y=highest_category, s=value_text, verticalalignment="center", ha="left", color=grey, fontdict=fontdict)
 
     # Remove top and right spines
     ax.spines["top"].set_visible(False)
@@ -237,7 +238,7 @@ def plot_ablations(ablation_dir: Path, save_path: Path | None = None, error_bar_
 
 
 if __name__ == "__main__":
-    ablation_dir = Path("benchmark_runs/MD17_ablations")
+    ablation_dir = Path("benchmark_runs/ablations_atom_17-Sep-2025_00-38-16")
     # Use percentile error bars by default
     set_matplotlib_style()
     plot_ablations(ablation_dir=ablation_dir, save_path=Path("Z_paper_content/ablations/ablation_MD17.pdf"), error_bar_type=ErrorBarType.PERCENTILE)
