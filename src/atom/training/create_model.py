@@ -5,6 +5,8 @@ from atom.atom.atom_model import ATOM
 from atom.training.config_options import Datasets, ModelType
 from atom.training.create_config import Config
 
+import torch
+
 
 def initialize_model(config: Config) -> nn.Module:
     """Initialize a model based on the configuration file.
@@ -15,6 +17,7 @@ def initialize_model(config: Config) -> nn.Module:
     Returns:
         nn.Module: The initialized model.
     """
+    torch.set_float32_matmul_precision("high")
     match config.benchmark.model_type:
         case ModelType.ATOM:
             return ATOM(
@@ -29,10 +32,10 @@ def initialize_model(config: Config) -> nn.Module:
                 num_timesteps=config.dataloader.num_timesteps,
                 positional_encoding=config.atom_config.positional_encoding,
                 rope_base=config.atom_config.rope_base,
+                rope_tau=config.atom_config.rope_tau,
                 lifting_type=config.atom_config.lifting_type,
                 projection_type=config.atom_config.projection_type,
                 rrwp_length=config.dataloader.rrwp_length,
-                time_encoding_enabled=config.dataloader.time_encoding_enabled,
                 value_residual_type=config.atom_config.value_residual_type,
                 learnable_attention_denom=config.atom_config.learnable_attention_denom,
             )
