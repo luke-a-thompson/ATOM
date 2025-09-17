@@ -60,10 +60,14 @@ def main() -> None:
 
             rel_experiment_dir: Path = (base_benchmark_root / rel_parent_dir / f"{rel_config_stem}_{invocation_timestamp}").resolve()
 
-            if config.dataloader.multitask:
-                multitask_benchmark(config, config_path, rel_experiment_dir)
-            else:
-                singletask_benchmark(config, config_path, rel_experiment_dir)
+            try:
+                if config.dataloader.multitask:
+                    multitask_benchmark(config, config_path, rel_experiment_dir)
+                else:
+                    singletask_benchmark(config, config_path, rel_experiment_dir)
+            except Exception as e:
+                # Continue to next config, but record the failure
+                print(f"Error running config {config_path}: {e}")
     else:
         raise ValueError("No config file or directory provided")
 
