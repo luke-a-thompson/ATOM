@@ -29,16 +29,9 @@ FEATURE_CONFIG: dict[str, dict[str, slice]] = {
 
 
 def parse_args() -> argparse.Namespace:
-    """Parse command line arguments."""
-    parser = argparse.ArgumentParser(description="Test model equivariance to 3D rotations")
-    _ = parser.add_argument("--config", type=str, help="Path to the config file")
-    _ = parser.add_argument(
-        "--model",
-        type=str,
-        help="Path to the model checkpoint",
-    )
-    _ = parser.add_argument("--test_e3nn", action="store_true", help="Test with a simple E3NN linear layer")
-    _ = parser.add_argument("--test_canonicalizer", action="store_true", help="Test with a canonicalizer")
+    """Parse command line arguments for simple directory-based evaluation."""
+    parser = argparse.ArgumentParser(description="Evaluate equivariance MSEs over an experiments directory")
+    _ = parser.add_argument("root_dir", type=str, help="Path to root directory containing experiment subdirectories")
     return parser.parse_args()
 
 
@@ -118,75 +111,99 @@ def apply_rotation(data: TensorDict, rotation_matrix: npt.NDArray[np.float64]) -
     return rotated_data
 
 
-def test_model_equivariance(config_path: str, model_path: str) -> None:
-    """Tests the model's equivariance to 3D rotations and prints results."""
-    print("Loading model and data...")
+def _fixed_rotation_matrix() -> npt.NDArray[np.float64]:
+    return Rotation.from_euler("xyz", [0.3, -0.7, 1.1]).as_matrix()
+
+
+def evaluate_single_run(config_path: str, model_path: str) -> dict[str, float]:
+    """Return supervised MSEs for one model on one deterministic batch.
+
+    Returns a dict with keys: "mse_unrot" and "mse_rot".
+    """
     config, model, data_sample = load_model_and_data(config_path, model_path)
 
-    # 1. Get model output for the original input
-    print("Computing original output...")
+    base_sample = data_sample.clone()
     with torch.no_grad():
-        original_output = model(data_sample)
+        original_output = model(base_sample.clone())
 
-    # 2. Generate a random rotation matrix
-    random_rotation: npt.NDArray[np.float64] = Rotation.random().as_matrix()
-    print(f"Generated rotation matrix:\n{random_rotation}")
-
-    # 3. Apply rotation to the input data
-    print("Applying rotation to input data...")
-    rotated_data_sample = apply_rotation(data_sample, random_rotation)
-
-    # 4. Get model output for the rotated input
-    print("Computing rotated output...")
+    R = _fixed_rotation_matrix()
+    rotated_data_sample = apply_rotation(base_sample.clone(), R)
     with torch.no_grad():
         rotated_output = model(rotated_data_sample)
 
-    # 5. Compare outputs
-    output_spec = FEATURE_CONFIG["output"]
-    xyz_slice = output_spec["xyz"]
-
+    xyz_slice = FEATURE_CONFIG["output"]["xyz"]
     original_xyz = original_output[..., xyz_slice].cpu().numpy()
     rotated_xyz = rotated_output[..., xyz_slice].cpu().numpy()
 
-    # Reshape for easier processing
+    gt_xyz = data_sample["x_t"][..., :3].cpu().numpy()
+    mse_unrot_vs_gt = float(np.mean((original_xyz - gt_xyz) ** 2))
+
     batch_size, timesteps, nodes, _ = original_xyz.shape
-    original_xyz_reshaped = original_xyz.reshape(-1, 3)
+    gt_xyz_rot = gt_xyz.reshape(-1, 3) @ R.T
+    gt_xyz_rot = gt_xyz_rot.reshape(batch_size, timesteps, nodes, 3)
+    mse_rot_vs_gt = float(np.mean((rotated_xyz - gt_xyz_rot) ** 2))
 
-    # Apply the same rotation to the original output
-    expected_rotated_xyz = original_xyz_reshaped @ random_rotation.T
-    expected_rotated_xyz = expected_rotated_xyz.reshape(batch_size, timesteps, nodes, 3)
+    return {"mse_unrot": mse_unrot_vs_gt, "mse_rot": mse_rot_vs_gt}
 
-    # Calculate the error
-    error = np.abs(rotated_xyz - expected_rotated_xyz)
-    max_error = np.max(error)
-    mean_error = np.mean(error)
 
-    print(f"\n=== EQUIVARIANCE TEST RESULTS ===")
-    print(f"Max error: {max_error:.2e}")
-    print(f"Mean error: {mean_error:.2e}")
+def run_equivariance_ablations(root_dir: str) -> None:
+    """Scan experiments under root_dir and print mean ± 2SD for MSEs.
 
-    # Check if the model is equivariant (using a reasonable tolerance)
-    tolerance = 1e-6
-    is_equivariant = max_error < tolerance
+    Expected layout per experiment:
+      <exp_dir>/config.toml (or any *.toml)
+      <exp_dir>/run_*/best_val_model.pth
+    """
+    root = Path(root_dir)
+    if not root.exists() or not root.is_dir():
+        print(f"Error: '{root_dir}' is not a directory")
+        return
 
-    if is_equivariant:
-        print("✅ The model is EQUIVARIANT to 3D rotations!")
-    else:
-        print("❌ The model is NOT EQUIVARIANT to 3D rotations!")
-        print(f"   Error exceeds tolerance of {tolerance:.2e}")
+    exp_dirs = sorted([p for p in root.iterdir() if p.is_dir()])
+    if len(exp_dirs) == 0:
+        print(f"No experiment directories found under '{root_dir}'")
+        return
 
-    # Check if the invariant part (if any) remains unchanged
-    invariant_slice = output_spec.get("invariant")
-    if invariant_slice and original_output.shape[-1] > xyz_slice.stop:
-        original_invariant = original_output[..., invariant_slice].cpu().numpy()
-        rotated_invariant = rotated_output[..., invariant_slice].cpu().numpy()
-        invariant_error = np.max(np.abs(original_invariant - rotated_invariant))
-        print(f"Invariant part max error: {invariant_error:.2e}")
+    for exp in exp_dirs:
+        # Find a config TOML at the experiment root
+        tomls = sorted(exp.glob("*.toml"))
+        if len(tomls) == 0:
+            print(f"[skip] No TOML found in {exp}")
+            continue
+        config_path = str(tomls[0])
 
-        if invariant_error < tolerance:
-            print("✅ Invariant parts remain unchanged!")
-        else:
-            print("❌ Invariant parts changed after rotation!")
+        # Find model checkpoints under run_*/
+        run_dirs = sorted([p for p in exp.glob("run_*") if p.is_dir()])
+        model_paths: list[str] = []
+        for rd in run_dirs:
+            model_file = rd / "best_val_model.pth"
+            if model_file.exists():
+                model_paths.append(str(model_file))
+
+        if len(model_paths) == 0:
+            print(f"[skip] No runs with checkpoints in {exp}")
+            continue
+
+        per_run_unrot: list[float] = []
+        per_run_rot: list[float] = []
+        for mp in model_paths:
+            res = evaluate_single_run(config_path, mp)
+            per_run_unrot.append(res["mse_unrot"])
+            per_run_rot.append(res["mse_rot"])
+
+        mean_unrot = float(np.mean(per_run_unrot))
+        sd_unrot = float(np.std(per_run_unrot, ddof=1)) if len(per_run_unrot) > 1 else 0.0
+        mean_rot = float(np.mean(per_run_rot))
+        sd_rot = float(np.std(per_run_rot, ddof=1)) if len(per_run_rot) > 1 else 0.0
+
+        # Per-run differences (rotated - unrotated) for mean ± 2SD reporting
+        per_run_diff = [r - u for r, u in zip(per_run_rot, per_run_unrot)]
+        mean_diff = float(np.mean(per_run_diff))
+        sd_diff = float(np.std(per_run_diff, ddof=1)) if len(per_run_diff) > 1 else 0.0
+
+        print(f"{exp.name} ({len(model_paths)} runs)")
+        print(f"  MSE vs ground truth (unrotated input): {mean_unrot:.3f} ± {(2*sd_unrot):.3f}")
+        print(f"  MSE vs ground truth (rotated input):   {mean_rot:.3f} ± {(2*sd_rot):.3f}")
+        print(f"  Difference (rotated − unrotated):      {mean_diff:.3f} ± {(2*sd_diff):.3f}")
 
 
 def test_e3nn_linear_equivariance() -> None:
@@ -211,8 +228,8 @@ def test_e3nn_linear_equivariance() -> None:
     with torch.no_grad():
         original_output = e3nn_linear(input_tensor)
 
-    # 2. Generate a random rotation matrix
-    random_rotation: npt.NDArray[np.float64] = Rotation.random().as_matrix()
+    # 2. Use a fixed deterministic rotation matrix (Euler xyz: 0.3, -0.7, 1.1)
+    random_rotation: npt.NDArray[np.float64] = Rotation.from_euler("xyz", [0.3, -0.7, 1.1]).as_matrix()
     print(f"Generated rotation matrix:\n{random_rotation}")
 
     # 3. Apply rotation to the input
@@ -241,10 +258,12 @@ def test_e3nn_linear_equivariance() -> None:
     error = np.abs(rotated_xyz - expected_rotated_xyz)
     max_error = np.max(error)
     mean_error = np.mean(error)
+    mse = np.mean((rotated_xyz - expected_rotated_xyz) ** 2)
 
     print(f"\n=== E3NN LINEAR LAYER TEST RESULTS ===")
     print(f"Max error: {max_error:.2e}")
     print(f"Mean error: {mean_error:.2e}")
+    print(f"MSE: {mse:.2e}")
 
     # Check if the layer is equivariant
     tolerance = 1e-6
@@ -280,8 +299,9 @@ def test_canonicalizer_equivariance(config_path: str, model_path: str) -> None:
     # Forward on original inputs
     _, _, _, Q = canonicalizer(x, v, Z)
 
-    # Generate a random rotation (acts on column vectors), for row vectors use transpose
-    R: torch.Tensor = o3.rand_matrix().to(x.device, x.dtype)
+    # Use a fixed deterministic rotation (Euler xyz: 0.3, -0.7, 1.1)
+    R_np: npt.NDArray[np.float64] = Rotation.from_euler("xyz", [0.3, -0.7, 1.1]).as_matrix()
+    R: torch.Tensor = torch.tensor(R_np, device=x.device, dtype=x.dtype)
     x_rot: torch.Tensor = x @ R.T
     v_rot: torch.Tensor = v @ R.T
 
@@ -305,9 +325,8 @@ def test_canonicalizer_equivariance(config_path: str, model_path: str) -> None:
 
 def main() -> None:
     args = parse_args()
-    if args.test_e3nn:
-        test_e3nn_linear_equivariance()
-    elif args.test_model:
-        test_model_equivariance(args.config, args.model)
-    elif args.test_canonicalizer:
-        test_canonicalizer_equivariance(args.config, args.model)
+    run_equivariance_ablations(args.root_dir)
+
+
+if __name__ == "__main__":
+    main()
