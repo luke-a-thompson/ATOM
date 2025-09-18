@@ -200,10 +200,19 @@ def run_equivariance_ablations(root_dir: str) -> None:
         mean_diff = float(np.mean(per_run_diff))
         sd_diff = float(np.std(per_run_diff, ddof=1)) if len(per_run_diff) > 1 else 0.0
 
+        # Scale to ×10^-2 units for display
+        scale = 100.0
+        mean_unrot_scaled = mean_unrot * scale
+        two_sd_unrot_scaled = (2 * sd_unrot) * scale
+        mean_rot_scaled = mean_rot * scale
+        two_sd_rot_scaled = (2 * sd_rot) * scale
+        mean_diff_scaled = mean_diff * scale
+        two_sd_diff_scaled = (2 * sd_diff) * scale
+
         print(f"{exp.name} ({len(model_paths)} runs)")
-        print(f"  MSE vs ground truth (unrotated input): {mean_unrot:.3f} ± {(2*sd_unrot):.3f}")
-        print(f"  MSE vs ground truth (rotated input):   {mean_rot:.3f} ± {(2*sd_rot):.3f}")
-        print(f"  Difference (rotated − unrotated):      {mean_diff:.3f} ± {(2*sd_diff):.3f}")
+        print(f"  S2T MSE vs ground truth (unrotated input): \\({mean_unrot_scaled:.3f}{{\\scriptstyle \\pm{two_sd_unrot_scaled:.3f}}}\\) \\times 10^{{-2}}")
+        print(f"  S2T MSE vs ground truth (rotated input):   \\({mean_rot_scaled:.3f}{{\\scriptstyle \\pm{two_sd_rot_scaled:.3f}}}\\) \\times 10^{{-2}}")
+        print(f"  Difference (rotated − unrotated):      \\({mean_diff_scaled:.3f}{{\\scriptstyle \\pm{two_sd_diff_scaled:.3f}}}\\) \\times 10^{{-2}}")
 
 
 def test_e3nn_linear_equivariance() -> None:

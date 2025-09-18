@@ -17,7 +17,6 @@ def initialize_model(config: Config) -> nn.Module:
     Returns:
         nn.Module: The initialized model.
     """
-    torch.set_float32_matmul_precision("high")
     match config.benchmark.model_type:
         case ModelType.ATOM:
             return ATOM(
