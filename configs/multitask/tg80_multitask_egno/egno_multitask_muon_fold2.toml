@@ -11,7 +11,7 @@ log_weights = false
 
 [dataloader]
 multitask = true
-delta_T = 10_000
+delta_T = [3000, 15_000]
 dataset = "tg80"
 num_timesteps = 8
 

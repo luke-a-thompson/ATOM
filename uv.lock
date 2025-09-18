@@ -34,10 +34,25 @@ wheels = [
 ]
 
 [[package]]
+name = "ase"
+version = "3.26.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "matplotlib" },
+    { name = "numpy" },
+    { name = "scipy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/30/33/2ffa44950267450f6a5cdb711c68e12d0d72d626e246e5897e3bada7bac6/ase-3.26.0.tar.gz", hash = "sha256:a071a355775b0a8062d23e9266e9d811b19d9f6d9ec5215e8032f7d93dc65075", size = 2405567, upload-time = "2025-08-12T13:06:55.589Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/dd/f0/6e52d797bee63530f4b778cb4cbb3a01970f104197c364a8ff51bc9f5a21/ase-3.26.0-py3-none-any.whl", hash = "sha256:77fd0e609bd3868006d4bb3bb95cdc4081d9e292ac84f6c9fb564b5751d2689e", size = 2946787, upload-time = "2025-08-12T13:06:53.316Z" },
+]
+
+[[package]]
 name = "atom"
 version = "0.1.3"
 source = { editable = "." }
 dependencies = [
+    { name = "dscribe" },
     { name = "e3nn" },
     { name = "llvmlite" },
     { name = "matplotlib" },
@@ -72,6 +87,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "dscribe", specifier = ">=2.1.1" },
     { name = "e3nn", specifier = ">=0.5.4,<0.6" },
     { name = "llvmlite", specifier = ">=0.43,<1" },
     { name = "matplotlib", specifier = ">=3.8.0,<4" },
@@ -316,6 +332,38 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/c5/e6/d1f6c00b7221e2d7c4b470132c931325c8b22c51ca62417e300f5ce16009/docker-pycreds-0.4.0.tar.gz", hash = "sha256:6ce3270bcaf404cc4c3e27e4b6c70d3521deae82fb508767870fdbf772d584d4", size = 8754, upload-time = "2018-11-29T03:26:50.996Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f5/e8/f6bd1eee09314e7e6dee49cbe2c5e22314ccdb38db16c9fc72d2fa80d054/docker_pycreds-0.4.0-py2.py3-none-any.whl", hash = "sha256:7266112468627868005106ec19cd0d722702d2b7d5912a28e19b826c3d37af49", size = 8982, upload-time = "2018-11-29T03:26:49.575Z" },
+]
+
+[[package]]
+name = "dscribe"
+version = "2.1.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "ase" },
+    { name = "joblib" },
+    { name = "numpy" },
+    { name = "scikit-learn" },
+    { name = "scipy" },
+    { name = "sparse" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/b7/17/2e1725dedadd638768883b97db98c42e31febe56859dae2b5efc8ed93201/dscribe-2.1.1.tar.gz", hash = "sha256:444484b7070255257383d191936f8bb5e4b11c1ba8eb4ac22c7273e82f9c8bdd", size = 1193399, upload-time = "2024-05-28T18:26:12.905Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e2/1f/4804c41bcbabf7523abe29edbaff68cd4b4269d1b176c4ef987634aece3a/dscribe-2.1.1-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:a542196f0ff3fedb0123d64661ff682043972c4c389782c6f18a470d63214718", size = 726328, upload-time = "2024-05-28T18:23:08.348Z" },
+    { url = "https://files.pythonhosted.org/packages/18/3c/cb0da78dd7424bad3bce41d9c11022352f2859a0fc96395f64cb0a96c265/dscribe-2.1.1-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:c18560090e6960e4bbc76adbca579d397b6c2977895f1af6676cb30909223c16", size = 691931, upload-time = "2024-05-28T18:23:11.172Z" },
+    { url = "https://files.pythonhosted.org/packages/19/82/10a3731504a36d61761421644653ef17cf40e046af8f3b72868e1e22e162/dscribe-2.1.1-cp311-cp311-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:225f34d53c6da68d05f405bc0096b1a017a937c86dbbb0aa4719b315714211a2", size = 12318775, upload-time = "2024-05-28T18:23:17.39Z" },
+    { url = "https://files.pythonhosted.org/packages/5e/28/0e4277a7a038ce34c6a2c115b7a6f7466e1c84d0be1706d621b103c45a9b/dscribe-2.1.1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:7ded7aa8b69ae4d4950b970010d57fe899cd41167e2c0aa0cf4512de0ee9d3ef", size = 12763032, upload-time = "2024-05-28T18:23:24.067Z" },
+    { url = "https://files.pythonhosted.org/packages/ee/6c/75dcd86b9e1a0d17ec5e0dd4118d7a4c7f06b074f58926c1cd8f957003db/dscribe-2.1.1-cp311-cp311-musllinux_1_2_i686.whl", hash = "sha256:bc4cea0da6a1520f313e11cff30141146d27aa6217dff33c9fb88c223addc8f2", size = 13155555, upload-time = "2024-05-28T18:23:36.097Z" },
+    { url = "https://files.pythonhosted.org/packages/4e/d4/6d0b3588fe95726e3b735883fb8be04bc6f019efbf1744ff727579baac1a/dscribe-2.1.1-cp311-cp311-musllinux_1_2_x86_64.whl", hash = "sha256:b64711052bffd5005ca532864284abcbc9a19b84461fb2aca936952c9e3a96ab", size = 13392590, upload-time = "2024-05-28T18:23:43.192Z" },
+    { url = "https://files.pythonhosted.org/packages/7c/64/f50456dd336e062152ad50dedf95ff6ad93d92e499702c2ba17ad283745b/dscribe-2.1.1-cp311-cp311-win32.whl", hash = "sha256:0bfaadf330c339b6c46f159eeb601ac1d3781933ee3fa5ff5c9ab7d986447ecc", size = 507481, upload-time = "2024-05-28T18:23:46.108Z" },
+    { url = "https://files.pythonhosted.org/packages/88/21/fa812e58e627d7a1adaaf0ca0a98503e4c837b946eeb5103c7c4fe4d80ab/dscribe-2.1.1-cp311-cp311-win_amd64.whl", hash = "sha256:d8c9e9b6ee9d9b84aa64e9950e3f4ee6ccdacc88000c40fc6c7c2f01f964adc5", size = 544099, upload-time = "2024-05-28T18:23:48.023Z" },
+    { url = "https://files.pythonhosted.org/packages/b7/8a/010baee807b56ce10231cd5a18938831eb7a2e692fc73cc32ec07b2e1c70/dscribe-2.1.1-cp312-cp312-macosx_10_9_x86_64.whl", hash = "sha256:5c2d96fa26ff16988183de0af664c671ba155866baff09885bd57e58bd03d8f2", size = 726014, upload-time = "2024-05-28T18:23:51.5Z" },
+    { url = "https://files.pythonhosted.org/packages/ee/84/983c61099fa81d04b71b8497fbf41af5f6339bd86f740ad38cd8f99b21be/dscribe-2.1.1-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:107f71f3f18e51cdf3d389caa1e5aef82589896c1c840b574d094a435dd0820b", size = 690824, upload-time = "2024-05-28T18:23:53.598Z" },
+    { url = "https://files.pythonhosted.org/packages/31/be/6ab1eafd959b43ca8a41f0c810465a1a4f970615187b2d9685001559509d/dscribe-2.1.1-cp312-cp312-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:fc9dafe5e45cc313360199c71e40ff050d37abb3cf5e2cfed1fc93e037c45fd6", size = 12256772, upload-time = "2024-05-28T18:23:58.821Z" },
+    { url = "https://files.pythonhosted.org/packages/63/f0/3b2511ec7940c4b321f484970fa19abc3dee07101a2205aa63ef810897c9/dscribe-2.1.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:5ccef04c8dc23004dc358020709bdd02aaad5d2276ba80afbc3c424330afd4f1", size = 12872731, upload-time = "2024-05-28T18:24:04.67Z" },
+    { url = "https://files.pythonhosted.org/packages/d9/cc/37c84679c62088b416637c0476009c5ce0d79ea9825f7f71beb08bd50cf0/dscribe-2.1.1-cp312-cp312-musllinux_1_2_i686.whl", hash = "sha256:14b1decc3e0f9cd04ece0865053c8786e1547a55757f183381ebe416946a10d6", size = 13184113, upload-time = "2024-05-28T18:24:10.689Z" },
+    { url = "https://files.pythonhosted.org/packages/06/97/488db9107af07f07c20d7ff9b5d8a3473de026a4a813b57f3c6900e837fb/dscribe-2.1.1-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:e7f0e7b040f602eb89446c287069267566bba2d223737392ed852e69b7ec9245", size = 13394418, upload-time = "2024-05-28T18:24:19.562Z" },
+    { url = "https://files.pythonhosted.org/packages/28/ff/1cd6bfd181eee5ab12bd62dc4f5c7364f76b835d9613f4bebd9d9c3fd401/dscribe-2.1.1-cp312-cp312-win32.whl", hash = "sha256:aefe40e0a0e72757638b1dd16076f9800dafbec1e3fb4fe790eb8c90d7ff5072", size = 508134, upload-time = "2024-05-28T18:24:22.807Z" },
+    { url = "https://files.pythonhosted.org/packages/c2/a8/ef1abf8b1cb9749b8619f595d2d5c45a77ea51040b7668a8d8d289c11fdd/dscribe-2.1.1-cp312-cp312-win_amd64.whl", hash = "sha256:78dd0a7922825a10995b8e3412fc6cf699a6e9ba78d873f60edd17c45d577ebf", size = 544185, upload-time = "2024-05-28T18:24:24.873Z" },
 ]
 
 [[package]]
@@ -1731,6 +1779,19 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/44/cd/a040c4b3119bbe532e5b0732286f805445375489fceaec1f48306068ee3b/smmap-5.0.2.tar.gz", hash = "sha256:26ea65a03958fa0c8a1c7e8c7a58fdc77221b8910f6be2131affade476898ad5", size = 22329, upload-time = "2025-01-02T07:14:40.909Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/04/be/d09147ad1ec7934636ad912901c5fd7667e1c858e19d355237db0d0cd5e4/smmap-5.0.2-py3-none-any.whl", hash = "sha256:b30115f0def7d7531d22a0fb6502488d879e75b260a9db4d0819cfb25403af5e", size = 24303, upload-time = "2025-01-02T07:14:38.724Z" },
+]
+
+[[package]]
+name = "sparse"
+version = "0.17.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numba" },
+    { name = "numpy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/63/74/5c674277fc3d61bd1863d233a8e1f7ddf35cb1adeeaf9973888629e7a9b1/sparse-0.17.0.tar.gz", hash = "sha256:6b1ad51a810c5be40b6f95e28513ec810fe1c785923bd83b2e4839a751df4bf7", size = 642387, upload-time = "2025-05-20T08:17:03.256Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8d/fd/42a1720542199ae6ff0f9c37bbd55dd3033ddd7bbe00d68cde09d6824887/sparse-0.17.0-py2.py3-none-any.whl", hash = "sha256:1922d1d97f692b1061c4f03a1dd6ee21850aedc88e171aa845715f5069952f18", size = 259370, upload-time = "2025-05-20T08:17:00.874Z" },
 ]
 
 [[package]]

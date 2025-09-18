@@ -11,7 +11,7 @@ log_weights = false
 
 [dataloader]
 multitask = true
-delta_T = 10_000
+delta_T = [3000, 24_000]
 dataset = "tg80"
 num_timesteps = 8
 
@@ -113,7 +113,8 @@ test_molecules = [
 explicit_hydrogen = false
 explicit_hydrogen_gradients = false
 radius_graph_threshold = 1.6
-rrwp_length = 8  # 0 for no RRWPs
+rrwp_length = 0  # 0 for no RRWPs
+time_lag_mode = "uniform"
 time_encoding_enabled = false
 normalize_z = false
 persistent_workers = true
@@ -126,11 +127,11 @@ force_regenerate = true
 device = "cuda"
 seed = 42
 batch_size = 192
-epochs = 250
+epochs = 100
 use_amp = false
 amp_dtype = "bfloat16"
 max_grad_norm = 1.0
-label_noise_std = 0.1
+label_noise_std = 0.0
 
 [optimizer]
 type = "muon"

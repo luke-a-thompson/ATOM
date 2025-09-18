@@ -287,19 +287,9 @@ uv run equivariance --config configs/ablations_atom/default.toml --model benchma
 <details>
 <summary>Evaluating Equivariance Error on ATOM</summary>
 
-### ATOM Baseline
+### Evaluating baseline, equivariant lifting, fully equivariant
 ```bash
-uv run equivariance --test_model --config benchmark_runs/ablations_atom_17-Sep-2025_00-38-16/default_17-Sep-2025_00-38-16/default_17-Sep-2025_00-38-16.toml --model benchmark_runs/ablations_atom_17-Sep-2025_00-38-16/default_17-Sep-2025_00-38-16/run_1/best_val_model.pth
-```
-
-### ATOM No Equivariant Lifting
-```bash
-uv run equivariance --test_model --config benchmark_runs/ablations_atom_17-Sep-2025_00-38-16/no_equivariant_lifting_17-Sep-2025_00-38-16/no_equivariant_lifting_17-Sep-2025_00-38-16.toml --model benchmark_runs/ablations_atom_17-Sep-2025_00-38-16/no_equivariant_lifting_17-Sep-2025_00-38-16/run_1/best_val_model.pth
-```
-
-### Fully Equivariant ATOM
-```bash
-uv run equivariance --test_model --config benchmark_runs/ablations_atom_17-Sep-2025_00-38-16/canonicalization_17-Sep-2025_00-38-16/canonicalization_17-Sep-2025_00-38-16.toml --model benchmark_runs/ablations_atom_17-Sep-2025_00-38-16/canonicalization_17-Sep-2025_00-38-16/run_1/best_val_model.pth
+uv run python /home/luke/gtno_py/tests/test_equivariance.py /home/luke/gtno_py/benchmark_runs/equivariance_error
 ```
 
 </summmary>
