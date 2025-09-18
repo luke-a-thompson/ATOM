@@ -164,9 +164,9 @@ class ATOMBlock(nn.Module):
         # q_data = self.pre_norm(q_data)
 
         if self.attention_type == AttentionType.SELF:
-            attended_nodes: torch.Tensor = x_0 + self.attention(tensor=x_0, mask=mask, time_increments=time_increments)
+            attended_nodes = x_0 + self.attention(tensor=x_0, mask=mask, time_increments=time_increments)
         else:
-            attended_nodes: torch.Tensor = x_0 + self.attention(x_0, v_0, concatenated_features, q_data=q_data, mask=mask, time_increments=time_increments)
+            attended_nodes = x_0 + self.attention(x_0, v_0, concatenated_features, q_data=q_data, mask=mask, time_increments=time_increments)
         x_0 = attended_nodes + self.ffn(attended_nodes, mask)
 
         if self.value_residual_type == ValueResidualType.LEARNABLE:
@@ -348,13 +348,13 @@ class ATOM(nn.Module):
         mask: torch.Tensor | None = batch.get("padded_nodes_mask", None)
 
         if mask is not None:
-            x_0: torch.Tensor = batch["x_0"] * mask
-            v_0: torch.Tensor = batch["v_0"] * mask
-            concat_features: torch.Tensor = batch["concatenated_features"] * mask
+            x_0 = batch["x_0"] * mask
+            v_0 = batch["v_0"] * mask
+            concat_features = batch["concatenated_features"] * mask
         else:
-            x_0: torch.Tensor = batch["x_0"]
-            v_0: torch.Tensor = batch["v_0"]
-            concat_features: torch.Tensor = batch["concatenated_features"]
+            x_0 = batch["x_0"]
+            v_0 = batch["v_0"]
+            concat_features = batch["concatenated_features"]
 
         ## Lift
         if self.lifting_type == LiftingType.CANONICALIZATION:
@@ -388,11 +388,12 @@ class ATOM(nn.Module):
             )
 
         ## Project
+        final_pred_pos: torch.Tensor
         if self.projection_type == ProjectionType.DECANONICALIZATION:
             assert so3_matrix is not None and x_0_mean is not None, "Decanonicalization requires canonicalization outputs (Q and x_0_mean)."
-            final_pred_pos: torch.Tensor = self.projection_layer(lifted_x_0, lifted_concat_features, so3_matrix, x_0_mean)
+            final_pred_pos = self.projection_layer(lifted_x_0, lifted_concat_features, so3_matrix, x_0_mean)
         else:
-            final_pred_pos: torch.Tensor = self.projection_layer(lifted_x_0, lifted_concat_features)
+            final_pred_pos = self.projection_layer(lifted_x_0, lifted_concat_features)
 
         if self.delta_update:
             final_pred_pos = batch["x_0"][..., :3] + final_pred_pos
