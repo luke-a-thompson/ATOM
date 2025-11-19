@@ -6,7 +6,7 @@ model_type = "atom"
 benchmark_name = "paper_rmd17"
 compile = true
 compile_trace = false
-runs = 3
+runs = 2
 log_weights = false
 
 [dataloader]
@@ -29,10 +29,9 @@ explicit_hydrogen_gradients = false
 radius_graph_threshold = 1.6
 rrwp_length = 0  # 0 for no RRWPs
 time_lag_mode = "uniform"
-time_encoding_enabled = false
 normalize_z = false
 persistent_workers = true
-num_workers = 4
+num_workers = 6
 pin_memory = true
 prefetch_factor = 2
 force_regenerate = true
@@ -40,18 +39,18 @@ force_regenerate = true
 [training]
 device = "cuda"
 seed = 42
-batch_size = 100
+batch_size = 192
 epochs = 1000
-use_amp = false
+use_amp = true
 amp_dtype = "bfloat16"
 max_grad_norm = 1.0
-label_noise_std = 0.1
+label_noise_std = 0.004
 
 [optimizer]
 type = "adamw"
-learning_rate = 1e-3
+learning_rate = 0.0005
 weight_decay = 1e-5
-adam_betas = [0.9, 0.999]
+adam_betas = [0.95, 0.999]
 adam_eps = 1e-10
 
 [scheduler]
@@ -59,20 +58,20 @@ type = "none"
 
 [atom_config]
 # Architecture parameters
-num_layers = 5
+num_layers = 8
 num_heads = 8
-lifting_dim = 128
+lifting_dim = 256
 # Output parameters
 output_heads = 1
-delta_update = false
+delta_update = true
 # Attention parameters
 heterogenous_attention_type = "ghca"
 positional_encoding = "trope"
 rope_base = 1000
-rope_tau = 10000
+rope_tau = 24_000
 learnable_attention_denom = false
 # Feature parameters
-lifting_type = "equivariant"
+lifting_type = "quasi_equivariant"
 projection_type = "equivariant"
 # Layer parameters
 norm = "rms"

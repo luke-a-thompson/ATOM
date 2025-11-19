@@ -4,8 +4,7 @@ from tqdm import tqdm
 from torch.utils.data._utils.collate import default_collate
 from typing import cast
 
-from atom.dataloaders.atom_dataloader import MD17DynamicsDataset
-from atom.dataloaders.nbody_dataloader import NBodyDynamicsDataset
+from atom.dataloaders.atom_dataloader import MDDynamicsDataset
 from atom.training.config_options import (
     DataPartition,
     MD17MoleculeType,
@@ -13,7 +12,6 @@ from atom.training.config_options import (
     MD22MoleculeType,
     TG80MoleculeType,
     ModelType,
-    Datasets,
 )
 from atom.training.create_config import Config
 
@@ -23,7 +21,7 @@ def create_datasets(
     molecule_type: MD17MoleculeType | RMD17MoleculeType | TG80MoleculeType | MD22MoleculeType | None,
     max_nodes: int | None = None,
     max_edges: int | None = None,
-) -> tuple[MD17DynamicsDataset | NBodyDynamicsDataset, MD17DynamicsDataset | NBodyDynamicsDataset, MD17DynamicsDataset | NBodyDynamicsDataset]:
+) -> tuple[MDDynamicsDataset, MDDynamicsDataset, MDDynamicsDataset]:
     """Create train, test and validation Torch datasets.
 
     Args:
@@ -37,93 +35,69 @@ def create_datasets(
     """
 
     # If we are using a message passing model, we need to return the edge data
-    if config.benchmark.model_type == ModelType.EGNO:
+    if config.benchmark.model_type in (ModelType.EGNO, ModelType.EGNN_S, ModelType.EGNN_R):
         return_edge_data = True
         egno_mode = True
     else:
         return_edge_data = False
         egno_mode = False
 
-    match config.dataloader.dataset:
-        case Datasets.md17 | Datasets.rmd17 | Datasets.tg80 | Datasets.md22:
-            train_dataset = MD17DynamicsDataset(
-                partition=DataPartition.train,
-                max_samples=500,
-                delta_frame=config.dataloader.delta_T,
-                num_timesteps=config.dataloader.num_timesteps,
-                data_dir="data/",
-                split_dir="data/",
-                molecule_type=molecule_type,
-                md17_version=config.dataloader.dataset,
-                explicit_hydrogen=config.dataloader.explicit_hydrogen,
-                max_nodes=max_nodes,
-                force_regenerate=config.dataloader.force_regenerate,
-                radius_graph_threshold=config.dataloader.radius_graph_threshold,
-                rrwp_length=config.dataloader.rrwp_length,
-                return_edge_data=return_edge_data,
-                egno_mode=egno_mode,
-                max_edges=max_edges,
-            )
+    train_dataset = MDDynamicsDataset(
+        partition=DataPartition.train,
+        max_samples=500,
+        delta_frame=config.dataloader.delta_T,
+        num_timesteps=config.dataloader.num_timesteps,
+        data_dir="data/",
+        split_dir="data/",
+        molecule_type=molecule_type,
+        md17_version=config.dataloader.dataset,
+        explicit_hydrogen=config.dataloader.explicit_hydrogen,
+        max_nodes=max_nodes,
+        force_regenerate=config.dataloader.force_regenerate,
+        radius_graph_threshold=config.dataloader.radius_graph_threshold,
+        rrwp_length=config.dataloader.rrwp_length,
+        return_edge_data=return_edge_data,
+        egno_mode=egno_mode,
+        max_edges=max_edges,
+    )
 
-            val_dataset = MD17DynamicsDataset(
-                partition=DataPartition.val,
-                max_samples=2000,
-                delta_frame=config.dataloader.delta_T,
-                num_timesteps=config.dataloader.num_timesteps,
-                data_dir="data/",
-                split_dir="data/",
-                molecule_type=molecule_type,
-                md17_version=config.dataloader.dataset,
-                explicit_hydrogen=config.dataloader.explicit_hydrogen,
-                max_nodes=max_nodes,
-                force_regenerate=config.dataloader.force_regenerate,
-                radius_graph_threshold=config.dataloader.radius_graph_threshold,
-                rrwp_length=config.dataloader.rrwp_length,
-                return_edge_data=return_edge_data,
-                egno_mode=egno_mode,
-                max_edges=max_edges,
-            )
+    val_dataset = MDDynamicsDataset(
+        partition=DataPartition.val,
+        max_samples=2000,
+        delta_frame=config.dataloader.delta_T,
+        num_timesteps=config.dataloader.num_timesteps,
+        data_dir="data/",
+        split_dir="data/",
+        molecule_type=molecule_type,
+        md17_version=config.dataloader.dataset,
+        explicit_hydrogen=config.dataloader.explicit_hydrogen,
+        max_nodes=max_nodes,
+        force_regenerate=config.dataloader.force_regenerate,
+        radius_graph_threshold=config.dataloader.radius_graph_threshold,
+        rrwp_length=config.dataloader.rrwp_length,
+        return_edge_data=return_edge_data,
+        egno_mode=egno_mode,
+        max_edges=max_edges,
+    )
 
-            test_dataset = MD17DynamicsDataset(
-                partition=DataPartition.test,
-                max_samples=2000,
-                delta_frame=config.dataloader.delta_T,
-                num_timesteps=config.dataloader.num_timesteps,
-                data_dir="data/",
-                split_dir="data/",
-                molecule_type=molecule_type,
-                md17_version=config.dataloader.dataset,
-                explicit_hydrogen=config.dataloader.explicit_hydrogen,
-                max_nodes=max_nodes,
-                force_regenerate=config.dataloader.force_regenerate,
-                radius_graph_threshold=config.dataloader.radius_graph_threshold,
-                rrwp_length=config.dataloader.rrwp_length,
-                return_edge_data=return_edge_data,
-                egno_mode=egno_mode,
-                max_edges=max_edges,
-            )
-        case Datasets.nbody_simple:
-            train_dataset = NBodyDynamicsDataset(
-                partition=DataPartition.train,
-                max_samples=3000,
-                num_timesteps=config.dataloader.num_timesteps,
-                data_dir="data/n_body_simple",
-                return_edge_data=return_edge_data,
-            )
-
-            val_dataset = NBodyDynamicsDataset(
-                partition=DataPartition.val,
-                num_timesteps=config.dataloader.num_timesteps,
-                data_dir="data/n_body_simple",
-                return_edge_data=return_edge_data,
-            )
-
-            test_dataset = NBodyDynamicsDataset(
-                partition=DataPartition.test,
-                num_timesteps=config.dataloader.num_timesteps,
-                data_dir="data/n_body_simple",
-                return_edge_data=return_edge_data,
-            )
+    test_dataset = MDDynamicsDataset(
+        partition=DataPartition.test,
+        max_samples=2000,
+        delta_frame=config.dataloader.delta_T,
+        num_timesteps=config.dataloader.num_timesteps,
+        data_dir="data/",
+        split_dir="data/",
+        molecule_type=molecule_type,
+        md17_version=config.dataloader.dataset,
+        explicit_hydrogen=config.dataloader.explicit_hydrogen,
+        max_nodes=max_nodes,
+        force_regenerate=config.dataloader.force_regenerate,
+        radius_graph_threshold=config.dataloader.radius_graph_threshold,
+        rrwp_length=config.dataloader.rrwp_length,
+        return_edge_data=return_edge_data,
+        egno_mode=egno_mode,
+        max_edges=max_edges,
+    )
 
     return train_dataset, val_dataset, test_dataset
 
@@ -150,7 +124,7 @@ def create_dataloaders_single(
         num_workers=config.dataloader.num_workers,
         pin_memory=config.dataloader.pin_memory,
         prefetch_factor=config.dataloader.prefetch_factor,
-        collate_fn=_pad_edges_to_uniform_length if config.benchmark.model_type == ModelType.EGNO else None,
+        collate_fn=_pad_edges_to_uniform_length if config.benchmark.model_type in (ModelType.EGNO, ModelType.EGNN_S, ModelType.EGNN_R) else None,
     )
     val_loader = DataLoader(
         val_dataset,
@@ -160,7 +134,7 @@ def create_dataloaders_single(
         num_workers=config.dataloader.num_workers,
         pin_memory=config.dataloader.pin_memory,
         prefetch_factor=config.dataloader.prefetch_factor,
-        collate_fn=_pad_edges_to_uniform_length if config.benchmark.model_type == ModelType.EGNO else None,
+        collate_fn=_pad_edges_to_uniform_length if config.benchmark.model_type in (ModelType.EGNO, ModelType.EGNN_S, ModelType.EGNN_R) else None,
     )
     test_loader = DataLoader(
         test_dataset,
@@ -170,7 +144,7 @@ def create_dataloaders_single(
         num_workers=config.dataloader.num_workers,
         pin_memory=config.dataloader.pin_memory,
         prefetch_factor=config.dataloader.prefetch_factor,
-        collate_fn=_pad_edges_to_uniform_length if config.benchmark.model_type == ModelType.EGNO else None,
+        collate_fn=_pad_edges_to_uniform_length if config.benchmark.model_type in (ModelType.EGNO, ModelType.EGNN_S, ModelType.EGNN_R) else None,
     )
 
     return train_loader, val_loader, test_loader
@@ -178,7 +152,7 @@ def create_dataloaders_single(
 
 def create_dataloaders_multitask(
     config: Config,
-) -> tuple[DataLoader[MD17DynamicsDataset], DataLoader[MD17DynamicsDataset], DataLoader[MD17DynamicsDataset]]:
+) -> tuple[DataLoader[MDDynamicsDataset], DataLoader[MDDynamicsDataset], DataLoader[MDDynamicsDataset]]:
     """Create train, test and validation Torch dataloaders for multiple molecule types and concatenate them into a single dataloader.
 
     Args:
@@ -207,9 +181,9 @@ def create_dataloaders_multitask(
 
     tqdm.write(f"Inferred max_nodes across all molecules as: {max_nodes}")
     tqdm.write(f"Inferred max_edges across all molecules as: {max_edges}")
-    train_loaders: list[MD17DynamicsDataset] = []
-    val_loaders: list[MD17DynamicsDataset] = []
-    test_loaders: list[MD17DynamicsDataset] = []
+    train_loaders: list[MDDynamicsDataset] = []
+    val_loaders: list[MDDynamicsDataset] = []
+    test_loaders: list[MDDynamicsDataset] = []
 
     for train_molecule_type in config.dataloader.train_molecules:
         try:
@@ -232,9 +206,9 @@ def create_dataloaders_multitask(
 
     if len(train_loaders) == 0 or len(val_loaders) == 0 or len(test_loaders) == 0:
         raise RuntimeError("No valid datasets remained after skipping failing molecules. Check your data/configs.")
-    multitask_train_dataset: torch.utils.data.ConcatDataset[MD17DynamicsDataset] = torch.utils.data.ConcatDataset(train_loaders)
-    multitask_val_dataset: torch.utils.data.ConcatDataset[MD17DynamicsDataset] = torch.utils.data.ConcatDataset(val_loaders)
-    multitask_test_dataset: torch.utils.data.ConcatDataset[MD17DynamicsDataset] = torch.utils.data.ConcatDataset(test_loaders)
+    multitask_train_dataset: torch.utils.data.ConcatDataset[MDDynamicsDataset] = torch.utils.data.ConcatDataset(train_loaders)
+    multitask_val_dataset: torch.utils.data.ConcatDataset[MDDynamicsDataset] = torch.utils.data.ConcatDataset(val_loaders)
+    multitask_test_dataset: torch.utils.data.ConcatDataset[MDDynamicsDataset] = torch.utils.data.ConcatDataset(test_loaders)
 
     train_loader = DataLoader(
         multitask_train_dataset,
@@ -244,7 +218,7 @@ def create_dataloaders_multitask(
         num_workers=config.dataloader.num_workers,
         pin_memory=config.dataloader.pin_memory,
         prefetch_factor=config.dataloader.prefetch_factor,
-        collate_fn=_pad_edges_to_uniform_length if config.benchmark.model_type == ModelType.EGNO else None,
+        collate_fn=_pad_edges_to_uniform_length if config.benchmark.model_type in (ModelType.EGNO, ModelType.EGNN_S, ModelType.EGNN_R) else None,
     )
     val_loader = DataLoader(
         multitask_val_dataset,
@@ -254,7 +228,7 @@ def create_dataloaders_multitask(
         num_workers=config.dataloader.num_workers,
         pin_memory=config.dataloader.pin_memory,
         prefetch_factor=config.dataloader.prefetch_factor,
-        collate_fn=_pad_edges_to_uniform_length if config.benchmark.model_type == ModelType.EGNO else None,
+        collate_fn=_pad_edges_to_uniform_length if config.benchmark.model_type in (ModelType.EGNO, ModelType.EGNN_S, ModelType.EGNN_R) else None,
     )
     test_loader = DataLoader(
         multitask_test_dataset,
@@ -264,7 +238,7 @@ def create_dataloaders_multitask(
         num_workers=config.dataloader.num_workers,
         pin_memory=config.dataloader.pin_memory,
         prefetch_factor=config.dataloader.prefetch_factor,
-        collate_fn=_pad_edges_to_uniform_length if config.benchmark.model_type == ModelType.EGNO else None,
+        collate_fn=_pad_edges_to_uniform_length if config.benchmark.model_type in (ModelType.EGNO, ModelType.EGNN_S, ModelType.EGNN_R) else None,
     )
 
     return train_loader, val_loader, test_loader
@@ -284,9 +258,9 @@ def _pad_edges_to_uniform_length(batch: list[dict[str, torch.Tensor]]) -> dict[s
     numbers of edges the default PyTorch ``default_collate`` fails.  This helper first
     determines the maximum number of edges in the batch and then right-pads the
     following keys to that size:
-        * ``edge_attr``               – float tensor of shape ``[E, d_e]``
-        * ``source_node_indices``     – integer tensor of shape ``[E]``
-        * ``target_node_indices``     – integer tensor of shape ``[E]``
+        * ``edge_attr``               - float tensor of shape ``[E, d_e]``
+        * ``source_node_indices``     - integer tensor of shape ``[E]``
+        * ``target_node_indices``     - integer tensor of shape ``[E]``
 
     All other keys are collated with the stock ``default_collate``.
     """

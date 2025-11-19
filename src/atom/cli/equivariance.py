@@ -128,8 +128,12 @@ def test_model_equivariance(config_path: str, model_path: str) -> None:
     output_spec = {"xyz": slice(0, 3), "invariant": slice(3, None)}
     xyz_slice = output_spec["xyz"]
 
-    original_xyz = original_output[..., xyz_slice].cpu().numpy()
-    rotated_xyz = rotated_output[..., xyz_slice].cpu().numpy()
+    # Model may return a dict (e.g., {"pos": tensor, ...}) or a raw tensor
+    original_pos = original_output["pos"] if isinstance(original_output, dict) else original_output
+    rotated_pos = rotated_output["pos"] if isinstance(rotated_output, dict) else rotated_output
+
+    original_xyz = original_pos[..., xyz_slice].cpu().numpy()
+    rotated_xyz = rotated_pos[..., xyz_slice].cpu().numpy()
 
     batch_size, timesteps, nodes, _ = original_xyz.shape
     # Supervised MSE vs ground truth for both cases
@@ -140,8 +144,12 @@ def test_model_equivariance(config_path: str, model_path: str) -> None:
     mse_rot_vs_gt = np.mean((rotated_xyz - gt_xyz_rot) ** 2)
 
     print("\n=== MODEL SUPERVISED METRICS ===")
-    print(f"MSE vs GT (unrot input): {mse_unrot_vs_gt:.2e}")
-    print(f"MSE vs GT (rot input): {mse_rot_vs_gt:.2e}")
+    scale_label: str = "x10^-2"
+    scale_factor: float = 1e2
+    mse_unrot_vs_gt_scaled: float = float(mse_unrot_vs_gt * scale_factor)
+    mse_rot_vs_gt_scaled: float = float(mse_rot_vs_gt * scale_factor)
+    print(f"MSE vs GT (unrot input): {mse_unrot_vs_gt_scaled:.2f} {scale_label}")
+    print(f"MSE vs GT (rot input): {mse_rot_vs_gt_scaled:.2f} {scale_label}")
 
 
 def test_e3nn_linear_equivariance() -> None:
@@ -185,9 +193,14 @@ def test_e3nn_linear_equivariance() -> None:
     mse = np.mean((rotated_xyz - expected_rotated_xyz) ** 2)
 
     print("\n=== E3NN LINEAR LAYER TEST RESULTS ===")
-    print(f"Max error: {max_error:.2e}")
-    print(f"Mean error: {mean_error:.2e}")
-    print(f"MSE: {mse:.2e}")
+    scale_label: str = "x10^-2"
+    scale_factor: float = 1e2
+    max_error_scaled: float = float(max_error * scale_factor)
+    mean_error_scaled: float = float(mean_error * scale_factor)
+    mse_scaled: float = float(mse * scale_factor)
+    print(f"Max error: {max_error_scaled:.2f} {scale_label}")
+    print(f"Mean error: {mean_error_scaled:.2f} {scale_label}")
+    print(f"MSE: {mse_scaled:.2f} {scale_label}")
 
     tolerance = 1e-6
     is_equivariant = max_error < tolerance

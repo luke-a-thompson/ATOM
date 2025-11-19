@@ -2,7 +2,7 @@ import numpy as np
 import numpy.typing as npt
 import torch
 import pickle as pkl
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 import os
 from typing import final, override
 from pathlib import Path
@@ -23,9 +23,9 @@ MOLECULE_STICKS: dict[str, list[tuple[int, int]]] = {
 }
 
 
-class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
+class MDDataset(Dataset[dict[str, torch.Tensor]]):
     """
-    MD17 Dataset
+    MD Dataset
     """
 
     def __init__(
@@ -94,10 +94,12 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         self.egno_mode: bool = egno_mode
         self.max_edges: int | None = max_edges
         self.time_lag_mode: TimeLagMode = time_lag_mode
+        self.dft_imprecision_margin: int = 0
         # Predeclare attributes for type checkers
         self.split_times: npt.NDArray[np.int_] = np.array([], dtype=np.int_)
         self.cfg: dict[str, list[tuple[int, int]] | list[list[int]]] = {}
         self.replicated_x_0_mean: torch.Tensor = torch.empty(0)
+        self.e: npt.NDArray[np.float64] | None = None
         self.edge_attr: torch.Tensor = torch.empty(0, 4, dtype=torch.float32)
         self.edge_index: tuple[torch.Tensor, torch.Tensor] = (
             torch.empty(0, dtype=torch.long),
@@ -105,51 +107,71 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         )
         # Removed absolute time indices; model uses local time only
         # Resolve molecule name from enum/value robustly
-        try:
-            molecule_name: str = str(molecule_type.value)
-        except Exception:
-            molecule_name = str(molecule_type)
+        molecule_name: str = str(getattr(molecule_type, "value", molecule_type))
+        # Deterministic molecule identifier for grouping in multitask loss
+        name_for_id: str = f"{self.md17_version.value}:{molecule_name}"
+        self.molecule_id: int = int(sum(ord(c) for c in name_for_id) % 1_000_000)
 
+        energy_col: str | None = None
+        forces_col: str | None = None
         match md17_version:
             case Datasets.md17:
                 full_dir = os.path.join(data_dir, "md17_npz", f"md17_{molecule_name}.npz")
                 split_dir = os.path.join(split_dir, "md17_splits", f"md17_{molecule_name}_split.pkl")
                 positions_col = "R"
                 charges_col = "z"
-                self.dft_imprecision_margin: int = 10_000
+                self.dft_imprecision_margin = 10_000
+                energy_col = None
             case Datasets.rmd17:
                 full_dir = os.path.join(data_dir, "rmd17_npz", f"rmd17_{molecule_name}.npz")
                 split_dir = os.path.join(split_dir, "rmd17_splits", f"rmd17_{molecule_name}_split.pkl")
                 positions_col = "coords"
                 charges_col = "nuclear_charges"
-                self.dft_imprecision_margin: int = 10_000
+                self.dft_imprecision_margin = 10_000
+                energy_col = None
             case Datasets.tg80:
                 full_dir = os.path.join(data_dir, "tg80_npz", f"tg80_{molecule_name}.npz")
                 split_dir = os.path.join(split_dir, "tg80_splits", f"tg80_{molecule_name}_split.pkl")
                 positions_col = "coords"
                 charges_col = "nuclear_charges"
-                self.dft_imprecision_margin: int = 500
-                train_par = 0.2
+                forces_col = "forces"
+                energy_col = "energy"
+                self.dft_imprecision_margin = 500
+                train_par = 0.4
                 val_par = 0.1
                 test_par = 0.1
             case Datasets.md22:
                 full_dir = os.path.join(data_dir, "md22_npz", f"md22_{molecule_name}.npz")
                 split_dir = os.path.join(split_dir, "md22_splits", f"md22_{molecule_name}_split.pkl")
-                self.dft_imprecision_margin: int = 500
+                self.dft_imprecision_margin = 500
                 if molecule_type == MD22MoleculeType.STACHYOSE:
-                    train_par = 0.2
-                    val_par = 0.1
-                    test_par = 0.1
+                    train_par = 0.3
+                    val_par = 0.15
+                    test_par = 0.15
                 positions_col = "R"
                 charges_col = "z"
+                energy_col = None
             case _:
                 raise ValueError(f"Invalid MD17 version: {md17_version}")
 
         data_file: np.lib.npyio.NpzFile = np.load(full_dir)
         self.x: npt.NDArray[np.float64] = data_file[positions_col]
         self.z: npt.NDArray[np.uint8] = data_file[charges_col]
+        # Load energies with configured column name
+        if energy_col is not None:
+            self.e = data_file[energy_col].astype(np.float64)
+        # Load forces if available (e.g., TG80)
+        self.f: npt.NDArray[np.float64] | None = None
+        if forces_col is not None and forces_col in data_file:
+            self.f = data_file[forces_col].astype(np.float64)
         self.v: npt.NDArray[np.float64] = self.x[1:] - self.x[:-1]  # Construct velocities from successive coords
         self.x = self.x[:-1]  # Remove last coord to ensure len(x) == len(v)
+        if self.e is not None:
+            # Align energies with trimmed coordinates/velocities
+            self.e = self.e[:-1]
+        if self.f is not None:
+            # Align forces with trimmed coordinates/velocities
+            self.f = self.f[:-1]
         assert self.x.shape == self.v.shape
 
         split = self._get_or_generate_split(
@@ -180,6 +202,8 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
             self.x = self.x[:, heavy_atom_mask, ...]
             self.v = self.v[:, heavy_atom_mask, ...]
             self.z = self.z[heavy_atom_mask]
+            if self.f is not None:
+                self.f = self.f[:, heavy_atom_mask, ...]
 
         if egno_mode is True:
             self.cfg = self._sample_cfg()
@@ -192,6 +216,11 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         self.replicated_v_0: torch.Tensor = self._replicate_tensor(self.v_0)
         self.replicated_concatenated_features: torch.Tensor = self._replicate_tensor(self.concatenated_features)
         self.replicated_z_0: torch.Tensor = self._replicate_tensor(self.z_0)
+        # Replicate forces if present
+        if hasattr(self, "f_0"):
+            self.replicated_f_0: torch.Tensor = self._replicate_tensor(self.f_0)
+        if hasattr(self, "f_t"):
+            self.replicated_f_t: torch.Tensor = self._replicate_tensor(self.f_t)
         if self.center_data:
             self.replicated_x_0_mean = self.replicated_x_0[..., :3].mean(dim=(2), keepdim=True)
             self.replicated_x_0[..., :3] = self.replicated_x_0[..., :3] - self.replicated_x_0_mean
@@ -216,23 +245,28 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         self.x_t: torch.Tensor = self._pad_tensor(x_t)
         self.v_t: torch.Tensor = self._pad_tensor(v_t)
 
+        # Energies for initial and target frames if available
+        if self.e is not None:
+            e_0 = torch.tensor(self.e[split_times], dtype=torch.float32)
+            e_t = torch.tensor(self.e[split_times + self.delta_frame_max], dtype=torch.float32)
+            self.e_0: torch.Tensor = e_0
+            self.e_t: torch.Tensor = e_t
+
+        # Forces for initial and target frames if available (shape: [B, N, 3])
+        if self.f is not None:
+            f_0_t = torch.tensor(self.f[split_times], dtype=torch.float32)
+            f_t_t = torch.tensor(self.f[split_times + self.delta_frame_max], dtype=torch.float32)
+            self.f_0: torch.Tensor = self._pad_tensor(f_0_t)
+            self.f_t: torch.Tensor = self._pad_tensor(f_t_t)
+
         self.num_nodes: int = z.shape[0]
 
         one_hop_adjacency, two_hop_adjacency = self._compute_adjacency_matrix(x, self.num_nodes, self.radius_graph_threshold)
 
         if self.return_edge_data:
             stick_set: set[tuple[int, int]] | None = None
-            if self.egno_mode:
-                # Build stick set from cfg with explicit typing
-                if "Stick" in self.cfg:
-                    stick_pairs: list[tuple[int, int]] = []
-                    for pair in self.cfg["Stick"]:
-                        i = int(pair[0])
-                        j = int(pair[1])
-                        if i > j:
-                            i, j = j, i
-                        stick_pairs.append((i, j))
-                    stick_set = set(stick_pairs)
+            if self.egno_mode and "Stick" in self.cfg:
+                stick_set = {((i if i <= j else j), (j if i <= j else i)) for i, j in self.cfg["Stick"]}
             self.edge_attr, self.edge_index = self._build_edge_attributes(one_hop_adjacency, two_hop_adjacency, torch.tensor(z), x_0, stick_set)
         if self.max_edges is not None and self.egno_mode:
             current_edges = self.edge_attr.shape[0]
@@ -256,13 +290,24 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         if self.normalize_z:
             self.z_0 = self.z_0 / self.z_0.max()
         self.concatenated_features: torch.Tensor = self._compute_concatenated_features()
-        self.mole_idx: torch.Tensor = torch.Tensor(torch.arange(z.shape[0])).unsqueeze(-1).expand(self.x_0.shape[0], -1, -1)
+        self.mole_idx: torch.Tensor = torch.arange(z.shape[0], dtype=torch.long).unsqueeze(-1).expand(self.x_0.shape[0], -1, -1)
 
         self.x_0 = self._pad_tensor(self.x_0)
         self.v_0 = self._pad_tensor(self.v_0)
         self.z_0 = self._pad_tensor(self.z_0)
         self.concatenated_features = self._pad_tensor(self.concatenated_features)
         self.mole_idx = self._pad_tensor(self.mole_idx)
+
+        # Precompute padded nodes mask once (shape: [T, N, 1]) for reuse in __getitem__
+        self.padded_nodes_mask: torch.Tensor | None = None
+        if self.max_nodes is not None:
+            base_mask = torch.cat(
+                [
+                    torch.ones(self.num_nodes, dtype=torch.bool),
+                    torch.zeros(self.max_nodes - self.num_nodes, dtype=torch.bool),
+                ]
+            )
+            self.padded_nodes_mask = base_mask.unsqueeze(0).expand(self.num_timesteps, -1).unsqueeze(-1).contiguous()
 
         assert (
             self.x_t.shape[:2]
@@ -314,7 +359,7 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         """
         Replicates a single tensor along the batch dimension.
 
-        Input tensor shape: [max_samples, d]
+        Input tensor shape: [max_samples, nodes, d]
         Output tensor shape: [max_samples, num_timesteps, nodes, d]
 
         Returns:
@@ -670,22 +715,22 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
             "Z": self.replicated_z_0[i].contiguous(),
             "x_t": self.x_t[i].contiguous(),
             "v_t": self.v_t[i].contiguous(),
+            "molecule_id": torch.tensor(self.molecule_id, dtype=torch.long),
         }
+
+        # Add energies if present. Shapes: (T,) repeated across timesteps
+        if hasattr(self, "e_0") and hasattr(self, "e_t"):
+            e0_val = float(self.e_0[i])
+            et_val = float(self.e_t[i])
+            sample["E_0"] = torch.full((self.num_timesteps,), e0_val, dtype=torch.float32)
+            sample["E_t"] = torch.full((self.num_timesteps,), et_val, dtype=torch.float32)
 
         # Removed delta_t and absolute time indices; model handles local time encoding
 
         # No time PE concatenation here; time PE will be added inside the model if enabled
 
-        if self.max_nodes is not None:
-            mask = torch.cat(
-                [
-                    torch.ones(self.num_nodes, dtype=torch.bool),
-                    torch.zeros(self.max_nodes - self.num_nodes, dtype=torch.bool),
-                ]
-            )
-
-            mask = mask.unsqueeze(0).expand(self.num_timesteps, -1).unsqueeze(-1).bool()
-            sample["padded_nodes_mask"] = mask.contiguous()
+        if self.max_nodes is not None and self.padded_nodes_mask is not None:
+            sample["padded_nodes_mask"] = self.padded_nodes_mask
 
         if self.return_edge_data:
             sample["edge_attr"] = self.edge_attr.contiguous()
@@ -695,6 +740,11 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
         if self.center_data:
             sample["x_0_mean"] = self.replicated_x_0_mean[i].contiguous()
 
+        # Add forces if present. Base dataset replicates across timesteps
+        if hasattr(self, "replicated_f_0") and hasattr(self, "replicated_f_t"):
+            sample["F_0"] = self.replicated_f_0[i].contiguous()
+            sample["F_t"] = self.replicated_f_t[i].contiguous()
+
         return sample
 
     def __len__(self):
@@ -702,9 +752,9 @@ class MD17Dataset(Dataset[dict[str, torch.Tensor]]):
 
 
 @final
-class MD17DynamicsDataset(MD17Dataset):
+class MDDynamicsDataset(MDDataset):
     """
-    MD17 Dynamics Dataset
+    MD Dynamics Dataset
     """
 
     def __init__(
@@ -730,7 +780,7 @@ class MD17DynamicsDataset(MD17Dataset):
         force_regenerate: bool = False,
         egno_mode: bool = False,
         max_edges: int | None = None,
-        time_lag_mode: TimeLagMode = TimeLagMode.LAST,
+        time_lag_mode: TimeLagMode = TimeLagMode.UNIFORM,
     ):
         super().__init__(
             partition=partition,
@@ -802,6 +852,16 @@ class MD17DynamicsDataset(MD17Dataset):
         x_t = np.stack(x_t_list, axis=1)
         v_t = np.stack(v_t_list, axis=1)
 
+        # Forces for dynamics, if available, align with x_t/v_t indices above
+        if self.f is not None:
+            if self.time_lag_mode == TimeLagMode.UNIFORM:
+                f_t_list = [self.f[split_times + delta_frame * i // num_timesteps] for i in range(1, num_timesteps + 1)]
+            else:
+                f_t_list = [self.f[split_times + delta_frame] for _ in range(1, num_timesteps + 1)]
+            f_t_np = np.stack(f_t_list, axis=1)
+            f_t = torch.Tensor(f_t_np)
+            self.f_t = self._pad_tensor(f_t)
+
         x_t = torch.Tensor(x_t)
         v_t = torch.Tensor(v_t)
         return x_t, v_t
@@ -811,7 +871,7 @@ class MD17DynamicsDataset(MD17Dataset):
         sample = super().__getitem__(i)
 
         # Randomize during training if a range was supplied
-        if self.data_partition == DataPartition.train and (self.delta_frame_min != self.delta_frame_max):
+        if self.delta_frame_min != self.delta_frame_max:
             # Log-uniform sampling over [delta_min, delta_max]
             log_min = float(np.log(max(1, self.delta_frame_min)))
             log_max = float(np.log(self.delta_frame_max))
@@ -840,111 +900,60 @@ class MD17DynamicsDataset(MD17Dataset):
             sample["x_t"] = x_t_t.contiguous()
             sample["v_t"] = v_t_t.contiguous()
             # Removed absolute time indices and delta_t; only targets are updated
+            # Provide per-step time increments for T-RoPE reflecting sampled delta_i
+            if hasattr(self, "num_timesteps") and self.num_timesteps > 0:
+                dt_val = float(delta_i)
+                per_step = dt_val / float(self.num_timesteps)
+                sample["time_increments"] = torch.full((self.num_timesteps,), per_step, dtype=torch.float32)
 
-        # Provide per-step time increments for T-RoPE if using dynamics
+            # If energies are present, update E_t to match sampled frame indices
+            e_local = self.e
+            if e_local is not None:
+                e_seq = torch.tensor(e_local[frame_idx], dtype=torch.float32)
+                sample["E_t"] = e_seq.contiguous()
+
+            # If forces are present, update F_t to match sampled frame indices
+            f_local = getattr(self, "f", None)
+            if f_local is not None:
+                f_seq = torch.tensor(f_local[frame_idx], dtype=torch.float32)
+                if self.max_nodes is not None:
+                    pad_amt = self.max_nodes - f_seq.shape[-2]
+                    if pad_amt > 0:
+                        f_seq = F.pad(f_seq, (0, 0, 0, pad_amt))
+                sample["F_t"] = f_seq.contiguous()
+
+        # If not randomized above, provide per-step time increments based on configured max horizon
         # Shape: [T], values equal to (delta / T) so cumulative gives [0, Δ, 2Δ, ...]
-        if hasattr(self, "num_timesteps") and self.num_timesteps > 0:
-            # Use configured max horizon for uniform per-step increments; keeps T-RoPE relative
+        elif hasattr(self, "num_timesteps") and self.num_timesteps > 0:
             dt_val = float(self.delta_frame_max)
             per_step = dt_val / float(self.num_timesteps)
             sample["time_increments"] = torch.full((self.num_timesteps,), per_step, dtype=torch.float32)
+            # If energies are present, set E_t sequence matching uniform increments
+            e_local2 = self.e
+            if e_local2 is not None:
+                base_idx = int(self.split_times[i])
+                if self.time_lag_mode == TimeLagMode.UNIFORM:
+                    inc = (self.delta_frame_max * np.arange(1, self.num_timesteps + 1) // self.num_timesteps).astype(np.int64)
+                else:
+                    inc = self.delta_frame_max * np.ones(self.num_timesteps, dtype=np.int64)
+                frame_idx = (base_idx + inc).astype(np.int64)
+                e_seq = torch.tensor(e_local2[frame_idx], dtype=torch.float32)
+                sample["E_t"] = e_seq.contiguous()
+
+            # If forces are present, set F_t sequence matching uniform increments
+            f_local2 = getattr(self, "f", None)
+            if f_local2 is not None:
+                base_idx = int(self.split_times[i])
+                if self.time_lag_mode == TimeLagMode.UNIFORM:
+                    inc = (self.delta_frame_max * np.arange(1, self.num_timesteps + 1) // self.num_timesteps).astype(np.int64)
+                else:
+                    inc = self.delta_frame_max * np.ones(self.num_timesteps, dtype=np.int64)
+                frame_idx = (base_idx + inc).astype(np.int64)
+                f_seq = torch.tensor(f_local2[frame_idx], dtype=torch.float32)
+                if self.max_nodes is not None:
+                    pad_amt = self.max_nodes - f_seq.shape[-2]
+                    if pad_amt > 0:
+                        f_seq = F.pad(f_seq, (0, 0, 0, pad_amt))
+                sample["F_t"] = f_seq.contiguous()
 
         return sample
-
-
-if __name__ == "__main__":
-    # Test MD17Dataset
-    # dataset_static = MD17Dataset(
-    #     partition=DataPartition.train,
-    #     max_samples=5000,
-    #     delta_frame=3000,
-    #     data_dir="data/",
-    #     split_dir="data/",
-    #     md17_version=Datasets.tg80,
-    #     molecule_type=TG80MoleculeType.uracil,
-    #     max_nodes=None,
-    #     force_regenerate=False,
-    #     num_timesteps=1,  # Set num_timesteps for replication
-    #     return_edge_data=False,
-    # )
-    # dataloader_static = DataLoader(dataset_static, batch_size=100, shuffle=True)
-    # print("MD17Dataset Output Shapes:")
-    # for data in dataloader_static:
-    #     for key in data:
-    #         if key not in ["cfg", "edge_attr", "edge_index"]:
-    #             print(f"  {key}:", data[key].shape)
-    #     if "cfg" in data:
-    #         print("  cfg shapes:")
-    #         for key in data["cfg"]:
-    #             print(f"    {key}:", data["cfg"][key].shape)
-    #     break
-
-    # Test MD17DynamicsDataset
-    dataset_dynamic = MD17DynamicsDataset(
-        partition=DataPartition.train,
-        max_samples=500,
-        delta_frame=3000,
-        data_dir="data/",
-        split_dir="data/",
-        md17_version=Datasets.tg80,
-        molecule_type=TG80MoleculeType.uracil,
-        max_nodes=None,
-        force_regenerate=False,
-        num_timesteps=8,  # Set num_timesteps for replication
-        return_edge_data=False,
-    )
-
-    dataloader_dynamic = DataLoader(dataset_dynamic, batch_size=100, shuffle=True)
-    print("MD17DynamicsDataset Output Shapes:")
-    for data in dataloader_dynamic:
-        for key in data:
-            if key not in ["cfg", "edge_attr"]:
-                print(f"  {key}:", data[key].shape)
-        if "cfg" in data:
-            print("  cfg shapes:")
-            for key in data["cfg"]:
-                print(f"    {key}:", data["cfg"][key].shape)
-        break
-
-    # datasets = []
-    # molecule_list = [MD17MoleculeType.benzene, MD17MoleculeType.ethanol]
-    # for molecule in molecule_list:
-    #     dataset_to_concat = MD17DynamicsDataset(
-    #         partition=DataPartition.train,
-    #         max_samples=500,
-    #         delta_frame=3000,
-    #         data_dir="data/",
-    #         split_dir="data/",
-    #         md17_version=MD17Version.md17,
-    #         molecule_type=molecule,
-    #         max_nodes=20,
-    #         force_regenerate=True,
-    #         num_timesteps=8,  # Set num_timesteps for replication
-    #     )
-    #     datasets.append(dataset_to_concat)
-
-    # dataset_dynamic = MD17DynamicsDataset(
-    #     partition=DataPartition.train,
-    #     max_samples=500,
-    #     delta_frame=3000,
-    #     data_dir="data/",
-    #     split_dir="data/",
-    #     md17_version=MD17Version.md17,
-    #     molecule_type=MD17MoleculeType.benzene,
-    #     max_nodes=6,
-    #     force_regenerate=True,
-    #     num_timesteps=8,  # Set num_timesteps for replication
-    # )
-
-    # # dataloader_dynamic = DataLoader(dataset_dynamic, batch_size=100, shuffle=True)
-    # combined_dataset = torch.utils.data.ConcatDataset(datasets)
-    # dataloader_concat = DataLoader(combined_dataset, batch_size=100, shuffle=True)
-
-    # print("\nMD17DynamicsMultitaskDataset Output Shapes:")
-    # print("Shape: Batch size, Time steps, Nodes, Features")
-    # data = next(iter(dataloader_concat))
-    # for key in data:
-    #     if key != "Molecule_type":
-    #         print(f"  {key}:", data[key].shape)
-    #     else:
-    #         print(f"  Molecule_type: {data['Molecule_type'][0]}")

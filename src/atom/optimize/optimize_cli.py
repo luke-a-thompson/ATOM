@@ -36,15 +36,11 @@ def _trial_to_config(base_config: Config, trial: optuna.trial.Trial) -> Config:
     optimizer_cfg: dict[str, object] = cast(dict[str, object], cfg["optimizer"])  # type: ignore[index]
     atom_cfg: dict[str, object] = cast(dict[str, object], cfg["atom_config"])  # type: ignore[index]
 
-    # Dataloader
-    dataloader_cfg["rrwp_length"] = trial.suggest_int("rrwp_length", 0, 12)
-
     # Training
     training_cfg["label_noise_std"] = trial.suggest_float("label_noise_std", 0.001, 0.2, log=True)
 
     # Optimizer
     optimizer_cfg["learning_rate"] = trial.suggest_float("learning_rate", 1e-5, 5e-3, log=True)
-    optimizer_cfg["weight_decay"] = trial.suggest_float("weight_decay", 1e-6, 1e-3, log=True)
 
     # Model architecture
     atom_cfg["num_layers"] = trial.suggest_int("num_layers", 5, 8)
@@ -79,7 +75,7 @@ def _objective_factory(base_config: Config) -> Callable[[optuna.trial.Trial], fl
         config: Config = _trial_to_config(base_config, trial)
 
         # Cap epochs for faster HPO while respecting user's setting
-        n_epochs: int = max(1, min(base_config.training.epochs, 50))
+        n_epochs: int = max(1, min(base_config.training.epochs, 250))
 
         train_loader = None
         val_loader = None
@@ -158,7 +154,7 @@ def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Hyperparameter optimization for ATOM using Optuna")
     _ = parser.add_argument("--config", type=str, required=True, help="Path to base config TOML")
     _ = parser.add_argument("--trials", type=int, default=25, help="Number of Optuna trials")
-    _ = parser.add_argument("--storage", type=str, default="", help="Optuna storage URL (e.g. sqlite:///optuna.db)")
+    _ = parser.add_argument("--storage", type=str, default="sqlite:///optuna.db", help="Optuna storage URL (e.g. sqlite:///optuna.db)")
     _ = parser.add_argument("--study", type=str, default="atom-optimize", help="Study name")
     _ = parser.add_argument("--direction", type=str, choices=["minimize", "maximize"], default="minimize", help="Optimization direction")
     _ = parser.add_argument("--save", type=str, default="optuna_results.json", help="Where to save study summary JSON")

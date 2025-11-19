@@ -15,7 +15,7 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         num_timesteps: int,
         positional_encoding: PositionalEncodingType,
         rope_base: float,
-        learnable_attention_denom: bool = False,
+        rope_tau: float = 1000.0,
         attention_dropout: float = 0.2,
     ) -> None:
         """
@@ -40,9 +40,6 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
             If True, apply RoPE to Q and K.
         rope_base : float
             Base for RoPE calculations.
-        learnable_attention_denom : bool, optional
-            If True, the attention denominator (sqrt(d_head)) is learnable,
-            by default False.
         attention_dropout : float, optional
             Dropout rate for attention weights, by default 0.2.
 
@@ -56,7 +53,7 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
             Linear layer for query projection.
         out_proj : nn.Linear
             Linear layer for output projection.
-        attention_denom : nn.Parameter or torch.Tensor
+        attention_denom : torch.Tensor
             Attention denominator.
         feature_weights : nn.Parameter
             Learnable weights for gating heterogeneous features.
@@ -74,6 +71,7 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         self.lifting_dim = lifting_dim
         self.num_timesteps = num_timesteps
         self.rope_base = rope_base
+        self.rope_tau = rope_tau
         self.d_head = self.lifting_dim // self.num_heads
 
         assert self.d_head % 2 == 0, "d_head must be even"
@@ -83,19 +81,9 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         self.query = nn.Linear(lifting_dim, lifting_dim)
         self.out_proj = nn.Linear(lifting_dim, lifting_dim)
 
-        # from e3nn import o3  # kept for reference; not used in current implementation
-        # self.key = o3.Linear(get_lifting_dim_irreps(lifting_dim), get_lifting_dim_irreps(lifting_dim))
-        # self.value = o3.Linear(get_lifting_dim_irreps(lifting_dim), get_lifting_dim_irreps(lifting_dim))
-        # self.query = o3.Linear(get_lifting_dim_irreps(lifting_dim), get_lifting_dim_irreps(lifting_dim))
-        # self.out_proj = o3.Linear(get_lifting_dim_irreps(lifting_dim), get_lifting_dim_irreps(lifting_dim))
-
         self.attention_dropout = nn.Dropout(attention_dropout)
-
-        denom_init = torch.full((num_heads,), float(self.d_head) ** 0.5)
-        if learnable_attention_denom:
-            self.attention_denom = nn.Parameter(denom_init)
-        else:
-            self.register_buffer("attention_denom", denom_init, persistent=False)
+        # Fixed attention denominator sqrt(d_head)
+        self.sqrt_dhead: float = float(self.d_head) ** 0.5
 
         self.feature_weights = nn.Parameter(torch.randn(3) * 0.1)
 
@@ -103,7 +91,7 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         self.positional_encoding: nn.Module | None = None
         match positional_encoding:
             case PositionalEncodingType.TROPE:
-                self.positional_encoding = TemporalRoPE(num_timesteps=self.num_timesteps, d_head=self.d_head, n_heads=self.num_heads, base=self.rope_base)
+                self.positional_encoding = TemporalRoPE(num_timesteps=self.num_timesteps, d_head=self.d_head, n_heads=self.num_heads, base=self.rope_base, tau=self.rope_tau)
             case PositionalEncodingType.ROPE:
                 self.positional_encoding = RoPE(d_head=self.d_head, n_heads=self.num_heads, base=self.rope_base, learnable_offset=False)
             case PositionalEncodingType.SINUSOIDAL:
@@ -211,7 +199,7 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
                 k_proj_i = self.positional_encoding(k_proj_i, rope_mask_for_rope)
 
             # 1) scores = Q·K^T / sqrt(d_head)
-            scores = q_proj @ k_proj_i.transpose(-2, -1) / self.attention_denom.view(1, -1, 1, 1)  # Broadcasts over heads
+            scores = (q_proj @ k_proj_i.transpose(-2, -1)) / self.sqrt_dhead
             if key_mask_for_scores is not None:
                 pass
                 # scores shape is [B, heads, seq_q, seq_k] = [B, heads, T*N, T*N]
@@ -245,7 +233,6 @@ class LinearHeterogenousCrossAttention(nn.Module):
         positional_encoding: PositionalEncodingType,
         rope_base: float,
         rope_tau: float,
-        learnable_attention_denom: bool = False,
         attention_dropout: float = 0.2,
     ) -> None:
         super().__init__()
@@ -264,12 +251,7 @@ class LinearHeterogenousCrossAttention(nn.Module):
         self.out_proj = nn.Linear(lifting_dim, lifting_dim)
 
         self.attention_dropout = nn.Dropout(attention_dropout)
-
-        denom_init = torch.full((num_heads,), float(self.d_head) ** 0.5)
-        if learnable_attention_denom:
-            self.attention_denom = nn.Parameter(denom_init)
-        else:
-            self.register_buffer("attention_denom", denom_init, persistent=False)
+        self.sqrt_dhead: float = float(self.d_head) ** 0.5
 
         self.feature_weights = nn.Parameter(torch.randn(3) * 0.1)
 
@@ -394,8 +376,8 @@ class QuadraticSelfAttention(nn.Module):
         num_timesteps: int,
         lifting_dim: int,
         positional_encoding: PositionalEncodingType,
+        rope_base: float,
         rope_tau: float = 1000.0,
-        learnable_attention_denom: bool = False,
         attention_dropout: float = 0.2,
     ) -> None:
         """
@@ -411,9 +393,6 @@ class QuadraticSelfAttention(nn.Module):
             Dimension for Q, K, V.
         use_rope : bool
             If True, apply RoPE to Q and K.
-        learnable_attention_denom : bool, optional
-            If True, the attention denominator (sqrt(d_head)) is learnable,
-            by default False.
         attention_dropout : float, optional
             Dropout rate for attention weights, by default 0.2.
 
@@ -425,7 +404,7 @@ class QuadraticSelfAttention(nn.Module):
             Linear layer for query projection.
         out_proj : nn.Linear
             Linear layer for output projection.
-        attention_denom : nn.Parameter or torch.Tensor
+        attention_denom : torch.Tensor
             Attention denominator.
         rope : TemporalRoPEWithOffset, optional
             RoPE module.
@@ -447,20 +426,17 @@ class QuadraticSelfAttention(nn.Module):
         self.query = nn.Linear(lifting_dim, lifting_dim)
         self.out_proj = nn.Linear(lifting_dim, lifting_dim)
         self.attention_dropout = nn.Dropout(attention_dropout)
-
-        denom_init = torch.full((num_heads,), float(self.d_head))
-        if learnable_attention_denom:
-            self.attention_denom = nn.Parameter(denom_init)
-        else:
-            self.register_buffer("attention_denom", denom_init, persistent=False)
+        self.sqrt_dhead: float = float(self.d_head) ** 0.5
 
         self.positional_encoding_type = positional_encoding
         self.positional_encoding: nn.Module | None = None
+        self.rope_base = rope_base
+        self.rope_tau = rope_tau
         match positional_encoding:
             case PositionalEncodingType.TROPE:
-                self.positional_encoding = TemporalRoPE(num_timesteps=self.num_timesteps, d_head=self.d_head, n_heads=self.num_heads, base=1000.0)
+                self.positional_encoding = TemporalRoPE(num_timesteps=self.num_timesteps, d_head=self.d_head, n_heads=self.num_heads, base=self.rope_base, tau=self.rope_tau)
             case PositionalEncodingType.ROPE:
-                self.positional_encoding = RoPE(d_head=self.d_head, n_heads=self.num_heads, base=1000.0)
+                self.positional_encoding = RoPE(d_head=self.d_head, n_heads=self.num_heads, base=self.rope_base)
             case PositionalEncodingType.SINUSOIDAL:
                 self.positional_encoding = None
             case PositionalEncodingType.NONE:
@@ -530,7 +506,7 @@ class QuadraticSelfAttention(nn.Module):
         elif self.positional_encoding_type == PositionalEncodingType.ROPE and self.positional_encoding is not None:
             k_proj = self.positional_encoding(k_proj, rope_mask_for_rope)
 
-        scores: torch.Tensor = q_proj @ k_proj.transpose(-2, -1) / self.attention_denom.view(1, -1, 1, 1)
+        scores: torch.Tensor = (q_proj @ k_proj.transpose(-2, -1)) / self.sqrt_dhead
         if key_mask_for_scores is not None:
             scores = scores.masked_fill(key_mask_for_scores == 0, float("-inf"))
 

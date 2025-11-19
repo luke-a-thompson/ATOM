@@ -160,6 +160,8 @@ class SchedulerType(StrEnum):
 class ModelType(StrEnum):
     ATOM = "atom"
     EGNO = "EGNO"
+    EGNN_S = "EGNN_S"
+    EGNN_R = "EGNN_R"
 
 
 @final
@@ -193,8 +195,8 @@ class AttentionType(StrEnum):
 @final
 class LiftingType(StrEnum):
     NON_EQUIVARIANT = "non_equivariant"
-    EQUIVARIANT = "equivariant"
-    NO_TP = "no_tensor_product"
+    QUASI_EQUIVARIANT = "quasi_equivariant"
+    QUASI_EQUIVARIANT_TP = "quasi_equivariant_tp"
     CANONICALIZATION = "canonicalization"
 
 
@@ -202,6 +204,12 @@ class LiftingType(StrEnum):
 class ProjectionType(StrEnum):
     EQUIVARIANT = "equivariant"
     DECANONICALIZATION = "decanonicalization"
+
+
+@final
+class OutputMode(StrEnum):
+    POS_ONLY = "pos"
+    POS_VEL_ENERGY = "pos_vel_energy"
 
 
 @final

@@ -71,7 +71,7 @@ rope_base = 1000
 rope_tau = 10000
 learnable_attention_denom = false
 # Feature parameters
-lifting_type = "equivariant"
+lifting_type = "quasi_equivariant_tp"
 projection_type = "equivariant"
 # Layer parameters
 norm = "rms"

@@ -2,67 +2,72 @@ from typing import final, override
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-from atom.atom.mlps import MLP
 from e3nn import o3
 
 
 @final
-class EquivariantProject(nn.Module):
+class EquivariantProjectPosOnly(nn.Module):
     def __init__(self, lifting_dim_irreps: str, out_irreps: str) -> None:
         super().__init__()
-        self.linear = o3.Linear(lifting_dim_irreps, out_irreps)
+        self.linear_pos = o3.Linear(lifting_dim_irreps, out_irreps)
 
     @override
     def forward(self, lifted_x_0: torch.Tensor, lifted_concat_features: torch.Tensor) -> torch.Tensor:
         _ = lifted_concat_features
-        return self.linear(lifted_x_0)
+        pos = self.linear_pos(lifted_x_0)
+        return pos
 
 
 @final
-class EquivariantMoEProject(nn.Module):
-    def __init__(self, lifting_dim_irreps: str, out_irreps: str, num_experts: int) -> None:
+class EquivariantProjectFull(nn.Module):
+    def __init__(self, lifting_dim_irreps: str, out_irreps: str) -> None:
         super().__init__()
-        self.experts = nn.ModuleList([o3.Linear(lifting_dim_irreps, out_irreps) for _ in range(num_experts)])
-        self.gate_net = MLP(
-            in_dim=o3.Irreps(lifting_dim_irreps).dim,
-            hidden_dim=max(1, o3.Irreps(lifting_dim_irreps).dim // 8),
-            out_dim=num_experts,
-            hidden_layers=2,
-            activation=nn.SiLU(),
-            dropout_p=0.1,
-        )
+        self.linear_pos = o3.Linear(lifting_dim_irreps, out_irreps)
+        self.linear_vel = o3.Linear(lifting_dim_irreps, out_irreps)
+        self.linear_energy = o3.Linear(lifting_dim_irreps, "1x0e")
 
     @override
-    def forward(self, lifted_x_0: torch.Tensor, lifted_concat_features: torch.Tensor) -> torch.Tensor:
-        gate_logits: torch.Tensor = self.gate_net(lifted_concat_features.mean(dim=(1, 2)))
-        if self.training:
-            routing_mask = F.gumbel_softmax(gate_logits, tau=1.0, hard=True, dim=-1)
-            expert_outputs = torch.stack([expert(lifted_x_0) for expert in self.experts], dim=1)
-            routing_mask = routing_mask.view(*routing_mask.shape, 1, 1, 1)
-            final_pred_pos = (expert_outputs * routing_mask).sum(dim=1)
-        else:
-            top_expert_idx = torch.argmax(gate_logits, dim=-1)
-            final_pred_pos = torch.zeros((*lifted_x_0.shape[:-1], 3), device=lifted_x_0.device, dtype=lifted_x_0.dtype)
+    def forward(self, lifted_x_0: torch.Tensor, lifted_concat_features: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        _ = lifted_concat_features
+        pos = self.linear_pos(lifted_x_0)
+        vel = self.linear_vel(lifted_x_0)
+        energy_per_node = self.linear_energy(lifted_x_0)
+        return pos, vel, energy_per_node
 
-            for i, expert in enumerate(self.experts):
-                mask = top_expert_idx == i
-                if not torch.any(mask):
-                    continue
-                expert_out = expert(lifted_x_0[mask])
-                final_pred_pos[mask] = expert_out
 
-        return final_pred_pos
+# MoE projection removed per request
 
 
 @final
 class DecanonicalizationProject(nn.Module):
     def __init__(self, lifting_dim_irreps: str, out_irreps: str) -> None:
         super().__init__()
-        self.linear = o3.Linear(lifting_dim_irreps, out_irreps)
+        self.linear_pos = o3.Linear(lifting_dim_irreps, out_irreps)
+        self.linear_vel = o3.Linear(lifting_dim_irreps, out_irreps)
+        self.linear_energy = o3.Linear(lifting_dim_irreps, "1x0e")
+
+    @override
+    def forward(
+        self, lifted_x_0: torch.Tensor, lifted_concat_features: torch.Tensor, so3_matrix: torch.Tensor, x_0_mean: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        _ = lifted_concat_features
+        pos_canonical = self.linear_pos(lifted_x_0)
+        vel_canonical = self.linear_vel(lifted_x_0)
+        energy_per_node = self.linear_energy(lifted_x_0)
+        pos_world = pos_canonical @ so3_matrix.transpose(-2, -1) + x_0_mean
+        vel_world = vel_canonical @ so3_matrix.transpose(-2, -1)
+        return pos_world, vel_world, energy_per_node
+
+
+@final
+class DecanonicalizationProjectPosOnly(nn.Module):
+    def __init__(self, lifting_dim_irreps: str, out_irreps: str) -> None:
+        super().__init__()
+        self.linear_pos = o3.Linear(lifting_dim_irreps, out_irreps)
 
     @override
     def forward(self, lifted_x_0: torch.Tensor, lifted_concat_features: torch.Tensor, so3_matrix: torch.Tensor, x_0_mean: torch.Tensor) -> torch.Tensor:
         _ = lifted_concat_features
-        decanonicalized_x_0 = self.linear(lifted_x_0) @ so3_matrix.transpose(-2, -1) + x_0_mean
-        return decanonicalized_x_0
+        pos_canonical = self.linear_pos(lifted_x_0)
+        pos_world = pos_canonical @ so3_matrix.transpose(-2, -1) + x_0_mean
+        return pos_world
