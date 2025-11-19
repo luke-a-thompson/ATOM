@@ -146,7 +146,6 @@ class OptimizerType(StrEnum):
     ADAMW = "adamw"
     ADAM = "adam"
     MUON = "muon"
-    ADAM_MINI = "adam-mini"
 
 
 @final
