@@ -105,7 +105,7 @@ def train_epoch(
     model: nn.Module,
     optimizer: optim.Optimizer,
     dataloader: DataLoader[dict[str, torch.Tensor]] | DataLoader[MDDynamicsDataset],
-    scheduler: optim.lr_scheduler._LRScheduler | None,
+    scheduler: optim.lr_scheduler.LRScheduler | None,
     scaler: GradScaler,
 ) -> float:
     """Single training epoch.
@@ -115,7 +115,7 @@ def train_epoch(
         model (nn.Module): The model to train.
         optimizer (optim.Optimizer): The optimizer to use.
         dataloader (DataLoader[dict[str, torch.Tensor]]): The dataloader to use.
-        scheduler (optim.lr_scheduler._LRScheduler | None): The scheduler to use.
+        scheduler (optim.lr_scheduler.LRScheduler | None): The scheduler to use.
 
     Returns:
         float: The loss of the epoch.
