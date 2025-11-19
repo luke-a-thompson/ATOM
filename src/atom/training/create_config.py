@@ -51,10 +51,6 @@ def _to_torch_device(value: object) -> torch.device:
     raise ValueError(f"Invalid device value: {value}")
 
 
-class WandbConfig(BaseModel):
-    use_wandb: bool
-
-
 class BenchmarkConfig(BaseModel):
     benchmark_name: str
     model_type: ModelType
@@ -290,7 +286,6 @@ class EGNNConfig(BaseModel):
 
 
 class Config(BaseModel):
-    wandb: WandbConfig
     benchmark: BenchmarkConfig
     dataloader: DataloaderConfig
     training: TrainingConfig

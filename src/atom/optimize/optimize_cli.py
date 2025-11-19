@@ -65,9 +65,6 @@ def _trial_to_config(base_config: Config, trial: optuna.trial.Trial) -> Config:
 
 def _objective_factory(base_config: Config) -> Callable[[optuna.trial.Trial], float]:
     def objective(trial: optuna.trial.Trial) -> float:
-        # Disable wandb for HPO runs to avoid clutter
-        os.environ["WANDB_DISABLED"] = "true"
-
         # Vary seed per trial for robustness
         set_seeds(base_config.training.seed + int(trial.number))
 

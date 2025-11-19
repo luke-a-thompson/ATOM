@@ -8,7 +8,6 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from tqdm.std import tqdm
-import wandb
 from torch import autocast
 from torch.amp.grad_scaler import GradScaler
 
@@ -58,8 +57,6 @@ def train_model(config: Config, model: nn.Module, benchmark_dir: Path, run_numbe
         # Log gate parameters and save to weights_dir if provided
         if config.benchmark.log_weights:
             log_weights(list(model.named_parameters()), epoch, save_dir=run_dir)
-
-        wandb.log({"train_s2t_loss": train_s2t_loss, "val_s2t_loss": val_s2t_loss, "lr": optimizer.param_groups[0]["lr"]})
 
         # if val_loss < best_val_loss and epoch > 0.5 * num_epochs:
         if val_s2t_loss < best_val_loss:

@@ -1,6 +1,5 @@
 from pathlib import Path
 from datetime import datetime
-import wandb
 
 from atom.training import (
     Config,
@@ -18,7 +17,6 @@ def main() -> None:
     if args.config:
         single_config_path: Path = Path(args.config).expanduser().resolve()
         config = Config.from_toml(single_config_path)
-        _ = wandb.init(project="ATOM", name=config.benchmark.benchmark_name, config=dict(config), mode="disabled" if not config.wandb.use_wandb else "online")
         set_environment_variables(config)
 
         # Preserve directory structure under benchmark_runs
@@ -39,7 +37,6 @@ def main() -> None:
                 config = Config.from_toml(config_path)
             except Exception as e:
                 raise ValueError(f"Error loading config from {config_path}: {e}")
-            _ = wandb.init(project="ATOM", name=config.benchmark.benchmark_name, config=dict(config), mode="disabled" if not config.wandb.use_wandb else "online")
             set_environment_variables(config)
 
             # Compute relative path to preserve structure under the provided base directory

@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn.functional as F
-import wandb
 from atom.training.create_config import Config
 
 
@@ -75,7 +74,7 @@ def set_environment_variables(config: Config) -> None:
 
 
 def log_weights(named_parameters: list[tuple[str, torch.Tensor]], epoch: int, save_dir: Path):
-    """Log feature weights to wandb and/or save as numpy arrays.
+    """Save feature weights and related tensors as numpy arrays.
 
     Args:
         named_parameters: Model's named parameters
@@ -145,32 +144,6 @@ def log_weights(named_parameters: list[tuple[str, torch.Tensor]], epoch: int, sa
 
             # Save updated history
             np.savez(lambda_v_path, lambda_v_residual=np.array(lambda_v_residual_history))
-
-    # Original wandb logging code
-    if feat_weights_per_layer:
-        averaged_param = torch.stack(feat_weights_per_layer, dim=0).mean(dim=0)
-        softmaxed_param = F.softmax(averaged_param, dim=0)
-        bin_labels = ["x_0", "v_0", "concat"]
-        values = softmaxed_param.tolist()
-
-        fig, ax = plt.subplots()
-        ax.bar(bin_labels, values)
-        ax.set_title("Averaged Feature Weights")
-        wandb.log({"feature_weights/averaged": wandb.Image(fig)}, step=epoch)
-        plt.close(fig)
-    if attention_denom_per_layer:
-        averaged_param = torch.stack(attention_denom_per_layer, dim=0).mean(dim=0)
-        wandb.log({"attention_denom/averaged": wandb.Histogram(averaged_param.tolist())}, step=epoch)
-
-        # Create a table of attention denominator values
-        attention_table = wandb.Table(columns=["Layer", "Value"])
-        for i, denom in enumerate(attention_denom_per_layer):
-            attention_table.add_data(i, denom[0].item())
-        wandb.log({"attention_denom/table": attention_table}, step=epoch)
-    if lambda_v_residual_per_layer:
-        averaged_param = torch.stack(lambda_v_residual_per_layer, dim=0).mean(dim=0)
-        wandb.log({"lambda_v_residual/averaged": wandb.Histogram(averaged_param.tolist())}, step=epoch)
-
 
 def add_brownian_noise(
     positions: torch.Tensor,

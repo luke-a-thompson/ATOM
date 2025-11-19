@@ -6,7 +6,6 @@ from tempfile import TemporaryDirectory
 
 import torch
 from tqdm.std import tqdm
-import wandb
 import typing
 
 from atom.training import (
@@ -105,21 +104,10 @@ def singletask_benchmark(
     with open(results_filename, "w") as f:
         _ = f.write(multi_run_results_json)
 
-    wandb.log(
-        {
-            "mean_test_loss": multi_run_results.s2s_test_loss_mean,
-            "mean_test_loss_final": multi_run_results.s2s_test_loss_mean,
-            "mean_secs_per_run": multi_run_results.mean_secs_per_run,
-            "mean_secs_per_epoch": multi_run_results.mean_secs_per_epoch,
-            "mean_s2t_test_loss": multi_run_results.s2t_test_loss_mean,
-            "std_s2t_test_loss": multi_run_results.s2t_test_loss_std,
-        }
-    )
-
     tqdm.write(f"\nSaved benchmark results to {results_filename}")
     tqdm.write(f"Benchmark Results ({config.benchmark.runs} runs, {config.training.epochs} epochs/run):")
     tqdm.write(f"  Average S2S Test Loss Final Timestep: {multi_run_results.s2s_test_loss_mean*100:.2f}x10^-2 ± {multi_run_results.s2s_test_loss_std*100:.2f}x10^-2")  # type: ignore
-    tqdm.write(f"  Average S2T Test Loss: {multi_run_results.s2t_test_loss_mean*100:.2f}x10^-2 ± {multi_run_results.s2t_test_loss_std*100:.2f}x10^-2")  # type: ignore
+    tqdm.write(f"  Average S2T Test Loss: {multi_run_results.s2t_test_loss_mean*100:.2f}x10^-2 ± {multi_run_results.s2t_test_loss_std*100:.2f}")  # type: ignore
     tqdm.write(f"  Average Time per Run: {multi_run_results.mean_secs_per_run:.1f}s")
     tqdm.write(f"  Average Time per Epoch: {multi_run_results.mean_secs_per_epoch:.1f}s")
     tqdm.write(f"  Average Best Val Loss Epoch: {multi_run_results.mean_best_val_loss_epoch:.1f}")
@@ -197,17 +185,6 @@ def multitask_benchmark(
     results_filename = f"{benchmark_dir}/results.json"
     with open(results_filename, "w") as f:
         _ = f.write(multi_run_results_json)
-
-    wandb.log(
-        {
-            "mean_test_loss": multi_run_results.s2s_test_loss_mean,
-            "mean_test_loss_final": multi_run_results.s2s_test_loss_mean,
-            "mean_secs_per_run": multi_run_results.mean_secs_per_run,
-            "mean_secs_per_epoch": multi_run_results.mean_secs_per_epoch,
-            "mean_s2t_test_loss": multi_run_results.s2t_test_loss_mean,
-            "std_s2t_test_loss": multi_run_results.s2t_test_loss_std,
-        }
-    )
 
     tqdm.write(f"\nSaved benchmark results to {results_filename}")
     tqdm.write(f"Benchmark Results ({config.benchmark.runs} runs, {config.training.epochs} epochs/run):")
