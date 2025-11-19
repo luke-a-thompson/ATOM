@@ -296,14 +296,39 @@ class Config(BaseModel):
     training: TrainingConfig
     optimizer: OptimizerConfig
     scheduler: SchedulerConfig
-    atom_config: ATOMConfig
-    egno_config: EGNOConfig
+    atom_config: ATOMConfig | None = None
+    egno_config: EGNOConfig | None = None
     egnn_config: EGNNConfig | None = None
 
     @model_validator(mode="after")
     def validate_output_heads(self) -> "Config":
-        if self.benchmark.model_type == ModelType.ATOM and self.atom_config.output_heads > 1 and self.dataloader.multitask is False:
+        if (
+            self.benchmark.model_type == ModelType.ATOM
+            and self.atom_config is not None
+            and self.atom_config.output_heads > 1
+            and self.dataloader.multitask is False
+        ):
             print("Are you sure you want to use multiple output heads for a single-task model? This is unusual, but maybe you're onto something.")
+        return self
+
+    @model_validator(mode="after")
+    def validate_model_specific_configs(self) -> "Config":
+        match self.benchmark.model_type:
+            case ModelType.ATOM:
+                if self.atom_config is None:
+                    raise ValueError("ATOM model requires 'atom_config' to be set.")
+                if self.egno_config is not None or self.egnn_config is not None:
+                    raise ValueError("ATOM model should not define 'egno_config' or 'egnn_config'.")
+            case ModelType.EGNO:
+                if self.egno_config is None:
+                    raise ValueError("EGNO model requires 'egno_config' to be set.")
+                if self.atom_config is not None or self.egnn_config is not None:
+                    raise ValueError("EGNO model should not define 'atom_config' or 'egnn_config'.")
+            case ModelType.EGNN_S | ModelType.EGNN_R:
+                if self.egnn_config is None:
+                    raise ValueError("EGNN model requires 'egnn_config' to be set.")
+                if self.atom_config is not None or self.egno_config is not None:
+                    raise ValueError("EGNN model should not define 'atom_config' or 'egno_config'.")
         return self
 
     @classmethod
