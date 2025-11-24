@@ -22,7 +22,6 @@ from atom.training import (
     initialize_scheduler,
     log_weights,
 )
-from atom.training.config_options import TimeLagMode
 
 
 def train_model(config: Config, model: nn.Module, benchmark_dir: Path, run_number: int) -> SingleRunResults:
@@ -269,6 +268,7 @@ def eval_epoch(
                 pred_coords = outputs["pos"]
             else:
                 pred_coords = outputs
+
 
             if config.dataloader.explicit_hydrogen and config.dataloader.explicit_hydrogen_gradients is False:
                 # Get atomic numbers Z from batch and create mask for heavy atoms (Z > 1)

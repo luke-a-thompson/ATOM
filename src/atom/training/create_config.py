@@ -240,7 +240,6 @@ class ATOMConfig(BaseModel):
     positional_encoding: PositionalEncodingType
     rope_base: Annotated[NonNegativeFloat, Field(description="Must be greater than or equal to 0.0.")]
     rope_tau: Annotated[NonNegativeFloat, Field(description="Must be greater than or equal to 0.0.")]
-    # Removed: learnable_attention_denom
     # Feature parameters
     lifting_type: LiftingType
     projection_type: ProjectionType
