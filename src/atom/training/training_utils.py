@@ -6,7 +6,16 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn.functional as F
+
 from atom.training.create_config import Config
+from atom.training.create_dataloaders import create_datasets
+from atom.training.config_options import (
+    Datasets,
+    MD17MoleculeType,
+    RMD17MoleculeType,
+    TG80MoleculeType,
+    MD22MoleculeType,
+)
 
 
 def parse_train_args() -> argparse.Namespace:
@@ -21,6 +30,11 @@ def parse_train_args() -> argparse.Namespace:
         "--configs",
         type=str,
         help="Path to directory containing config.toml files to run sequentially",
+    )
+    _ = parser.add_argument(
+        "--show-connectivity",
+        action="store_true",
+        help="Print graph connectivity statistics for the dataset(s) defined by the config, then exit.",
     )
     return parser.parse_args()
 
@@ -71,6 +85,63 @@ def set_environment_variables(config: Config) -> None:
     if config.benchmark.compile_trace:
         assert os.access(Path("torch_compiler/trace"), os.W_OK), "Directory trace_dir is not writable."
         os.environ["TORCH_TRACE"] = "torch_compiler/trace"
+
+
+def _infer_molecule_type_for_single_task(config: Config) -> MD17MoleculeType | RMD17MoleculeType | TG80MoleculeType | MD22MoleculeType:
+    if config.dataloader.molecule_type is None:
+        msg = "For single-task connectivity analysis, 'dataloader.molecule_type' must be set."
+        raise ValueError(msg)
+    dataset = config.dataloader.dataset
+    mol_value = config.dataloader.molecule_type
+    if dataset == Datasets.md17:
+        return MD17MoleculeType(mol_value)
+    if dataset == Datasets.rmd17:
+        return RMD17MoleculeType(mol_value)
+    if dataset == Datasets.tg80:
+        return TG80MoleculeType(mol_value)
+    if dataset == Datasets.md22:
+        return MD22MoleculeType(mol_value)
+    msg = f"Unsupported dataset for connectivity analysis: {dataset}"
+    raise ValueError(msg)
+
+
+def show_connectivity(config: Config) -> None:
+    """
+    Analyse and print basic connectivity statistics for the configured dataset(s).
+
+    This uses the same dataset construction as training but calls the underlying
+    adjacency computation to expose one-hop / two-hop edge counts.
+    """
+    print("=== Connectivity analysis ===")
+    if config.dataloader.multitask:
+        assert config.dataloader.train_molecules is not None
+        mols = config.dataloader.train_molecules
+        print(f"Multitask dataset with {len(mols)} train molecules.")
+        for mol in mols:
+            try:
+                train_dataset, _, _ = create_datasets(config, mol, max_nodes=None)
+            except Exception as exc:
+                print(f"- {mol}: failed to construct dataset ({exc})")
+                continue
+            one_hop, two_hop = train_dataset._compute_adjacency_matrix(
+                train_dataset.x,
+                train_dataset.num_nodes,
+                train_dataset.radius_graph_threshold,
+            )
+            one_hop_edges = int(one_hop.sum().item() // 2)
+            two_hop_edges = int(two_hop.sum().item() // 2)
+            print(f"- {mol}: nodes={train_dataset.num_nodes}, one-hop edges={one_hop_edges}, two-hop edges={two_hop_edges}")
+    else:
+        mol = _infer_molecule_type_for_single_task(config)
+        train_dataset, _, _ = create_datasets(config, mol, max_nodes=None)
+        one_hop, two_hop = train_dataset._compute_adjacency_matrix(
+            train_dataset.x,
+            train_dataset.num_nodes,
+            train_dataset.radius_graph_threshold,
+        )
+        one_hop_edges = int(one_hop.sum().item() // 2)
+        two_hop_edges = int(two_hop.sum().item() // 2)
+        print(f"Single-task dataset {mol}: nodes={train_dataset.num_nodes}, one-hop edges={one_hop_edges}, two-hop edges={two_hop_edges}")
 
 
 def log_weights(named_parameters: list[tuple[str, torch.Tensor]], epoch: int, save_dir: Path):

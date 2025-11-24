@@ -7,7 +7,15 @@ import os
 from typing import final, override
 from pathlib import Path
 import torch.nn.functional as F
-from atom.training.config_options import DataPartition, Datasets, MD17MoleculeType, RMD17MoleculeType, TG80MoleculeType, MD22MoleculeType, TimeLagMode
+from atom.training.config_options import (
+    DataPartition,
+    Datasets,
+    MD17MoleculeType,
+    RMD17MoleculeType,
+    TG80MoleculeType,
+    MD22MoleculeType,
+    TimeLagMode,
+)
 
 
 # Centralized stick definitions per molecule (indices assume no hydrogens)
@@ -36,11 +44,14 @@ class MDDataset(Dataset[dict[str, torch.Tensor]]):
         data_dir: str,
         split_dir: str,
         md17_version: Datasets,
-        molecule_type: MD17MoleculeType | RMD17MoleculeType | TG80MoleculeType | MD22MoleculeType,
+        molecule_type: MD17MoleculeType
+        | RMD17MoleculeType
+        | TG80MoleculeType
+        | MD22MoleculeType,
         max_nodes: int | None,
         return_edge_data: bool,
         center_data: bool = False,
-        num_timesteps: int = 1,  # Number of timesteps to replicate
+        num_timesteps: int = 1,
         explicit_hydrogen: bool = False,
         radius_graph_threshold: float = 1.6,
         rrwp_length: int = 8,
@@ -52,8 +63,9 @@ class MDDataset(Dataset[dict[str, torch.Tensor]]):
         seed: int = 42,
         force_regenerate: bool = False,
         verbose: bool = False,
-        max_edges: int | None = None,  # Maximum number of edges to pad to
+        max_edges: int | None = None,
         time_lag_mode: TimeLagMode = TimeLagMode.LAST,
+        use_two_hop_edges: bool = True,
     ):
         """
         Args:
@@ -70,14 +82,18 @@ class MDDataset(Dataset[dict[str, torch.Tensor]]):
         """
         self.data_partition: DataPartition = partition
         self.md17_version: Datasets = md17_version
-        self.molecule_type: MD17MoleculeType | RMD17MoleculeType | TG80MoleculeType | MD22MoleculeType = molecule_type
+        self.molecule_type: (
+            MD17MoleculeType | RMD17MoleculeType | TG80MoleculeType | MD22MoleculeType
+        ) = molecule_type
         self.max_nodes: int | None = max_nodes
         # Support fixed or ranged delta frame. Use max for indexing safety and eval.
         if isinstance(delta_frame, tuple):
             self.delta_frame_min: int = int(delta_frame[0])
             self.delta_frame_max: int = int(delta_frame[1])
             if self.delta_frame_min <= 0 or self.delta_frame_max <= 0:
-                raise ValueError(f"delta_frame bounds must be positive, got {delta_frame}")
+                raise ValueError(
+                    f"delta_frame bounds must be positive, got {delta_frame}"
+                )
             if self.delta_frame_min > self.delta_frame_max:
                 raise ValueError(f"delta_frame min must be <= max, got {delta_frame}")
         else:
@@ -93,6 +109,7 @@ class MDDataset(Dataset[dict[str, torch.Tensor]]):
         self.normalize_z: bool = normalize_z
         self.egno_mode: bool = egno_mode
         self.max_edges: int | None = max_edges
+        self.use_two_hop_edges: bool = use_two_hop_edges
         self.time_lag_mode: TimeLagMode = time_lag_mode
         self.dft_imprecision_margin: int = 0
         # Predeclare attributes for type checkers
@@ -116,22 +133,34 @@ class MDDataset(Dataset[dict[str, torch.Tensor]]):
         forces_col: str | None = None
         match md17_version:
             case Datasets.md17:
-                full_dir = os.path.join(data_dir, "md17_npz", f"md17_{molecule_name}.npz")
-                split_dir = os.path.join(split_dir, "md17_splits", f"md17_{molecule_name}_split.pkl")
+                full_dir = os.path.join(
+                    data_dir, "md17_npz", f"md17_{molecule_name}.npz"
+                )
+                split_dir = os.path.join(
+                    split_dir, "md17_splits", f"md17_{molecule_name}_split.pkl"
+                )
                 positions_col = "R"
                 charges_col = "z"
                 self.dft_imprecision_margin = 10_000
                 energy_col = None
             case Datasets.rmd17:
-                full_dir = os.path.join(data_dir, "rmd17_npz", f"rmd17_{molecule_name}.npz")
-                split_dir = os.path.join(split_dir, "rmd17_splits", f"rmd17_{molecule_name}_split.pkl")
+                full_dir = os.path.join(
+                    data_dir, "rmd17_npz", f"rmd17_{molecule_name}.npz"
+                )
+                split_dir = os.path.join(
+                    split_dir, "rmd17_splits", f"rmd17_{molecule_name}_split.pkl"
+                )
                 positions_col = "coords"
                 charges_col = "nuclear_charges"
                 self.dft_imprecision_margin = 10_000
                 energy_col = None
             case Datasets.tg80:
-                full_dir = os.path.join(data_dir, "tg80_npz", f"tg80_{molecule_name}.npz")
-                split_dir = os.path.join(split_dir, "tg80_splits", f"tg80_{molecule_name}_split.pkl")
+                full_dir = os.path.join(
+                    data_dir, "tg80_npz", f"tg80_{molecule_name}.npz"
+                )
+                split_dir = os.path.join(
+                    split_dir, "tg80_splits", f"tg80_{molecule_name}_split.pkl"
+                )
                 positions_col = "coords"
                 charges_col = "nuclear_charges"
                 forces_col = "forces"
@@ -141,8 +170,12 @@ class MDDataset(Dataset[dict[str, torch.Tensor]]):
                 val_par = 0.1
                 test_par = 0.1
             case Datasets.md22:
-                full_dir = os.path.join(data_dir, "md22_npz", f"md22_{molecule_name}.npz")
-                split_dir = os.path.join(split_dir, "md22_splits", f"md22_{molecule_name}_split.pkl")
+                full_dir = os.path.join(
+                    data_dir, "md22_npz", f"md22_{molecule_name}.npz"
+                )
+                split_dir = os.path.join(
+                    split_dir, "md22_splits", f"md22_{molecule_name}_split.pkl"
+                )
                 self.dft_imprecision_margin = 500
                 if molecule_type == MD22MoleculeType.STACHYOSE:
                     train_par = 0.3
@@ -164,7 +197,9 @@ class MDDataset(Dataset[dict[str, torch.Tensor]]):
         self.f: npt.NDArray[np.float64] | None = None
         if forces_col is not None and forces_col in data_file:
             self.f = data_file[forces_col].astype(np.float64)
-        self.v: npt.NDArray[np.float64] = self.x[1:] - self.x[:-1]  # Construct velocities from successive coords
+        self.v: npt.NDArray[np.float64] = (
+            self.x[1:] - self.x[:-1]
+        )  # Construct velocities from successive coords
         self.x = self.x[:-1]  # Remove last coord to ensure len(x) == len(v)
         if self.e is not None:
             # Align energies with trimmed coordinates/velocities
@@ -214,7 +249,9 @@ class MDDataset(Dataset[dict[str, torch.Tensor]]):
         # Shape: [max_samples, num_timesteps, nodes, d]
         self.replicated_x_0: torch.Tensor = self._replicate_tensor(self.x_0)
         self.replicated_v_0: torch.Tensor = self._replicate_tensor(self.v_0)
-        self.replicated_concatenated_features: torch.Tensor = self._replicate_tensor(self.concatenated_features)
+        self.replicated_concatenated_features: torch.Tensor = self._replicate_tensor(
+            self.concatenated_features
+        )
         self.replicated_z_0: torch.Tensor = self._replicate_tensor(self.z_0)
         # Replicate forces if present
         if hasattr(self, "f_0"):
@@ -222,8 +259,12 @@ class MDDataset(Dataset[dict[str, torch.Tensor]]):
         if hasattr(self, "f_t"):
             self.replicated_f_t: torch.Tensor = self._replicate_tensor(self.f_t)
         if self.center_data:
-            self.replicated_x_0_mean = self.replicated_x_0[..., :3].mean(dim=(2), keepdim=True)
-            self.replicated_x_0[..., :3] = self.replicated_x_0[..., :3] - self.replicated_x_0_mean
+            self.replicated_x_0_mean = self.replicated_x_0[..., :3].mean(
+                dim=(2), keepdim=True
+            )
+            self.replicated_x_0[..., :3] = (
+                self.replicated_x_0[..., :3] - self.replicated_x_0_mean
+            )
 
         # Assert that self.replicated_x_0 contains identical data across all timesteps
         # This means for each sample, all timesteps should have the same initial positions
@@ -234,10 +275,17 @@ class MDDataset(Dataset[dict[str, torch.Tensor]]):
             # Check that all other timesteps have identical data
             for t in range(1, self.num_timesteps):
                 assert torch.allclose(self.replicated_x_0[0][t], first_timestep_data), (
-                    f"Initial positions (x_0) at timestep {t} differ from timestep 0. " f"Shape: {self.replicated_x_0.shape}"
+                    f"Initial positions (x_0) at timestep {t} differ from timestep 0. "
+                    f"Shape: {self.replicated_x_0.shape}"
                 )
 
-    def process_data(self, split_times: npt.NDArray[np.int_], x: npt.NDArray[np.float64], v: npt.NDArray[np.float64], z: npt.NDArray[np.uint8]):
+    def process_data(
+        self,
+        split_times: npt.NDArray[np.int_],
+        x: npt.NDArray[np.float64],
+        v: npt.NDArray[np.float64],
+        z: npt.NDArray[np.uint8],
+    ):
         """Processes loaded data, common to both MD17Dataset and MD17DynamicsDataset"""
         x_0, v_0 = self.get_initial_frames(split_times, x, v)
         x_t, v_t = self.get_target_frames(split_times, x, v)
@@ -248,49 +296,82 @@ class MDDataset(Dataset[dict[str, torch.Tensor]]):
         # Energies for initial and target frames if available
         if self.e is not None:
             e_0 = torch.tensor(self.e[split_times], dtype=torch.float32)
-            e_t = torch.tensor(self.e[split_times + self.delta_frame_max], dtype=torch.float32)
+            e_t = torch.tensor(
+                self.e[split_times + self.delta_frame_max], dtype=torch.float32
+            )
             self.e_0: torch.Tensor = e_0
             self.e_t: torch.Tensor = e_t
 
         # Forces for initial and target frames if available (shape: [B, N, 3])
         if self.f is not None:
             f_0_t = torch.tensor(self.f[split_times], dtype=torch.float32)
-            f_t_t = torch.tensor(self.f[split_times + self.delta_frame_max], dtype=torch.float32)
+            f_t_t = torch.tensor(
+                self.f[split_times + self.delta_frame_max], dtype=torch.float32
+            )
             self.f_0: torch.Tensor = self._pad_tensor(f_0_t)
             self.f_t: torch.Tensor = self._pad_tensor(f_t_t)
 
         self.num_nodes: int = z.shape[0]
 
-        one_hop_adjacency, two_hop_adjacency = self._compute_adjacency_matrix(x, self.num_nodes, self.radius_graph_threshold)
+        one_hop_adjacency, two_hop_adjacency = self._compute_adjacency_matrix(
+            x, self.num_nodes, self.radius_graph_threshold
+        )
 
         if self.return_edge_data:
             stick_set: set[tuple[int, int]] | None = None
             if self.egno_mode and "Stick" in self.cfg:
-                stick_set = {((i if i <= j else j), (j if i <= j else i)) for i, j in self.cfg["Stick"]}
-            self.edge_attr, self.edge_index = self._build_edge_attributes(one_hop_adjacency, two_hop_adjacency, torch.tensor(z), x_0, stick_set)
+                stick_set = {
+                    ((i if i <= j else j), (j if i <= j else i))
+                    for i, j in self.cfg["Stick"]
+                }
+            # Optionally drop two-hop edges (e.g. for GATv2 which should see only one-hop connectivity)
+            if not self.use_two_hop_edges:
+                effective_two_hop = torch.zeros_like(two_hop_adjacency)
+            else:
+                effective_two_hop = two_hop_adjacency
+            self.edge_attr, self.edge_index = self._build_edge_attributes(
+                one_hop_adjacency, effective_two_hop, torch.tensor(z), x_0, stick_set
+            )
         if self.max_edges is not None and self.egno_mode:
             current_edges = self.edge_attr.shape[0]
             if current_edges < self.max_edges:
                 pad_len = self.max_edges - current_edges
                 # Pad edge attributes with zeros
-                edge_attr_pad = torch.zeros(pad_len, self.edge_attr.shape[1], dtype=self.edge_attr.dtype)
+                edge_attr_pad = torch.zeros(
+                    pad_len, self.edge_attr.shape[1], dtype=self.edge_attr.dtype
+                )
                 self.edge_attr = torch.cat([self.edge_attr, edge_attr_pad], dim=0)
                 # Pad edge indices with zeros (valid self-loop indices)
                 source_pad = torch.zeros(pad_len, dtype=self.edge_index[0].dtype)
                 target_pad = torch.zeros(pad_len, dtype=self.edge_index[1].dtype)
-                self.edge_index = (torch.cat([self.edge_index[0], source_pad], dim=0), torch.cat([self.edge_index[1], target_pad], dim=0))
+                self.edge_index = (
+                    torch.cat([self.edge_index[0], source_pad], dim=0),
+                    torch.cat([self.edge_index[1], target_pad], dim=0),
+                )
 
         if self.rrwp_length > 0:
-            self.rrwp: torch.Tensor = self.calculate_rrwp(one_hop_adjacency, self.rrwp_length)
+            self.rrwp: torch.Tensor = self.calculate_rrwp(
+                one_hop_adjacency, self.rrwp_length
+            )
 
-        self.x_0: torch.Tensor = torch.cat([x_0, torch.norm(x_0, dim=-1, keepdim=True)], dim=-1)
-        self.v_0: torch.Tensor = torch.cat([v_0, torch.norm(v_0, dim=-1, keepdim=True)], dim=-1)
+        self.x_0: torch.Tensor = torch.cat(
+            [x_0, torch.norm(x_0, dim=-1, keepdim=True)], dim=-1
+        )
+        self.v_0: torch.Tensor = torch.cat(
+            [v_0, torch.norm(v_0, dim=-1, keepdim=True)], dim=-1
+        )
         # Expand atomic numbers to match batch dimension of x_0 and v_0
-        self.z_0: torch.Tensor = torch.Tensor(z).unsqueeze(-1).unsqueeze(0).expand(self.x_0.shape[0], -1, -1)
+        self.z_0: torch.Tensor = (
+            torch.Tensor(z).unsqueeze(-1).unsqueeze(0).expand(self.x_0.shape[0], -1, -1)
+        )
         if self.normalize_z:
             self.z_0 = self.z_0 / self.z_0.max()
         self.concatenated_features: torch.Tensor = self._compute_concatenated_features()
-        self.mole_idx: torch.Tensor = torch.arange(z.shape[0], dtype=torch.long).unsqueeze(-1).expand(self.x_0.shape[0], -1, -1)
+        self.mole_idx: torch.Tensor = (
+            torch.arange(z.shape[0], dtype=torch.long)
+            .unsqueeze(-1)
+            .expand(self.x_0.shape[0], -1, -1)
+        )
 
         self.x_0 = self._pad_tensor(self.x_0)
         self.v_0 = self._pad_tensor(self.v_0)
@@ -307,7 +388,12 @@ class MDDataset(Dataset[dict[str, torch.Tensor]]):
                     torch.zeros(self.max_nodes - self.num_nodes, dtype=torch.bool),
                 ]
             )
-            self.padded_nodes_mask = base_mask.unsqueeze(0).expand(self.num_timesteps, -1).unsqueeze(-1).contiguous()
+            self.padded_nodes_mask = (
+                base_mask.unsqueeze(0)
+                .expand(self.num_timesteps, -1)
+                .unsqueeze(-1)
+                .contiguous()
+            )
 
         assert (
             self.x_t.shape[:2]
@@ -349,7 +435,9 @@ class MDDataset(Dataset[dict[str, torch.Tensor]]):
         ]
 
         if self.rrwp_length > 0:
-            rrwp = self.rrwp.unsqueeze(0).expand(self.x_0.shape[0], -1, -1)  # Expand to match actual sample count
+            rrwp = self.rrwp.unsqueeze(0).expand(
+                self.x_0.shape[0], -1, -1
+            )  # Expand to match actual sample count
             features_to_concat.append(rrwp)
 
         concatenated_features = torch.cat(features_to_concat, dim=-1)
@@ -366,22 +454,34 @@ class MDDataset(Dataset[dict[str, torch.Tensor]]):
             torch.Tensor: The replicated tensor.
         """
         # Add new time dimension
-        assert tensor.shape[0] == len(
-            self.split_times
-        ), f"Tensor shape: {tensor.shape}, expected samples: {len(self.split_times)}. Molecule type: {self.molecule_type} for split: {self.data_partition}"
+        assert tensor.shape[0] == len(self.split_times), (
+            f"Tensor shape: {tensor.shape}, expected samples: {len(self.split_times)}. Molecule type: {self.molecule_type} for split: {self.data_partition}"
+        )
         tensor_with_time = tensor.unsqueeze(1)
 
         # Expand along time dimension to num_timesteps
-        tensor_expanded = tensor_with_time.expand(-1, self.num_timesteps, *tensor.shape[1:]).contiguous()
+        tensor_expanded = tensor_with_time.expand(
+            -1, self.num_timesteps, *tensor.shape[1:]
+        ).contiguous()
 
         return tensor_expanded
 
-    def get_initial_frames(self, split_times: npt.NDArray[np.int_], x: npt.NDArray[np.float64], v: npt.NDArray[np.float64]) -> tuple[torch.Tensor, torch.Tensor]:
+    def get_initial_frames(
+        self,
+        split_times: npt.NDArray[np.int_],
+        x: npt.NDArray[np.float64],
+        v: npt.NDArray[np.float64],
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         x_0 = torch.Tensor(x[split_times])
         v_0 = torch.Tensor(v[split_times])
         return x_0, v_0
 
-    def get_target_frames(self, split_times: npt.NDArray[np.int_], x: npt.NDArray[np.float64], v: npt.NDArray[np.float64]) -> tuple[torch.Tensor, torch.Tensor]:
+    def get_target_frames(
+        self,
+        split_times: npt.NDArray[np.int_],
+        x: npt.NDArray[np.float64],
+        v: npt.NDArray[np.float64],
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         x_t = torch.Tensor(x[split_times + self.delta_frame_max])
         v_t = torch.Tensor(v[split_times + self.delta_frame_max])
         return x_t, v_t
@@ -421,12 +521,23 @@ class MDDataset(Dataset[dict[str, torch.Tensor]]):
                 with open(split_dir, "rb") as f:
                     return pkl.load(f)
             except FileNotFoundError:
-                print("Split file not found, generating new split") if self.verbose else None
+                print(
+                    "Split file not found, generating new split"
+                ) if self.verbose else None
         else:
             print("Forcing regeneration of dataset split") if self.verbose else None
 
         # Generate new split
-        return self._generate_new_split(start=start, end=end, x=x, train_par=train_par, val_par=val_par, test_par=test_par, seed=seed, split_dir=split_dir)
+        return self._generate_new_split(
+            start=start,
+            end=end,
+            x=x,
+            train_par=train_par,
+            val_par=val_par,
+            test_par=test_par,
+            seed=seed,
+            split_dir=split_dir,
+        )
 
     def _generate_new_split(
         self,
@@ -466,7 +577,9 @@ class MDDataset(Dataset[dict[str, torch.Tensor]]):
 
         # Select training indices
         train_size = int(train_par * num_timesteps)
-        train_idx = np.random.choice(np.arange(num_timesteps), size=train_size, replace=False)
+        train_idx = np.random.choice(
+            np.arange(num_timesteps), size=train_size, replace=False
+        )
         assigned_mask[train_idx] = True
 
         # Select validation indices from remaining frames
@@ -493,12 +606,18 @@ class MDDataset(Dataset[dict[str, torch.Tensor]]):
             pkl.dump(split, f)
 
         if self.verbose:
-            print(f"Generated and saved split with {len(train_idx)} train, {len(val_idx)} val, and {len(test_idx)} test samples")
-            print(f"Note: Max samples will be limited to {self.max_samples if hasattr(self, 'max_samples') else 'unlimited'} during dataset usage")
+            print(
+                f"Generated and saved split with {len(train_idx)} train, {len(val_idx)} val, and {len(test_idx)} test samples"
+            )
+            print(
+                f"Note: Max samples will be limited to {self.max_samples if hasattr(self, 'max_samples') else 'unlimited'} during dataset usage"
+            )
 
         return split
 
-    def _compute_adjacency_matrix(self, x: npt.NDArray[np.float64], num_atoms: int, threshold: float) -> tuple[torch.Tensor, torch.Tensor]:
+    def _compute_adjacency_matrix(
+        self, x: npt.NDArray[np.float64], num_atoms: int, threshold: float
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """Compute one-hop and two-hop adjacency matrices based on distance threshold.
 
         Args:
@@ -511,7 +630,9 @@ class MDDataset(Dataset[dict[str, torch.Tensor]]):
             tuple[torch.Tensor, torch.Tensor]: (one_hop_adjacency_matrix, two_hop_adjacency_matrix)
         """
         # Extract positions at time 0
-        positions: torch.Tensor = torch.tensor(x[0], dtype=torch.float32)  # Shape: (num_atoms, 3)
+        positions: torch.Tensor = torch.tensor(
+            x[0], dtype=torch.float32
+        )  # Shape: (num_atoms, 3)
 
         # Compute pairwise distances using vectorized operations
         # Expand dimensions for broadcasting
@@ -519,7 +640,9 @@ class MDDataset(Dataset[dict[str, torch.Tensor]]):
         pos_j: torch.Tensor = positions.unsqueeze(0)  # Shape: (1, num_atoms, 3)
 
         # Compute distances between all pairs of atoms
-        distances: torch.Tensor = torch.norm(pos_i - pos_j, dim=2)  # Shape: (num_atoms, num_atoms)
+        distances: torch.Tensor = torch.norm(
+            pos_i - pos_j, dim=2
+        )  # Shape: (num_atoms, num_atoms)
 
         one_hop_edges: torch.Tensor = (distances < threshold).int()
 
@@ -529,15 +652,21 @@ class MDDataset(Dataset[dict[str, torch.Tensor]]):
         # If no edges are found, gradually increase threshold until we get edges
         current_threshold = threshold
         if one_hop_edges.sum() == 0 and self.verbose:
-            print(f"[{self.molecule_type}] No edges found with initial threshold {threshold}. Increasing threshold to find edges...")
+            print(
+                f"[{self.molecule_type}] No edges found with initial threshold {threshold}. Increasing threshold to find edges..."
+            )
 
-        while one_hop_edges.sum() == 0 and current_threshold < 10.0:  # Cap at 10.0 to prevent infinite loop
+        while (
+            one_hop_edges.sum() == 0 and current_threshold < 10.0
+        ):  # Cap at 10.0 to prevent infinite loop
             current_threshold *= 1.5
             one_hop_edges = (distances < current_threshold).int()
             one_hop_edges.fill_diagonal_(0)
 
         if one_hop_edges.sum() > 0 and current_threshold != threshold and self.verbose:
-            print(f"[{self.molecule_type}] Found edges with new threshold {current_threshold:.2f}.")
+            print(
+                f"[{self.molecule_type}] Found edges with new threshold {current_threshold:.2f}."
+            )
 
         if one_hop_edges.sum() == 0:
             raise ValueError(
@@ -556,7 +685,9 @@ class MDDataset(Dataset[dict[str, torch.Tensor]]):
             one_hop_count = int(one_hop_edges.sum().item() // 2)
             two_hop_count = int(two_hop_only.sum().item() // 2)
             total_edges = one_hop_count + two_hop_count
-            print(f"[{self.molecule_type}] Total edges: {total_edges}. One-hop: {one_hop_count}, Two-hop: {two_hop_count}.")
+            print(
+                f"[{self.molecule_type}] Total edges: {total_edges}. One-hop: {one_hop_count}, Two-hop: {two_hop_count}."
+            )
 
         return one_hop_edges, two_hop_only
 
@@ -588,7 +719,13 @@ class MDDataset(Dataset[dict[str, torch.Tensor]]):
         targets = torch.cat([one_idx[:, 1], two_idx[:, 1]], dim=0).long()
 
         # Edge type: 1 for one-hop, 2 for two-hop
-        edge_type = torch.cat([torch.ones(one_idx.size(0)), 2 * torch.ones(two_idx.size(0))], dim=0).float().unsqueeze(1)
+        edge_type = (
+            torch.cat(
+                [torch.ones(one_idx.size(0)), 2 * torch.ones(two_idx.size(0))], dim=0
+            )
+            .float()
+            .unsqueeze(1)
+        )
 
         z_i = z[sources].float().unsqueeze(1)
         z_j = z[targets].float().unsqueeze(1)
@@ -601,7 +738,10 @@ class MDDataset(Dataset[dict[str, torch.Tensor]]):
         else:
             # Use stick indicator as 4th feature
             pairs = torch.stack([sources, targets], dim=1)
-            is_stick = torch.tensor([tuple(sorted(p.tolist())) in stick_set for p in pairs], dtype=torch.float32).unsqueeze(1)
+            is_stick = torch.tensor(
+                [tuple(sorted(p.tolist())) in stick_set for p in pairs],
+                dtype=torch.float32,
+            ).unsqueeze(1)
             edge_attr = torch.cat([z_i, z_j, edge_type, is_stick], dim=1)
 
         return edge_attr, (sources, targets)
@@ -621,14 +761,18 @@ class MDDataset(Dataset[dict[str, torch.Tensor]]):
             mol_type_str = str(self.molecule_type).lower()
         cfg["Stick"] = MOLECULE_STICKS.get(mol_type_str, [])
         if not cfg["Stick"] and self.verbose:
-            print(f"Warning: No specific 'Stick' configuration defined for molecule type: {self.molecule_type}. No stick indices will be used.")
+            print(
+                f"Warning: No specific 'Stick' configuration defined for molecule type: {self.molecule_type}. No stick indices will be used."
+            )
 
         # Calculate 'Isolated' nodes (nodes not part of any stick)
         cur_selected = []
         if "Stick" in cfg:
             for stick_pair in cfg["Stick"]:
                 cur_selected.extend(stick_pair)
-        cfg["Isolated"] = [[node_idx] for node_idx in range(n_node) if node_idx not in cur_selected]
+        cfg["Isolated"] = [
+            [node_idx] for node_idx in range(n_node) if node_idx not in cur_selected
+        ]
         if not cfg["Isolated"]:  # Remove if empty
             cfg.pop("Isolated")
 
@@ -670,13 +814,17 @@ class MDDataset(Dataset[dict[str, torch.Tensor]]):
 
         # Extract the diagonal from each matrix to get the self-return probabilities
         rrwp = torch.stack([mat.diag() for mat in rrwp_list], dim=1)  # Shape: (n, k)
-        assert rrwp.shape == (self.num_nodes, walk_length), f"RRWP shape: {rrwp.shape}, num_nodes: {self.num_nodes}, walk_length: {walk_length}"
+        assert rrwp.shape == (self.num_nodes, walk_length), (
+            f"RRWP shape: {rrwp.shape}, num_nodes: {self.num_nodes}, walk_length: {walk_length}"
+        )
         return rrwp
 
     def _pad_tensor(self, tensor: torch.Tensor) -> torch.Tensor:
         # tensor shape assumed to be (num_samples, N, d)
         if self.max_nodes is not None:
-            assert tensor.shape[-2] <= self.max_nodes, f"Node dim of tensor indicates {tensor.shape[-2]} nodes, max_nodes: {self.max_nodes}. Overall shape is {tensor.shape}"
+            assert tensor.shape[-2] <= self.max_nodes, (
+                f"Node dim of tensor indicates {tensor.shape[-2]} nodes, max_nodes: {self.max_nodes}. Overall shape is {tensor.shape}"
+            )
             pad_amt = self.max_nodes - tensor.shape[-2]
             if pad_amt > 0:
                 # pad (last_dim_left, last_dim_right, node_dim_left, node_dim_right)
@@ -711,7 +859,9 @@ class MDDataset(Dataset[dict[str, torch.Tensor]]):
         sample = {
             "x_0": self.replicated_x_0[i].contiguous(),
             "v_0": self.replicated_v_0[i].contiguous(),
-            "concatenated_features": self.replicated_concatenated_features[i].contiguous(),
+            "concatenated_features": self.replicated_concatenated_features[
+                i
+            ].contiguous(),
             "Z": self.replicated_z_0[i].contiguous(),
             "x_t": self.x_t[i].contiguous(),
             "v_t": self.v_t[i].contiguous(),
@@ -722,8 +872,12 @@ class MDDataset(Dataset[dict[str, torch.Tensor]]):
         if hasattr(self, "e_0") and hasattr(self, "e_t"):
             e0_val = float(self.e_0[i])
             et_val = float(self.e_t[i])
-            sample["E_0"] = torch.full((self.num_timesteps,), e0_val, dtype=torch.float32)
-            sample["E_t"] = torch.full((self.num_timesteps,), et_val, dtype=torch.float32)
+            sample["E_0"] = torch.full(
+                (self.num_timesteps,), e0_val, dtype=torch.float32
+            )
+            sample["E_t"] = torch.full(
+                (self.num_timesteps,), et_val, dtype=torch.float32
+            )
 
         # Removed delta_t and absolute time indices; model handles local time encoding
 
@@ -765,10 +919,13 @@ class MDDynamicsDataset(MDDataset):
         data_dir: str,
         split_dir: str,
         md17_version: Datasets,
-        molecule_type: MD17MoleculeType | RMD17MoleculeType | TG80MoleculeType | MD22MoleculeType,
+        molecule_type: MD17MoleculeType
+        | RMD17MoleculeType
+        | TG80MoleculeType
+        | MD22MoleculeType,
         max_nodes: int | None,
         return_edge_data: bool,
-        num_timesteps: int = 8,  # Number of timesteps for dynamics
+        num_timesteps: int = 8,
         explicit_hydrogen: bool = False,
         train_par: float = 0.1,
         val_par: float = 0.05,
@@ -781,6 +938,7 @@ class MDDynamicsDataset(MDDataset):
         egno_mode: bool = False,
         max_edges: int | None = None,
         time_lag_mode: TimeLagMode = TimeLagMode.UNIFORM,
+        use_two_hop_edges: bool = True,
     ):
         super().__init__(
             partition=partition,
@@ -792,7 +950,7 @@ class MDDynamicsDataset(MDDataset):
             molecule_type=molecule_type,
             max_nodes=max_nodes,
             return_edge_data=return_edge_data,
-            num_timesteps=num_timesteps,  # Pass num_timesteps to base class for replication
+            num_timesteps=num_timesteps,
             explicit_hydrogen=explicit_hydrogen,
             train_par=train_par,
             val_par=val_par,
@@ -805,6 +963,7 @@ class MDDynamicsDataset(MDDataset):
             egno_mode=egno_mode,
             max_edges=max_edges,
             time_lag_mode=time_lag_mode,
+            use_two_hop_edges=use_two_hop_edges,
         )
         x_t, v_t = self.get_dynamic_target_frames()
         self.x_t = self._pad_tensor(x_t)
@@ -813,7 +972,9 @@ class MDDynamicsDataset(MDDataset):
         # Re-replicate dataset after defining x_t, v_t for dynamics dataset
         self.replicated_x_0: torch.Tensor = self._replicate_tensor(self.x_0)
         self.replicated_v_0: torch.Tensor = self._replicate_tensor(self.v_0)
-        self.replicated_concatenated_features: torch.Tensor = self._replicate_tensor(self.concatenated_features)
+        self.replicated_concatenated_features: torch.Tensor = self._replicate_tensor(
+            self.concatenated_features
+        )
         self.replicated_z_0: torch.Tensor = self._replicate_tensor(self.z_0)
         self.replicated_mole_idx: torch.Tensor = self._replicate_tensor(self.mole_idx)
 
@@ -844,20 +1005,36 @@ class MDDynamicsDataset(MDDataset):
         num_timesteps = self.num_timesteps
 
         if self.time_lag_mode == TimeLagMode.UNIFORM:
-            x_t_list = [self.x[split_times + delta_frame * i // num_timesteps] for i in range(1, num_timesteps + 1)]
-            v_t_list = [self.v[split_times + delta_frame * i // num_timesteps] for i in range(1, num_timesteps + 1)]
+            x_t_list = [
+                self.x[split_times + delta_frame * i // num_timesteps]
+                for i in range(1, num_timesteps + 1)
+            ]
+            v_t_list = [
+                self.v[split_times + delta_frame * i // num_timesteps]
+                for i in range(1, num_timesteps + 1)
+            ]
         else:
-            x_t_list = [self.x[split_times + delta_frame] for _ in range(1, num_timesteps + 1)]
-            v_t_list = [self.v[split_times + delta_frame] for _ in range(1, num_timesteps + 1)]
+            x_t_list = [
+                self.x[split_times + delta_frame] for _ in range(1, num_timesteps + 1)
+            ]
+            v_t_list = [
+                self.v[split_times + delta_frame] for _ in range(1, num_timesteps + 1)
+            ]
         x_t = np.stack(x_t_list, axis=1)
         v_t = np.stack(v_t_list, axis=1)
 
         # Forces for dynamics, if available, align with x_t/v_t indices above
         if self.f is not None:
             if self.time_lag_mode == TimeLagMode.UNIFORM:
-                f_t_list = [self.f[split_times + delta_frame * i // num_timesteps] for i in range(1, num_timesteps + 1)]
+                f_t_list = [
+                    self.f[split_times + delta_frame * i // num_timesteps]
+                    for i in range(1, num_timesteps + 1)
+                ]
             else:
-                f_t_list = [self.f[split_times + delta_frame] for _ in range(1, num_timesteps + 1)]
+                f_t_list = [
+                    self.f[split_times + delta_frame]
+                    for _ in range(1, num_timesteps + 1)
+                ]
             f_t_np = np.stack(f_t_list, axis=1)
             f_t = torch.Tensor(f_t_np)
             self.f_t = self._pad_tensor(f_t)
@@ -880,7 +1057,9 @@ class MDDynamicsDataset(MDDataset):
             delta_i = max(1, min(delta_i, self.delta_frame_max))
 
             if self.time_lag_mode == TimeLagMode.UNIFORM:
-                inc = (delta_i * np.arange(1, self.num_timesteps + 1) // self.num_timesteps).astype(np.int64)
+                inc = (
+                    delta_i * np.arange(1, self.num_timesteps + 1) // self.num_timesteps
+                ).astype(np.int64)
             else:
                 inc = delta_i * np.ones(self.num_timesteps, dtype=np.int64)
             frame_idx = (int(self.split_times[i]) + inc).astype(np.int64)
@@ -904,7 +1083,9 @@ class MDDynamicsDataset(MDDataset):
             if hasattr(self, "num_timesteps") and self.num_timesteps > 0:
                 dt_val = float(delta_i)
                 per_step = dt_val / float(self.num_timesteps)
-                sample["time_increments"] = torch.full((self.num_timesteps,), per_step, dtype=torch.float32)
+                sample["time_increments"] = torch.full(
+                    (self.num_timesteps,), per_step, dtype=torch.float32
+                )
 
             # If energies are present, update E_t to match sampled frame indices
             e_local = self.e
@@ -927,15 +1108,23 @@ class MDDynamicsDataset(MDDataset):
         elif hasattr(self, "num_timesteps") and self.num_timesteps > 0:
             dt_val = float(self.delta_frame_max)
             per_step = dt_val / float(self.num_timesteps)
-            sample["time_increments"] = torch.full((self.num_timesteps,), per_step, dtype=torch.float32)
+            sample["time_increments"] = torch.full(
+                (self.num_timesteps,), per_step, dtype=torch.float32
+            )
             # If energies are present, set E_t sequence matching uniform increments
             e_local2 = self.e
             if e_local2 is not None:
                 base_idx = int(self.split_times[i])
                 if self.time_lag_mode == TimeLagMode.UNIFORM:
-                    inc = (self.delta_frame_max * np.arange(1, self.num_timesteps + 1) // self.num_timesteps).astype(np.int64)
+                    inc = (
+                        self.delta_frame_max
+                        * np.arange(1, self.num_timesteps + 1)
+                        // self.num_timesteps
+                    ).astype(np.int64)
                 else:
-                    inc = self.delta_frame_max * np.ones(self.num_timesteps, dtype=np.int64)
+                    inc = self.delta_frame_max * np.ones(
+                        self.num_timesteps, dtype=np.int64
+                    )
                 frame_idx = (base_idx + inc).astype(np.int64)
                 e_seq = torch.tensor(e_local2[frame_idx], dtype=torch.float32)
                 sample["E_t"] = e_seq.contiguous()
@@ -945,9 +1134,15 @@ class MDDynamicsDataset(MDDataset):
             if f_local2 is not None:
                 base_idx = int(self.split_times[i])
                 if self.time_lag_mode == TimeLagMode.UNIFORM:
-                    inc = (self.delta_frame_max * np.arange(1, self.num_timesteps + 1) // self.num_timesteps).astype(np.int64)
+                    inc = (
+                        self.delta_frame_max
+                        * np.arange(1, self.num_timesteps + 1)
+                        // self.num_timesteps
+                    ).astype(np.int64)
                 else:
-                    inc = self.delta_frame_max * np.ones(self.num_timesteps, dtype=np.int64)
+                    inc = self.delta_frame_max * np.ones(
+                        self.num_timesteps, dtype=np.int64
+                    )
                 frame_idx = (base_idx + inc).astype(np.int64)
                 f_seq = torch.tensor(f_local2[frame_idx], dtype=torch.float32)
                 if self.max_nodes is not None:

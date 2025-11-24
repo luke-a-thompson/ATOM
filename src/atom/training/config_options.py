@@ -189,6 +189,7 @@ class AttentionType(StrEnum):
     SELF = "self"
     GHCA = "ghca"
     LINEAR_GHCA = "linear_ghca"
+    GATV2 = "gatv2"
 
 
 @final
