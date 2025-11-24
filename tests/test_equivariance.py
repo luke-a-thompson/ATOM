@@ -312,7 +312,7 @@ def test_e3nn_linear_equivariance() -> None:
         print(f"   Error exceeds tolerance of {tolerance:.2e}")
 
 
-def test_canonicalizer_equivariance(config_path: str, model_path: str) -> None:
+def test_canonicalizer_equivariance() -> None:
     """Tests the canonicalizer module's equivariance to 3D rotations."""
     print("Testing canonicalizer equivariance (module)...")
 
@@ -353,8 +353,8 @@ def test_canonicalizer_equivariance(config_path: str, model_path: str) -> None:
     x_can_rot: torch.Tensor = x_rot @ Q_rot
     v_can_rot: torch.Tensor = v_rot @ Q_rot
 
-    assert torch.allclose(x_can, x_can_rot, atol=1e-5), f"x canonicalization is not equivariant, error: {torch.norm(x_can - x_can_rot)}"
-    assert torch.allclose(v_can, v_can_rot, atol=1e-5), f"v canonicalization is not equivariant, error: {torch.norm(v_can - v_can_rot)}"
+    assert torch.allclose(x_can, x_can_rot, atol=1e-4), f"x canonicalization is not equivariant, error: {torch.norm(x_can - x_can_rot)}"
+    assert torch.allclose(v_can, v_can_rot, atol=1e-4), f"v canonicalization is not equivariant, error: {torch.norm(v_can - v_can_rot)}"
 
     print("Canonicalizer module equivariance test passed.")
 

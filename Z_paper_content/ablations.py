@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import ScalarFormatter
 from scipy import stats
 from usyd_colors import get_palette
-from figures import set_matplotlib_style
+from Z_paper_content.figures import set_matplotlib_style
 
 
 class ErrorBarType(Enum):
@@ -265,22 +265,3 @@ def plot_ablations(
         plt.savefig(save_path.with_suffix(".pdf"), format="pdf", dpi=300, bbox_inches="tight")
         plt.savefig(save_path.with_suffix(".svg"), format="svg", dpi=300, bbox_inches="tight")
         print(f"Figure saved as PDF to {save_path}")
-
-
-if __name__ == "__main__":
-    ablation_dir = Path("benchmark_runs/ablations_atom_17-Sep-2025_00-38-16")
-    # Use percentile error bars by default
-    set_matplotlib_style()
-    plot_ablations(
-        ablation_dir=ablation_dir,
-        save_path=Path("Z_paper_content/ablations/ablation_MD17_ST.pdf"),
-        error_bar_type=ErrorBarType.PERCENTILE,
-        add_text=True,
-    )
-
-    # Uncomment to use standard deviation error bars instead
-    # plot_ablations(
-    #     ablation_dir=ablation_dir,
-    #     save_path=Path("Z_paper_content/ablations/ablation_MD17_std_dev.pdf"),
-    #     error_bar_type=ErrorBarType.STANDARD_DEVIATION
-    # )

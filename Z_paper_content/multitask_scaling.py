@@ -258,7 +258,3 @@ def main() -> None:
     save_path: Path | None = Path(args.output) if args.output is not None else None
 
     plot_multitask_scaling(benchmark_dir=benchmark_dir, save_path=save_path)
-
-
-if __name__ == "__main__":
-    main()

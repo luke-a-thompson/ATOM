@@ -357,8 +357,3 @@ def main_t() -> None:
         model_paths=args.model,
         save_dir=args.save_dir,
     )
-
-
-if __name__ == "__main__":
-    # Default to P-invariance CLI if called directly
-    main_p()

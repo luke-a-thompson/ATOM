@@ -419,7 +419,3 @@ def runtime_table_cli() -> int:
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(latex_text, encoding="utf-8")
     return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(runtime_table_cli())

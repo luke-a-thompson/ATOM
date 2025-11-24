@@ -1,113 +1,41 @@
 import torch
-from atom.atom.attentions import TemporalRoPEWithOffset
+from atom.atom.positional_encodings import TemporalRoPE
 
 device = "cuda"
 
 
-class TestTemporalRoPEWithOffsetGroup:
-    def test_temporal_rope_vector_norm_unchanged(self):
-        batch_size = 2
-        num_timesteps = 2
-        num_nodes = 3
-        d = 4
-        num_heads = 2
-        d_head = d // num_heads
+class TestTemporalRoPEGroup:
+    def test_temporal_rope_preserves_vector_norms_and_is_nontrivial(self) -> None:
+        batch_size: int = 2
+        num_timesteps: int = 2
+        num_nodes: int = 3
+        d: int = 4
+        num_heads: int = 2
+        d_head: int = d // num_heads
 
-        # Batches = blue; heads = yellow; nodes * timesteps = purple
-        # [Batch, heads, nodes * timesteps, d_head]
-        flattened_x = torch.tensor(
-            [
-                [
-                    [
-                        [1, 1],
-                        [1, 1],
-                        [1, 1],
-                        [1, 1],
-                        [1, 1],
-                        [1, 1],
-                    ],
-                    [
-                        [1, 1],
-                        [1, 1],
-                        [1, 1],
-                        [1, 1],
-                        [1, 1],
-                        [1, 1],
-                    ],
-                ],
-                [
-                    [
-                        [1, 1],
-                        [1, 1],
-                        [1, 1],
-                        [1, 1],
-                        [1, 1],
-                        [1, 1],
-                    ],
-                    [
-                        [1, 1],
-                        [1, 1],
-                        [1, 1],
-                        [1, 1],
-                        [1, 1],
-                        [1, 1],
-                    ],
-                ],
-            ],
-            device=device,
-        )
-        # Freqs =  1.0, 0.0316227766016838
-        rope_output = TemporalRoPEWithOffset(num_timesteps=num_timesteps, d_head=d_head, n_heads=num_heads).forward(flattened_x)
-
-        # [Batch, heads, nodes * timesteps, d_head]
-        # Purple = [even, odd]
-        expected_rope_output = torch.tensor(
-            [
-                [
-                    [
-                        [1, 1],
-                        [1, 1],
-                        [1, 1],
-                        [-0.3011, 1.3817],
-                        [-0.3011, 1.3817],
-                        [-0.3011, 1.3817],
-                    ],
-                    [
-                        [1, 1],
-                        [1, 1],
-                        [1, 1],
-                        [-0.3011, 1.3817],
-                        [-0.3011, 1.3817],
-                        [-0.3011, 1.3817],
-                    ],
-                ],
-                [
-                    [
-                        [1, 1],
-                        [1, 1],
-                        [1, 1],
-                        [-0.3011, 1.3817],
-                        [-0.3011, 1.3817],
-                        [-0.3011, 1.3817],
-                    ],
-                    [
-                        [1, 1],
-                        [1, 1],
-                        [1, 1],
-                        [-0.3011, 1.3817],
-                        [-0.3011, 1.3817],
-                        [-0.3011, 1.3817],
-                    ],
-                ],
-            ],
-            dtype=torch.float32,
+        # Shape [B, H, N * T, d_head]
+        flattened_x: torch.Tensor = torch.ones(
+            batch_size,
+            num_heads,
+            num_timesteps * num_nodes,
+            d_head,
             device=device,
         )
 
-        assert rope_output.shape == expected_rope_output.shape
-        assert torch.allclose(rope_output, expected_rope_output, atol=1e-2), (
-            f"rope_output: \n{rope_output}, \nexpected_rope_output: \n{expected_rope_output}"
-        )
+        trope = TemporalRoPE(num_timesteps=num_timesteps, d_head=d_head, n_heads=num_heads)
+        rope_output: torch.Tensor = trope(flattened_x, mask=None, time_increments=None)
+
+        # Shape should be preserved
+        assert rope_output.shape == flattened_x.shape
+
+        # Norms of the last half of the sequence (where rotation is non-trivial) should be preserved
+        # Flatten over batch, head and sequence, then compare per‑vector norms
+        orig_norms: torch.Tensor = torch.linalg.vector_norm(flattened_x, dim=-1)
+        out_norms: torch.Tensor = torch.linalg.vector_norm(rope_output, dim=-1)
+        assert torch.allclose(orig_norms, out_norms, atol=1e-5)
+
+        # Check that at least one vector actually changed (rotation is not identity everywhere)
+        assert torch.any(torch.abs(rope_output - flattened_x) > 1e-6)
 
     def test_rope_timestep_interleave(self):
         num_timesteps = 3

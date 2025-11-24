@@ -311,8 +311,3 @@ def plot_invariance_results(invariance_to_plot: Literal["t", "p"]) -> None:
     save_path = figure_dir / figure_file_name
     plt.savefig(save_path, format="pdf", dpi=300, bbox_inches="tight")
     print(f"Figure saved as PDF to {save_path}")
-
-
-if __name__ == "__main__":
-    set_matplotlib_style(font_size=18)
-    plot_invariance_results("p")  # or "p" for P-invariance (num_timesteps)

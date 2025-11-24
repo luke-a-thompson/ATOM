@@ -4,7 +4,6 @@ from tqdm import tqdm
 from torch.utils.data._utils.collate import default_collate
 from typing import cast
 
-from atom.dataloaders.atom_dataloader import MDDynamicsDataset
 from atom.training.config_options import (
     DataPartition,
     MD17MoleculeType,
@@ -22,7 +21,8 @@ def create_datasets(
     molecule_type: MD17MoleculeType | RMD17MoleculeType | TG80MoleculeType | MD22MoleculeType,
     max_nodes: int | None = None,
     max_edges: int | None = None,
-) -> tuple[MDDynamicsDataset, MDDynamicsDataset, MDDynamicsDataset]:
+) -> tuple["MDDynamicsDataset", "MDDynamicsDataset", "MDDynamicsDataset"]:
+    from atom.dataloaders.atom_dataloader import MDDynamicsDataset
     """Create train, test and validation Torch datasets.
 
     Args:
@@ -210,10 +210,11 @@ def create_dataloaders_single(
 def create_dataloaders_multitask(
     config: Config,
 ) -> tuple[
-    DataLoader[MDDynamicsDataset],
-    DataLoader[MDDynamicsDataset],
-    DataLoader[MDDynamicsDataset],
+    DataLoader["MDDynamicsDataset"],
+    DataLoader["MDDynamicsDataset"],
+    DataLoader["MDDynamicsDataset"],
 ]:
+    from atom.dataloaders.atom_dataloader import MDDynamicsDataset
     """Create train, test and validation Torch dataloaders for multiple molecule types and concatenate them into a single dataloader.
 
     Args:
@@ -246,9 +247,9 @@ def create_dataloaders_multitask(
 
     tqdm.write(f"Inferred max_nodes across all molecules as: {max_nodes}")
     tqdm.write(f"Inferred max_edges across all molecules as: {max_edges}")
-    train_loaders: list[MDDynamicsDataset] = []
-    val_loaders: list[MDDynamicsDataset] = []
-    test_loaders: list[MDDynamicsDataset] = []
+    train_loaders: list["MDDynamicsDataset"] = []
+    val_loaders: list["MDDynamicsDataset"] = []
+    test_loaders: list["MDDynamicsDataset"] = []
 
     for train_molecule_type in config.dataloader.train_molecules:
         try:
@@ -276,9 +277,9 @@ def create_dataloaders_multitask(
 
     if len(train_loaders) == 0 or len(val_loaders) == 0 or len(test_loaders) == 0:
         raise RuntimeError("No valid datasets remained after skipping failing molecules. Check your data/configs.")
-    multitask_train_dataset: torch.utils.data.ConcatDataset[MDDynamicsDataset] = torch.utils.data.ConcatDataset(train_loaders)
-    multitask_val_dataset: torch.utils.data.ConcatDataset[MDDynamicsDataset] = torch.utils.data.ConcatDataset(val_loaders)
-    multitask_test_dataset: torch.utils.data.ConcatDataset[MDDynamicsDataset] = torch.utils.data.ConcatDataset(test_loaders)
+    multitask_train_dataset: torch.utils.data.ConcatDataset["MDDynamicsDataset"] = torch.utils.data.ConcatDataset(train_loaders)
+    multitask_val_dataset: torch.utils.data.ConcatDataset["MDDynamicsDataset"] = torch.utils.data.ConcatDataset(val_loaders)
+    multitask_test_dataset: torch.utils.data.ConcatDataset["MDDynamicsDataset"] = torch.utils.data.ConcatDataset(test_loaders)
 
     train_loader = DataLoader(
         multitask_train_dataset,

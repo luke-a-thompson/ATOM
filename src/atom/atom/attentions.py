@@ -1,11 +1,13 @@
-from typing import final, override
+from typing import final, override, TYPE_CHECKING
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from atom.training.config_options import PositionalEncodingType
 from atom.atom.positional_encodings import TemporalRoPE, RoPE
+
+if TYPE_CHECKING:
+    from atom.training.config_options import PositionalEncodingType
 
 
 @final
@@ -15,11 +17,12 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         lifting_dim: int,
         num_heads: int,
         num_timesteps: int,
-        positional_encoding: PositionalEncodingType,
+        positional_encoding: "PositionalEncodingType",
         rope_base: float,
         rope_tau: float = 1000.0,
         attention_dropout: float = 0.2,
     ) -> None:
+        from atom.training.config_options import PositionalEncodingType
         """
         Heterogenous graph cross attention.
 
@@ -144,6 +147,7 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         torch.Tensor
             Output tensor of shape `[B, T, N, d]`.
         """
+        from atom.training.config_options import PositionalEncodingType
         B, T, N, d = q_data.shape
         q_data_flat = q_data.view(B, T * N, d)
 
@@ -215,11 +219,12 @@ class LinearHeterogenousCrossAttention(nn.Module):
         lifting_dim: int,
         num_heads: int,
         num_timesteps: int,
-        positional_encoding: PositionalEncodingType,
+        positional_encoding: "PositionalEncodingType",
         rope_base: float,
         rope_tau: float,
         attention_dropout: float = 0.2,
     ) -> None:
+        from atom.training.config_options import PositionalEncodingType
         super().__init__()
 
         self.num_heads = num_heads
@@ -275,6 +280,7 @@ class LinearHeterogenousCrossAttention(nn.Module):
         mask: torch.Tensor | None,
         time_increments: torch.Tensor | None = None,
     ) -> torch.Tensor:
+        from atom.training.config_options import PositionalEncodingType
         # Flatten Q data: [B, T, N, d] -> [B, N*T, d]
         B, T, N, d = q_data.shape
         q_data_flat = q_data.view(B, T * N, d)
@@ -375,11 +381,12 @@ class QuadraticSelfAttention(nn.Module):
         num_heads: int,
         num_timesteps: int,
         lifting_dim: int,
-        positional_encoding: PositionalEncodingType,
+        positional_encoding: "PositionalEncodingType",
         rope_base: float,
         rope_tau: float = 1000.0,
         attention_dropout: float = 0.2,
     ) -> None:
+        from atom.training.config_options import PositionalEncodingType
         """
         Quadratic self-attention mechanism.
 
@@ -486,6 +493,7 @@ class QuadraticSelfAttention(nn.Module):
             6. Compute attention weights and multiply by V.
             7. Reshape output to `[B, T, N, d]`.
         """
+        from atom.training.config_options import PositionalEncodingType
         B, T, N, d = tensor.shape
         tensor_flat = tensor.view(B, T * N, d)
 
@@ -543,11 +551,12 @@ class GATv2GraphAttention(nn.Module):
         lifting_dim: int,
         num_heads: int,
         num_timesteps: int,
-        positional_encoding: PositionalEncodingType,
+        positional_encoding: "PositionalEncodingType",
         rope_base: float,
         attention_dropout: float = 0.2,
         negative_slope: float = 0.2,
     ) -> None:
+        from atom.training.config_options import PositionalEncodingType
         super().__init__()
 
         self.num_heads = num_heads
@@ -617,6 +626,7 @@ class GATv2GraphAttention(nn.Module):
         Returns:
             Tensor of shape `[B, T, N, d]` with updated node features.
         """
+        from atom.training.config_options import PositionalEncodingType
         B, T, N, d = tensor.shape
         assert d == self.lifting_dim, f"Expected feature dim {self.lifting_dim}, got {d}"
 

@@ -36,6 +36,7 @@ inference = "atom.inference:main"
 rotation_loss_robustness = "atom.cli.equivariance:main_rotation_loss_robustness"
 equivariance_defect = "atom.cli.equivariance:main_equivariance_defect"
 optimize = "atom.optimize:main"
+paper = "analysis_code.cli:main"
 tables = "Z_paper_content.run_tables:main"
 p_invariance = "Z_paper_content.invariances:main_p"
 t_invariance = "Z_paper_content.invariances:main_t"
@@ -60,14 +61,15 @@ torchvision = { index = "pytorch-gpu" }
 torchaudio = { index = "pytorch-gpu" }
 
 [tool.hatch.build.targets.sdist]
-include = ["src/atom", "Z_paper_content"]
+include = ["src/atom", "Z_paper_content", "analysis_code"]
 
 [tool.hatch.build.targets.wheel]
-include = ["src/atom", "Z_paper_content"]
+include = ["src/atom", "Z_paper_content", "analysis_code"]
 
 [tool.hatch.build.targets.wheel.sources]
 "src/atom" = "atom"
 "Z_paper_content" = "Z_paper_content"
+"analysis_code" = "analysis_code"
 
 [build-system]
 requires = ["hatchling"]

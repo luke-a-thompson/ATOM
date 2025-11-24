@@ -1,5 +1,6 @@
 from datetime import datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from tensordict import TensorDict
 import torch
@@ -11,7 +12,9 @@ from tqdm.std import tqdm
 from torch import autocast
 from torch.amp.grad_scaler import GradScaler
 
-from atom.dataloaders.atom_dataloader import MDDynamicsDataset
+if TYPE_CHECKING:
+    from atom.dataloaders.atom_dataloader import MDDynamicsDataset
+
 from atom.training import (
     Config,
     SingleRunResults,
@@ -106,7 +109,7 @@ def train_epoch(
     config: Config,
     model: nn.Module,
     optimizer: optim.Optimizer,
-    dataloader: DataLoader[dict[str, torch.Tensor]] | DataLoader[MDDynamicsDataset],
+    dataloader: DataLoader[dict[str, torch.Tensor]] | DataLoader["MDDynamicsDataset"],
     scheduler: optim.lr_scheduler.LRScheduler | None,
     scaler: GradScaler,
 ) -> float:
@@ -247,7 +250,7 @@ def train_epoch(
 def eval_epoch(
     config: Config,
     model: nn.Module,
-    loader: DataLoader[dict[str, torch.Tensor]] | DataLoader[MDDynamicsDataset],
+    loader: DataLoader[dict[str, torch.Tensor]] | DataLoader["MDDynamicsDataset"],
 ) -> tuple[float, float]:
     """Evaluation loop.
 

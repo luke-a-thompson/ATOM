@@ -278,7 +278,3 @@ def main() -> None:
         json.dump(stats, f, indent=2)
 
     print(f"Saved ATOM inference timing results to {output_path}")
-
-
-if __name__ == "__main__":
-    main()

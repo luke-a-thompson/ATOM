@@ -215,32 +215,3 @@ def create_corrected_volatility_visualization(data_dir: Path, dataset_name: str,
         format="pdf",
     )
     print(f"Figure saved as PDF to /Z_paper_content/dataset/{dataset_name}_molecule_behavior_comparison.pdf")
-
-
-if __name__ == "__main__":
-    from figures import set_matplotlib_style
-
-    set_matplotlib_style()
-    orig_data_dir: Path = Path("data/md17_npz")
-    refresh_data_dir: Path = Path("data/rmd17_npz")
-    tg_80_data_dir: Path = Path("data/tg80_npz")
-
-    # First pass: collect all data to find global maximum
-    all_position_variances: list[float] = []
-    for data_dir in [orig_data_dir, refresh_data_dir, tg_80_data_dir]:
-        npz_files: list[Path] = list(data_dir.glob("*.npz"))
-        for filepath in npz_files:
-            data = np.load(filepath)
-            if "rmd17" in data_dir.stem or "tg80" in data_dir.stem:
-                arr: npt.NDArray[np.number] = data["coords"]
-            else:
-                arr: npt.NDArray[np.number] = data["R"]
-            if arr.ndim == 3 and arr.shape[2] == 3:
-                all_position_variances.append(float(np.var(arr)))
-
-    global_max_x = max(all_position_variances) * 1.15  # Add 15% padding
-
-    # Second pass: create plots with consistent x-axis
-    create_corrected_volatility_visualization(orig_data_dir, "md17", global_max_x)
-    create_corrected_volatility_visualization(refresh_data_dir, "rmd17", global_max_x)
-    create_corrected_volatility_visualization(tg_80_data_dir, "tg80", global_max_x)
