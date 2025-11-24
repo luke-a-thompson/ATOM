@@ -141,9 +141,7 @@ tg_80_smiles = {
 print(f"Length of tg_80_smiles: {len(tg_80_smiles)}")
 
 
-def write_toml_split(
-    filename: str, train: list[str], val: list[str], test: list[str]
-) -> None:
+def write_toml_split(filename: str, train: list[str], val: list[str], test: list[str]) -> None:
     with open(filename, "w") as f:
         _ = f.write("train_molecules = [\n")
         for m in train:
@@ -191,9 +189,7 @@ def _names_to_smiles(names: list[str], raw_map: dict[str, str]) -> list[str]:
     return smiles_list
 
 
-def _compute_ecfp4_dense(
-    smiles: list[str], fp_size: int = 1024
-) -> npt.NDArray[np.float32]:
+def _compute_ecfp4_dense(smiles: list[str], fp_size: int = 1024) -> npt.NDArray[np.float32]:
     fpgen = rdFingerprintGenerator.GetMorganGenerator(radius=2, fpSize=fp_size)
     X = np.zeros((len(smiles), fp_size), dtype=np.float32)
     for i, s in enumerate(smiles):
@@ -233,9 +229,7 @@ def _save_umap_plot(
     idx_test = np.array([name_to_idx[n] for n in test], dtype=np.int64)
 
     fig, ax = plt.subplots(figsize=(8, 6), dpi=150)
-    ax.scatter(
-        emb2d[idx_train, 0], emb2d[idx_train, 1], c="#B0B0B0", s=20, label="train"
-    )
+    ax.scatter(emb2d[idx_train, 0], emb2d[idx_train, 1], c="#B0B0B0", s=20, label="train")
     ax.scatter(emb2d[idx_val, 0], emb2d[idx_val, 1], c="#1f77b4", s=30, label="val")
     ax.scatter(emb2d[idx_test, 0], emb2d[idx_test, 1], c="#ff7f0e", s=40, label="test")
     ax.set_xticks([])
@@ -249,9 +243,7 @@ def _save_umap_plot(
     plt.close(fig)
 
 
-def _assign_clusters_to_folds(
-    cluster_labels: list[int], names: list[str], n_folds: int
-) -> dict[int, list[str]]:
+def _assign_clusters_to_folds(cluster_labels: list[int], names: list[str], n_folds: int) -> dict[int, list[str]]:
     clusters: dict[int, list[str]] = {}
     for name, lab in zip(names, cluster_labels):
         clusters.setdefault(int(lab), []).append(name)
@@ -304,23 +296,14 @@ def write_umap_cluster_folds(n_folds: int = 5, fp_size: int = 1024) -> None:
     for split_idx in range(n_folds):
         test: list[str] = sorted(cluster_to_names[cluster_ids[split_idx]])
         val: list[str] = sorted(cluster_to_names[cluster_ids[split_idx + half]])
-        train: list[str] = sorted(
-            [
-                n
-                for j, cid in enumerate(cluster_ids)
-                if j not in [split_idx, split_idx + half]
-                for n in cluster_to_names[cid]
-            ]
-        )
+        train: list[str] = sorted([n for j, cid in enumerate(cluster_ids) if j not in [split_idx, split_idx + half] for n in cluster_to_names[cid]])
         filename = f"data/crossval_folds_umap/fold{split_idx + 1}.toml"
         write_toml_split(filename, train, val, test)
         print(f"Wrote {filename}: train={len(train)}, val={len(val)}, test={len(test)}")
 
         # Save UMAP plot for this split (2D projection for visualization)
         plot_path = f"data/crossval_folds_umap/plots/fold{split_idx + 1}.png"
-        _save_umap_plot(
-            names=names, X=X, train=train, val=val, test=test, out_path=plot_path
-        )
+        _save_umap_plot(names=names, X=X, train=train, val=val, test=test, out_path=plot_path)
 
 
 # Shuffle molecules once with a fixed seed (random baseline)
@@ -338,13 +321,7 @@ group_idxs = np.array_split(idxs, n_groups)
 for split_idx in range(n_splits):
     test_idx = group_idxs[split_idx]
     val_idx = group_idxs[split_idx + n_splits]
-    train_idx = np.concatenate(
-        [
-            group_idxs[g]
-            for g in range(n_groups)
-            if g not in [split_idx, split_idx + n_splits]
-        ]
-    )
+    train_idx = np.concatenate([group_idxs[g] for g in range(n_groups) if g not in [split_idx, split_idx + n_splits]])
 
     test = [shuffled[i] for i in test_idx]
     val = [shuffled[i] for i in val_idx]

@@ -107,9 +107,7 @@ def plot_learnable_attention_weights(
         None
     """
 
-    weights: npt.NDArray[np.float32] = np.load(
-        weights_dir / data_file_name, allow_pickle=True
-    )
+    weights: npt.NDArray[np.float32] = np.load(weights_dir / data_file_name, allow_pickle=True)
     attention_denom: npt.NDArray[np.float32] = weights["attention_denom"]
     print(f"Attention denom shape: {attention_denom.shape}")
 
@@ -124,9 +122,7 @@ def plot_learnable_attention_weights(
     n_layers: int = attention_denom.shape[1]
     n_heads: int = attention_denom.shape[2]
     attention_denom = attention_denom.reshape(n_timesteps, n_layers * n_heads)
-    print(
-        f"Reshaped attention denom: {attention_denom.shape} (timesteps, layers*heads)"
-    )
+    print(f"Reshaped attention denom: {attention_denom.shape} (timesteps, layers*heads)")
 
     # Select indices at regular intervals based on step_size
     selected_indices: list[int] = list(range(0, n_timesteps, step_size))
@@ -188,15 +184,7 @@ def plot_learnable_attention_weights(
 
 if __name__ == "__main__":
     set_matplotlib_style()
-    plot_learnable_attention_weights(
-        Path("benchmark_runs/denom_aspirin_md17_22-May-2025_17-09-23/run_1"), "aspirin"
-    )
-    plot_lambda_value_residuals(
-        Path("benchmark_runs/denom_aspirin_md17_22-May-2025_17-09-23/run_1"), "aspirin"
-    )
-    plot_learnable_attention_weights(
-        Path("benchmark_runs/denom_uracil_md17_22-May-2025_17-24-37/run_1"), "uracil"
-    )
-    plot_lambda_value_residuals(
-        Path("benchmark_runs/denom_uracil_md17_22-May-2025_17-24-37/run_1"), "uracil"
-    )
+    plot_learnable_attention_weights(Path("benchmark_runs/denom_aspirin_md17_22-May-2025_17-09-23/run_1"), "aspirin")
+    plot_lambda_value_residuals(Path("benchmark_runs/denom_aspirin_md17_22-May-2025_17-09-23/run_1"), "aspirin")
+    plot_learnable_attention_weights(Path("benchmark_runs/denom_uracil_md17_22-May-2025_17-24-37/run_1"), "uracil")
+    plot_lambda_value_residuals(Path("benchmark_runs/denom_uracil_md17_22-May-2025_17-24-37/run_1"), "uracil")

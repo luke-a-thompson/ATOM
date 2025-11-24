@@ -45,9 +45,7 @@ class NBodyDynamicsDataset(Dataset[dict[str, torch.Tensor]]):
         self.suffix: str = suffix
 
         # Load full trajectory data
-        self.loc_full, self.vel_full, self.edges, self.edge_attr, self.charges = (
-            self._load_data()
-        )
+        self.loc_full, self.vel_full, self.edges, self.edge_attr, self.charges = self._load_data()
 
         self.n_samples: int = min(self.loc_full.shape[0], self.max_samples)
         # Ensure we only process up to n_samples if max_samples is smaller than file
@@ -98,14 +96,10 @@ class NBodyDynamicsDataset(Dataset[dict[str, torch.Tensor]]):
         charges_tensor = torch.tensor(charges_raw, dtype=torch.float32)
         if charges_tensor.ndim == 2:  # Expected [S_file, N]
             charges = charges_tensor.unsqueeze(-1)  # [S_file, N, 1]
-        elif (
-            charges_tensor.ndim == 3 and charges_tensor.shape[-1] == 1
-        ):  # Already [S_file, N, 1]
+        elif charges_tensor.ndim == 3 and charges_tensor.shape[-1] == 1:  # Already [S_file, N, 1]
             charges = charges_tensor
         else:
-            raise ValueError(
-                f"Unexpected shape for charges: {charges_tensor.shape}. Expected [S, N] or [S, N, 1]."
-            )
+            raise ValueError(f"Unexpected shape for charges: {charges_tensor.shape}. Expected [S, N] or [S, N, 1].")
 
         n_nodes = loc_full_torch.size(2)
         rows, cols = [], []
@@ -121,11 +115,7 @@ class NBodyDynamicsDataset(Dataset[dict[str, torch.Tensor]]):
         edges = [rows, cols]
 
         # Convert edge_attr to tensor with shape [S, E, 1]
-        edge_attr = (
-            torch.tensor(np.array(edge_attr_list), dtype=torch.float32)
-            .transpose(0, 1)
-            .unsqueeze(2)
-        )
+        edge_attr = torch.tensor(np.array(edge_attr_list), dtype=torch.float32).transpose(0, 1).unsqueeze(2)
 
         return loc_full_torch, vel_full_torch, edges, edge_attr, charges
 
@@ -138,9 +128,7 @@ class NBodyDynamicsDataset(Dataset[dict[str, torch.Tensor]]):
 
         # Expand along the new time dimension to num_timesteps
         # tensor_unsqueeze.shape[2:] will be (N,D) or (N,1)
-        replicated_tensor = tensor_unsqueeze.expand(
-            -1, self.num_timesteps, *tensor_unsqueeze.shape[2:]
-        ).contiguous()
+        replicated_tensor = tensor_unsqueeze.expand(-1, self.num_timesteps, *tensor_unsqueeze.shape[2:]).contiguous()
         return replicated_tensor
 
     def _sample_trajectory(self, sample_idx: int) -> torch.Tensor:
@@ -162,9 +150,7 @@ class NBodyDynamicsDataset(Dataset[dict[str, torch.Tensor]]):
         trajectory_gt = self._sample_trajectory(i)  # [num_timesteps, N, D]
 
         nodes = torch.sqrt(torch.sum(self.replicated_vel[i] ** 2, dim=-1, keepdim=True))
-        concatenated_features = torch.cat(
-            (self.replicated_loc[i], self.replicated_vel[i]), dim=-1
-        )
+        concatenated_features = torch.cat((self.replicated_loc[i], self.replicated_vel[i]), dim=-1)
 
         # Returns:
         # - x_0: replicated initial positions [num_timesteps, N, D]
@@ -188,12 +174,8 @@ class NBodyDynamicsDataset(Dataset[dict[str, torch.Tensor]]):
         inc = torch.arange(1, self.num_timesteps + 1, dtype=torch.long)
         sample["time_indices"] = self.frame_0 + delta_frame * inc // self.num_timesteps
         if self.return_edge_data:
-            sample["source_node_indices"] = torch.tensor(
-                self.edges[0], dtype=torch.long
-            ).contiguous()
-            sample["target_node_indices"] = torch.tensor(
-                self.edges[1], dtype=torch.long
-            ).contiguous()
+            sample["source_node_indices"] = torch.tensor(self.edges[0], dtype=torch.long).contiguous()
+            sample["target_node_indices"] = torch.tensor(self.edges[1], dtype=torch.long).contiguous()
         return sample
 
     def __len__(self) -> int:
@@ -216,9 +198,7 @@ if __name__ == "__main__":
 
     dataloader = DataLoader(dataset, batch_size=10, shuffle=True)
 
-    assert False, np.load(
-        "data/n_body_simple/loc_train_charged5_initvel1small.npy"
-    ).shape
+    assert False, np.load("data/n_body_simple/loc_train_charged5_initvel1small.npy").shape
 
     batch = next(iter(dataloader))
     for key, tensor in batch.items():

@@ -42,9 +42,7 @@ class EGNNSequential(nn.Module):
 
         # One frame per layer; require T <= num_layers
         if T > self.num_layers:
-            raise ValueError(
-                f"EGNNSequential requires num_layers >= num_timesteps (P). Got num_layers={self.num_layers}, P={T}."
-            )
+            raise ValueError(f"EGNNSequential requires num_layers >= num_timesteps (P). Got num_layers={self.num_layers}, P={T}.")
 
         # Base scalar node feats from t=0
         if "concatenated_features" in batch:
@@ -73,11 +71,7 @@ class EGNNSequential(nn.Module):
         edge_index = (row0, col0)
 
         # Embed initial scalars
-        h_emb = self.egnn.embedding(
-            torch.cat(
-                (base_h0, torch.zeros(B, N, self.time_embed_dim, device=device)), dim=-1
-            ).view(B * N, -1)
-        )
+        h_emb = self.egnn.embedding(torch.cat((base_h0, torch.zeros(B, N, self.time_embed_dim, device=device)), dim=-1).view(B * N, -1))
 
         preds: list[torch.Tensor] = []
         for layer_idx in range(T):
@@ -85,28 +79,20 @@ class EGNNSequential(nn.Module):
             v_flat = v_cur.reshape(B * N, 3)
 
             # Dynamic distance feature from current x
-            dist_sq = torch.sum(
-                (x_flat[row0] - x_flat[col0]) ** 2, dim=-1, keepdim=True
-            )
-            edge_attr_t = torch.cat(
-                (edge_attr_base.reshape(B * E, -1), dist_sq), dim=-1
-            )
+            dist_sq = torch.sum((x_flat[row0] - x_flat[col0]) ** 2, dim=-1, keepdim=True)
+            edge_attr_t = torch.cat((edge_attr_base.reshape(B * E, -1), dist_sq), dim=-1)
             edge_mask_t: torch.Tensor | None = None
             if edge_mask_b is not None:
                 edge_mask_t = edge_mask_b.reshape(B * E)
 
-            x_flat, v_flat, h_emb = self.egnn.layers[layer_idx](
-                x_flat, h_emb, edge_index, edge_attr_t, v_flat, edge_mask_t
-            )
+            x_flat, v_flat, h_emb = self.egnn.layers[layer_idx](x_flat, h_emb, edge_index, edge_attr_t, v_flat, edge_mask_t)
             x_cur = x_flat.view(B, N, 3)
             v_cur = v_flat.view(B, N, 3)
             preds.append(x_cur)
 
         return torch.stack(preds, dim=1)
 
-    def _timestep_embedding_vector(
-        self, num_timesteps: int, lifting_dim: int, t: int, max_positions: int = 10_000
-    ) -> torch.Tensor:
+    def _timestep_embedding_vector(self, num_timesteps: int, lifting_dim: int, t: int, max_positions: int = 10_000) -> torch.Tensor:
         half_dim = lifting_dim // 2
         if half_dim == 0:
             return torch.zeros(lifting_dim, dtype=torch.float32)
@@ -194,9 +180,7 @@ class EGNNRollout(nn.Module):
 
             loc = x_t.reshape(B * N, 3)
             dist_sq = torch.sum((loc[row] - loc[col]) ** 2, dim=-1, keepdim=True)
-            edge_attr_t = torch.cat(
-                (edge_attr_base.reshape(B * E, -1), dist_sq), dim=-1
-            )
+            edge_attr_t = torch.cat((edge_attr_base.reshape(B * E, -1), dist_sq), dim=-1)
 
             edge_mask_t: torch.Tensor | None = None
             if edge_mask_b is not None:
@@ -207,9 +191,7 @@ class EGNNRollout(nn.Module):
             x_step = x_flat
             v_step = v_flat
             for layer in self.egnn.layers:
-                x_step, v_step, h_emb = layer(
-                    x_step, h_emb, edge_index, edge_attr_t, v_step, edge_mask_t
-                )
+                x_step, v_step, h_emb = layer(x_step, h_emb, edge_index, edge_attr_t, v_step, edge_mask_t)
             x_t = x_step.view(B, N, 3)
             v_t = v_step.view(B, N, 3)
             preds.append(x_t)

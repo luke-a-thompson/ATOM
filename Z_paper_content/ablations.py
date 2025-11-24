@@ -156,9 +156,7 @@ def plot_ablations(
             benchmark_name = data["config"]["benchmark"]["benchmark_name"]
 
             # Extract individual run results
-            s2s_test_losses = [
-                run["s2s_test_loss"] for run in data["single_run_results"]
-            ]
+            s2s_test_losses = [run["s2s_test_loss"] for run in data["single_run_results"]]
             data_dict[benchmark_name] = s2s_test_losses
 
     print_results_table(data_dict)
@@ -171,18 +169,14 @@ def plot_ablations(
 
     # Print results table
     print("\nWelch's t-test results (compared to Baseline model):")
-    print(
-        "Model\t\t\tMean Difference\t\tStd Dev\t\tUnadjusted p-value\tAdjusted p-value"
-    )
+    print("Model\t\t\tMean Difference\t\tStd Dev\t\tUnadjusted p-value\tAdjusted p-value")
     print("-" * 100)
     for model_name, (mean_diff, std_dev, p_val, adj_p_val) in sorted_results:
         # Convert model name to display format
         display_name = model_name.replace("atom_", "").replace("_", " ").title()
         if "Rope" in display_name:
             display_name = display_name.replace("Rope", "T-RoPE")
-        print(
-            f"{display_name:<20} {mean_diff:>10.4f}\t\t{std_dev:>8.4f}\t\t{p_val:>10.4f}\t\t{adj_p_val:>10.4f}"
-        )
+        print(f"{display_name:<20} {mean_diff:>10.4f}\t\t{std_dev:>8.4f}\t\t{p_val:>10.4f}\t\t{adj_p_val:>10.4f}")
 
     # Calculate means and error bounds for plotting
     plot_data: dict[str, tuple[float, float, float]] = {}
@@ -211,9 +205,7 @@ def plot_ablations(
     fig, ax = plt.subplots(figsize=(6, 4))
 
     # Create horizontal bars with error bars
-    bars = ax.barh(
-        categories, values, color=red, alpha=0.8, edgecolor=grey, linewidth=0
-    )
+    bars = ax.barh(categories, values, color=red, alpha=0.8, edgecolor=grey, linewidth=0)
 
     # Add error bars
     _ = ax.errorbar(
@@ -270,12 +262,8 @@ def plot_ablations(
     # Save if path provided
     if save_path:
         save_path.parent.mkdir(parents=True, exist_ok=True)
-        plt.savefig(
-            save_path.with_suffix(".pdf"), format="pdf", dpi=300, bbox_inches="tight"
-        )
-        plt.savefig(
-            save_path.with_suffix(".svg"), format="svg", dpi=300, bbox_inches="tight"
-        )
+        plt.savefig(save_path.with_suffix(".pdf"), format="pdf", dpi=300, bbox_inches="tight")
+        plt.savefig(save_path.with_suffix(".svg"), format="svg", dpi=300, bbox_inches="tight")
         print(f"Figure saved as PDF to {save_path}")
 
 

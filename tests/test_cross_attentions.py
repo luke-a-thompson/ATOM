@@ -57,9 +57,7 @@ class TestTemporalRoPEWithOffsetGroup:
             device=device,
         )
         # Freqs =  1.0, 0.0316227766016838
-        rope_output = TemporalRoPEWithOffset(
-            num_timesteps=num_timesteps, d_head=d_head, n_heads=num_heads
-        ).forward(flattened_x)
+        rope_output = TemporalRoPEWithOffset(num_timesteps=num_timesteps, d_head=d_head, n_heads=num_heads).forward(flattened_x)
 
         # [Batch, heads, nodes * timesteps, d_head]
         # Purple = [even, odd]
@@ -116,18 +114,12 @@ class TestTemporalRoPEWithOffsetGroup:
         num_nodes = 4
 
         times = torch.arange(num_timesteps).unsqueeze(1)  # [T,1]
-        positions = torch.repeat_interleave(times, num_nodes, dim=1).flatten(
-            0, 1
-        )  # [N*T=seq_len]
+        positions = torch.repeat_interleave(times, num_nodes, dim=1).flatten(0, 1)  # [N*T=seq_len]
 
-        assert torch.equal(
-            positions, torch.tensor([0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2])
-        )
+        assert torch.equal(positions, torch.tensor([0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2]))
 
     def test_rope_stack_interleave(self):
-        original = torch.tensor(
-            [[1, 2, 3, 4, 5, 6], [7, 8, 9, 10, 11, 12]], dtype=torch.int32
-        )
+        original = torch.tensor([[1, 2, 3, 4, 5, 6], [7, 8, 9, 10, 11, 12]], dtype=torch.int32)
 
         t1 = original[..., 0::2]
         t2 = original[..., 1::2]
@@ -143,14 +135,10 @@ class TestTemporalRoPEWithOffsetGroup:
         d_head = 4
 
         times = torch.arange(num_timesteps).unsqueeze(1)  # [T,1]
-        positions = (
-            torch.repeat_interleave(times, num_nodes, dim=1).flatten(0, 1).to(device)
-        )  # [N*T=seq_len]
+        positions = torch.repeat_interleave(times, num_nodes, dim=1).flatten(0, 1).to(device)  # [N*T=seq_len]
 
         offset = torch.zeros(num_heads, device=device)
-        freqs = torch.tensor(
-            [[[1.0, 0.0316227766016838]]], device=device
-        )  # Analytically derived from d_head = 4, manually unsqueezed
+        freqs = torch.tensor([[[1.0, 0.0316227766016838]]], device=device)  # Analytically derived from d_head = 4, manually unsqueezed
 
         positions_broadcast = positions.unsqueeze(0)  # [1, seq_len]
         offset_broadcast = offset.unsqueeze(-1)  # [H, 1]
@@ -158,9 +146,7 @@ class TestTemporalRoPEWithOffsetGroup:
 
         angle = shifted_positions.unsqueeze(-1) * freqs
 
-        assert angle.shape == torch.Size(
-            [num_heads, num_nodes * num_timesteps, d_head // 2]
-        )
+        assert angle.shape == torch.Size([num_heads, num_nodes * num_timesteps, d_head // 2])
 
         cos_t = angle.cos().unsqueeze(0)
         sin_t = angle.sin().unsqueeze(0)
@@ -218,9 +204,5 @@ class TestTemporalRoPEWithOffsetGroup:
             device=device,
         )
 
-        assert torch.allclose(cos_t, expected_cos_t, atol=1e-3), (
-            f"cos_t: \n{cos_t}, \nexpected_cos_t: \n{expected_cos_t}"
-        )
-        assert torch.allclose(sin_t, expected_sin_t, atol=1e-3), (
-            f"sin_t: \n{sin_t}, \nexpected_sin_t: \n{expected_sin_t}"
-        )
+        assert torch.allclose(cos_t, expected_cos_t, atol=1e-3), f"cos_t: \n{cos_t}, \nexpected_cos_t: \n{expected_cos_t}"
+        assert torch.allclose(sin_t, expected_sin_t, atol=1e-3), f"sin_t: \n{sin_t}, \nexpected_sin_t: \n{expected_sin_t}"

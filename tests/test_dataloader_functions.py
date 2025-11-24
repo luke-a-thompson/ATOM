@@ -65,13 +65,9 @@ class TestMD17DynamicsDataset:
             tensor = batch[key]
             B, T = tensor.shape[0], tensor.shape[1]
             for t in range(1, T):
-                assert torch.allclose(tensor[:, 0, ...], tensor[:, t, ...]), (
-                    f"Replication error for key '{key}': time slice 0 and {t} differ."
-                )
+                assert torch.allclose(tensor[:, 0, ...], tensor[:, t, ...]), f"Replication error for key '{key}': time slice 0 and {t} differ."
 
-        print(
-            "Test passed: All replicated tensors are identical along the time dimension."
-        )
+        print("Test passed: All replicated tensors are identical along the time dimension.")
 
     def test_assert_replicated_dataset_all_identical_rmd17(self):
         """
@@ -127,13 +123,9 @@ class TestMD17DynamicsDataset:
             tensor = batch[key]
             B, T = tensor.shape[0], tensor.shape[1]
             for t in range(1, T):
-                assert torch.allclose(tensor[:, 0, ...], tensor[:, t, ...]), (
-                    f"Replication error for key '{key}': time slice 0 and {t} differ."
-                )
+                assert torch.allclose(tensor[:, 0, ...], tensor[:, t, ...]), f"Replication error for key '{key}': time slice 0 and {t} differ."
 
-        print(
-            "Test passed: All replicated tensors are identical along the time dimension."
-        )
+        print("Test passed: All replicated tensors are identical along the time dimension.")
 
     def test_replicate_tensor(self):
         device = torch.device("cpu")
@@ -176,18 +168,12 @@ class TestMD17DynamicsDataset:
             device=device,
         )
         # Verify the input tensor shape is (1, 10, 4)
-        assert input_tensor.shape == (max_samples, 10, 4), (
-            f"Input tensor shape {input_tensor.shape} != (1, 10, 4)"
-        )
+        assert input_tensor.shape == (max_samples, 10, 4), f"Input tensor shape {input_tensor.shape} != (1, 10, 4)"
 
         # Expected output: replicate input_tensor along a new time dimension, resulting in shape (max_samples*num_timesteps, 10, 4)
         # Since num_timesteps=2 and max_samples=1, expected shape is (2, 10, 4) with both time slices identical.
-        expected_output_tensor = torch.cat(
-            [input_tensor, input_tensor], dim=0
-        ).unsqueeze(0)
-        assert expected_output_tensor.shape == (1, num_timesteps, 10, 4), (
-            f"Expected tensor shape {expected_output_tensor.shape} != (1, 2, 10, 4)"
-        )
+        expected_output_tensor = torch.cat([input_tensor, input_tensor], dim=0).unsqueeze(0)
+        assert expected_output_tensor.shape == (1, num_timesteps, 10, 4), f"Expected tensor shape {expected_output_tensor.shape} != (1, 2, 10, 4)"
 
         # Use the dataset's _replicate_tensor method to perform replication.
         output_tensor = dataset._replicate_tensor(input_tensor)
@@ -196,9 +182,7 @@ class TestMD17DynamicsDataset:
         assert output_tensor.shape == expected_output_tensor.shape, (
             f"Output shape {output_tensor.shape} != Expected shape {expected_output_tensor.shape}"
         )
-        assert torch.equal(output_tensor, expected_output_tensor), (
-            f"Output tensor:\n{output_tensor}\nExpected tensor:\n{expected_output_tensor}"
-        )
+        assert torch.equal(output_tensor, expected_output_tensor), f"Output tensor:\n{output_tensor}\nExpected tensor:\n{expected_output_tensor}"
 
         print("test_replicate_tensor passed!")
 
@@ -226,28 +210,20 @@ class TestMD17DynamicsDataset:
         # Create a test tensor with shape (batch_size, num_nodes, feature_dim)
         num_nodes = 10  # Smaller than max_nodes
         feature_dim = 4
-        input_tensor = torch.ones(
-            (max_samples, num_nodes, feature_dim), dtype=torch.float32
-        )
+        input_tensor = torch.ones((max_samples, num_nodes, feature_dim), dtype=torch.float32)
 
         # Apply padding
         padded_tensor = dataset._pad_tensor(input_tensor)
 
         # Verify shape is correct
         expected_shape = (max_samples, max_nodes, feature_dim)
-        assert padded_tensor.shape == expected_shape, (
-            f"Padded tensor shape {padded_tensor.shape} != Expected shape {expected_shape}"
-        )
+        assert padded_tensor.shape == expected_shape, f"Padded tensor shape {padded_tensor.shape} != Expected shape {expected_shape}"
 
         # Verify original values are preserved
-        assert torch.all(padded_tensor[:, :num_nodes, :] == 1.0), (
-            "Original values were modified during padding"
-        )
+        assert torch.all(padded_tensor[:, :num_nodes, :] == 1.0), "Original values were modified during padding"
 
         # Verify padded values are zeros
-        assert torch.all(padded_tensor[:, num_nodes:, :] == 0.0), (
-            "Padded values are not zeros"
-        )
+        assert torch.all(padded_tensor[:, num_nodes:, :] == 0.0), "Padded values are not zeros"
 
         print("test_pad_tensor passed!")
 
@@ -286,24 +262,14 @@ class TestMD17DynamicsDataset:
 
         # Check that the number of True values in the mask equals the actual number of nodes
         actual_nodes = dataset.num_nodes
-        assert actual_nodes == 6, (
-            f"Actual number of nodes {actual_nodes} != Expected number of nodes 6"
-        )
+        assert actual_nodes == 6, f"Actual number of nodes {actual_nodes} != Expected number of nodes 6"
         true_count = sample["padded_nodes_mask"].sum().item()
-        expected_true_count = (
-            actual_nodes * num_timesteps
-        )  # True for each real node across all timesteps
-        assert true_count == expected_true_count, (
-            f"True count in mask {true_count} != Expected count {expected_true_count}"
-        )
+        expected_true_count = actual_nodes * num_timesteps  # True for each real node across all timesteps
+        assert true_count == expected_true_count, f"True count in mask {true_count} != Expected count {expected_true_count}"
 
         # Verify that the mask is True for real nodes and False for padded nodes
         for t in range(num_timesteps):
-            assert torch.all(
-                sample["padded_nodes_mask"][t, :actual_nodes, 0] == True
-            ), f"Real nodes not correctly masked as True at timestep {t}"
-            assert torch.all(
-                sample["padded_nodes_mask"][t, actual_nodes:, 0] == False
-            ), f"Padded nodes not correctly masked as False at timestep {t}"
+            assert torch.all(sample["padded_nodes_mask"][t, :actual_nodes, 0] == True), f"Real nodes not correctly masked as True at timestep {t}"
+            assert torch.all(sample["padded_nodes_mask"][t, actual_nodes:, 0] == False), f"Padded nodes not correctly masked as False at timestep {t}"
 
         print("test_node_masking passed!")

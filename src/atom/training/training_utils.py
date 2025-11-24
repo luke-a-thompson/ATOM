@@ -17,9 +17,7 @@ from atom.training.config_options import (
 
 
 def parse_train_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Train ATOM model with configuration file(s)"
-    )
+    parser = argparse.ArgumentParser(description="Train ATOM model with configuration file(s)")
     group = parser.add_mutually_exclusive_group(required=True)
     _ = group.add_argument(
         "--config",
@@ -52,9 +50,7 @@ def get_config_files(directory: str) -> list[Path]:
     if not dir_path.is_dir():
         raise NotADirectoryError(f"The path {directory} is not a directory")
 
-    config_files: list[Path] = sorted(
-        p for p in dir_path.rglob("*.toml") if p.is_file()
-    )
+    config_files: list[Path] = sorted(p for p in dir_path.rglob("*.toml") if p.is_file())
     if not config_files:
         raise FileNotFoundError(f"No .toml files found in directory {directory}")
 
@@ -85,9 +81,7 @@ def set_environment_variables(config: Config) -> None:
     """
     # os.environ["TORCHINDUCTOR_CACHE_DIR"] = "torch_compiler/inductor_cache"
     if config.benchmark.compile_trace:
-        assert os.access(Path("torch_compiler/trace"), os.W_OK), (
-            "Directory trace_dir is not writable."
-        )
+        assert os.access(Path("torch_compiler/trace"), os.W_OK), "Directory trace_dir is not writable."
         os.environ["TORCH_TRACE"] = "torch_compiler/trace"
 
 
@@ -136,9 +130,7 @@ def show_connectivity(config: Config) -> None:
             )
             one_hop_edges = int(one_hop.sum().item() // 2)
             two_hop_edges = int(two_hop.sum().item() // 2)
-            print(
-                f"- {mol}: nodes={train_dataset.num_nodes}, one-hop edges={one_hop_edges}, two-hop edges={two_hop_edges}"
-            )
+            print(f"- {mol}: nodes={train_dataset.num_nodes}, one-hop edges={one_hop_edges}, two-hop edges={two_hop_edges}")
     else:
         mol = _infer_molecule_type_for_single_task(config)
         train_dataset, _, _ = create_datasets(config, mol, max_nodes=None)
@@ -149,14 +141,10 @@ def show_connectivity(config: Config) -> None:
         )
         one_hop_edges = int(one_hop.sum().item() // 2)
         two_hop_edges = int(two_hop.sum().item() // 2)
-        print(
-            f"Single-task dataset {mol}: nodes={train_dataset.num_nodes}, one-hop edges={one_hop_edges}, two-hop edges={two_hop_edges}"
-        )
+        print(f"Single-task dataset {mol}: nodes={train_dataset.num_nodes}, one-hop edges={one_hop_edges}, two-hop edges={two_hop_edges}")
 
 
-def log_weights(
-    named_parameters: list[tuple[str, torch.Tensor]], epoch: int, save_dir: Path
-):
+def log_weights(named_parameters: list[tuple[str, torch.Tensor]], epoch: int, save_dir: Path):
     """Save feature weights and related tensors as numpy arrays.
 
     Args:
@@ -207,15 +195,11 @@ def log_weights(
                 attention_denom_history = loaded_data["attention_denom"].tolist()
 
             # Add current epoch data - this will be a 3D array: [train_step, layer, values]
-            current_attention_denom = torch.stack(
-                attention_denom_per_layer, dim=0
-            ).numpy()
+            current_attention_denom = torch.stack(attention_denom_per_layer, dim=0).numpy()
             attention_denom_history.append(current_attention_denom)
 
             # Save updated history
-            np.savez(
-                attention_denom_path, attention_denom=np.array(attention_denom_history)
-            )
+            np.savez(attention_denom_path, attention_denom=np.array(attention_denom_history))
 
         # Lambda v residual
         if lambda_v_residual_per_layer:
@@ -230,9 +214,7 @@ def log_weights(
             lambda_v_residual_history.append(current_lambda_v)
 
             # Save updated history
-            np.savez(
-                lambda_v_path, lambda_v_residual=np.array(lambda_v_residual_history)
-            )
+            np.savez(lambda_v_path, lambda_v_residual=np.array(lambda_v_residual_history))
 
 
 def add_brownian_noise(

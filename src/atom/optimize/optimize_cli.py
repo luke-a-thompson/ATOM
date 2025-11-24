@@ -36,14 +36,10 @@ def _trial_to_config(base_config: Config, trial: optuna.trial.Trial) -> Config:
     atom_cfg: dict[str, object] = cast(dict[str, object], cfg["atom_config"])  # type: ignore[index]
 
     # Training
-    training_cfg["label_noise_std"] = trial.suggest_float(
-        "label_noise_std", 0.001, 0.2, log=True
-    )
+    training_cfg["label_noise_std"] = trial.suggest_float("label_noise_std", 0.001, 0.2, log=True)
 
     # Optimizer
-    optimizer_cfg["learning_rate"] = trial.suggest_float(
-        "learning_rate", 1e-5, 5e-3, log=True
-    )
+    optimizer_cfg["learning_rate"] = trial.suggest_float("learning_rate", 1e-5, 5e-3, log=True)
 
     # Model architecture
     atom_cfg["num_layers"] = trial.suggest_int("num_layers", 5, 8)
@@ -59,9 +55,7 @@ def _trial_to_config(base_config: Config, trial: optuna.trial.Trial) -> Config:
     # Round max down to nearest multiple of divisible_by to satisfy Optuna step grid
     if max_lifting % divisible_by != 0:
         max_lifting = max_lifting - (max_lifting % divisible_by)
-    lifting_dim: int = trial.suggest_int(
-        "lifting_dim", min_lifting, max_lifting, step=divisible_by
-    )
+    lifting_dim: int = trial.suggest_int("lifting_dim", min_lifting, max_lifting, step=divisible_by)
     atom_cfg["lifting_dim"] = lifting_dim
     atom_cfg["delta_update"] = trial.suggest_categorical("delta_update", [True, False])
 
@@ -101,17 +95,11 @@ def _objective_factory(base_config: Config) -> Callable[[optuna.trial.Trial], fl
             scaler = GradScaler(enabled=bool(config.training.use_amp))
 
             best_val: float = float("inf")
-            epoch_bar = tqdm(
-                range(n_epochs), desc=f"Trial {trial.number}", leave=False, unit="epoch"
-            )
+            epoch_bar = tqdm(range(n_epochs), desc=f"Trial {trial.number}", leave=False, unit="epoch")
             for epoch_index in epoch_bar:
-                _ = train_epoch(
-                    config, model, optimizer, train_loader, scheduler, scaler
-                )
+                _ = train_epoch(config, model, optimizer, train_loader, scheduler, scaler)
                 val_s2t, _ = eval_epoch(config, model, val_loader)
-                if scheduler and isinstance(
-                    scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau
-                ):
+                if scheduler and isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
                     scheduler.step(val_s2t)
 
                 # Report for pruning
@@ -123,9 +111,7 @@ def _objective_factory(base_config: Config) -> Callable[[optuna.trial.Trial], fl
                 if val_s2t < best_val:
                     best_val = val_s2t
 
-                epoch_bar.set_postfix(
-                    {"val_s2t": f"{val_s2t:.5f}", "best": f"{best_val:.5f}"}
-                )
+                epoch_bar.set_postfix({"val_s2t": f"{val_s2t:.5f}", "best": f"{best_val:.5f}"})
             epoch_bar.close()
 
             return best_val
@@ -136,11 +122,7 @@ def _objective_factory(base_config: Config) -> Callable[[optuna.trial.Trial], fl
         except RuntimeError as runtime_error:
             # Catch CUDA OOMs that manifest as RuntimeError or other transient training issues
             error_message: str = str(runtime_error).lower()
-            if (
-                "out of memory" in error_message
-                or "cuda error" in error_message
-                or "cublas" in error_message
-            ):
+            if "out of memory" in error_message or "cuda error" in error_message or "cublas" in error_message:
                 raise
             # Re-raise other runtime errors to be handled by Optuna catch
             raise
@@ -165,24 +147,16 @@ def _objective_factory(base_config: Config) -> Callable[[optuna.trial.Trial], fl
 
 
 def _parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Hyperparameter optimization for ATOM using Optuna"
-    )
-    _ = parser.add_argument(
-        "--config", type=str, required=True, help="Path to base config TOML"
-    )
-    _ = parser.add_argument(
-        "--trials", type=int, default=25, help="Number of Optuna trials"
-    )
+    parser = argparse.ArgumentParser(description="Hyperparameter optimization for ATOM using Optuna")
+    _ = parser.add_argument("--config", type=str, required=True, help="Path to base config TOML")
+    _ = parser.add_argument("--trials", type=int, default=25, help="Number of Optuna trials")
     _ = parser.add_argument(
         "--storage",
         type=str,
         default="sqlite:///optuna.db",
         help="Optuna storage URL (e.g. sqlite:///optuna.db)",
     )
-    _ = parser.add_argument(
-        "--study", type=str, default="atom-optimize", help="Study name"
-    )
+    _ = parser.add_argument("--study", type=str, default="atom-optimize", help="Study name")
     _ = parser.add_argument(
         "--direction",
         type=str,
@@ -227,9 +201,7 @@ def main() -> None:
             pruner=pruner,
         )
     else:
-        study = optuna.create_study(
-            direction=direction, study_name=study_name, pruner=pruner
-        )
+        study = optuna.create_study(direction=direction, study_name=study_name, pruner=pruner)
 
     trials_count: int = int(args.trials)
     # Continue after common errors; failing trials are recorded without aborting the study

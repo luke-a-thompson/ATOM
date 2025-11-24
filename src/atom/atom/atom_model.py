@@ -59,22 +59,14 @@ class ATOMBlock(nn.Module):
         self.pre_norm: nn.Module
         match norm:
             case NormType.LAYER:
-                self.norms = nn.ModuleList(
-                    [nn.LayerNorm(normalized_shape=lifting_dim) for _ in range(3)]
-                )
+                self.norms = nn.ModuleList([nn.LayerNorm(normalized_shape=lifting_dim) for _ in range(3)])
             case NormType.RMS:
-                self.norms = nn.ModuleList(
-                    [nn.RMSNorm(normalized_shape=lifting_dim) for _ in range(3)]
-                )
+                self.norms = nn.ModuleList([nn.RMSNorm(normalized_shape=lifting_dim) for _ in range(3)])
             case _:
-                raise ValueError(
-                    f"Invalid norm type: {norm}, select from one of {NormType.__members__.keys()}"
-                )  # type: ignore
+                raise ValueError(f"Invalid norm type: {norm}, select from one of {NormType.__members__.keys()}")  # type: ignore
 
         if lifting_dim % num_heads != 0:
-            raise ValueError(
-                f"Lifting (embedding) dim {lifting_dim} must be divisible by num_heads ({num_heads})"
-            )
+            raise ValueError(f"Lifting (embedding) dim {lifting_dim} must be divisible by num_heads ({num_heads})")
 
         activation_fn: nn.Module
         match activation:
@@ -91,9 +83,7 @@ class ATOMBlock(nn.Module):
             case FFNActivation.SWIGLU:
                 activation_fn = SwiGLU(input_dim=lifting_dim)
             case _:
-                raise ValueError(
-                    f"Invalid activation function: {activation}, select from one of {FFNActivation.__members__.keys()}"
-                )
+                raise ValueError(f"Invalid activation function: {activation}, select from one of {FFNActivation.__members__.keys()}")
 
         # lifting_dim_irreps = get_lifting_dim_irreps(lifting_dim)
         # self.ffn = EquivariantMLP(
@@ -152,18 +142,14 @@ class ATOMBlock(nn.Module):
                     rope_base=rope_base,
                 )
             case _:
-                raise ValueError(
-                    f"Invalid heterogenous attention type: {attention_type}, select from one of {AttentionType.__members__.keys()}"
-                )  # type: ignore
+                raise ValueError(f"Invalid heterogenous attention type: {attention_type}, select from one of {AttentionType.__members__.keys()}")  # type: ignore
 
         self.value_residual_type = value_residual_type
 
         self.lambda_v_residual: nn.Parameter | torch.Tensor
         match self.value_residual_type:
             case ValueResidualType.LEARNABLE:
-                self.lambda_v_residual = nn.Parameter(
-                    torch.tensor(0.5)
-                )  # Initialize lambda to 0.5
+                self.lambda_v_residual = nn.Parameter(torch.tensor(0.5))  # Initialize lambda to 0.5
             case ValueResidualType.FIXED:
                 self.lambda_v_residual = torch.tensor(0.5)
             case ValueResidualType.NONE:
@@ -215,9 +201,7 @@ class ATOMBlock(nn.Module):
         # q_data = self.pre_norm(q_data)
 
         if self.attention_type == AttentionType.SELF:
-            attended_nodes = x_0 + self.attention(
-                tensor=x_0, mask=mask, time_increments=time_increments
-            )
+            attended_nodes = x_0 + self.attention(tensor=x_0, mask=mask, time_increments=time_increments)
         elif self.attention_type == AttentionType.GATV2:
             if edge_index is None:
                 msg = "GATV2 attention requires 'edge_index' to be provided to ATOMBlock.forward."
@@ -251,9 +235,7 @@ class ATOMBlock(nn.Module):
                 if self.value_residual_type == ValueResidualType.LEARNABLE:
                     lambda_val = torch.sigmoid(self.lambda_v_residual)
                 else:
-                    lambda_val = self.lambda_v_residual.to(
-                        dtype=x_0.dtype, device=x_0.device
-                    )
+                    lambda_val = self.lambda_v_residual.to(dtype=x_0.dtype, device=x_0.device)
                 x_0 = lambda_val * x_0 + (1 - lambda_val) * initial_v
 
         return x_0, initial_v
@@ -321,9 +303,7 @@ class ATOM(nn.Module):
         """
         super().__init__()
 
-        assert num_timesteps > 1, (
-            f"num_timesteps must be greater than 1. Got {num_timesteps}"
-        )
+        assert num_timesteps > 1, f"num_timesteps must be greater than 1. Got {num_timesteps}"
         self.num_timesteps = num_timesteps
         self.use_equivariant_lifting = lifting_type
         self.lifting_dim = lifting_dim
@@ -337,9 +317,7 @@ class ATOM(nn.Module):
         self.attention_type: AttentionType = attention_type
         # Removed FiLM modulation
 
-        x_0_in_irreps, v_0_in_irreps, concat_feats_in_irreps = get_in_irreps(
-            rrwp_length
-        )
+        x_0_in_irreps, v_0_in_irreps, concat_feats_in_irreps = get_in_irreps(rrwp_length)
         lifting_dim_irreps: str = get_lifting_dim_irreps(lifting_dim)
 
         match lifting_type:
@@ -372,9 +350,7 @@ class ATOM(nn.Module):
                     lifting_dim_irreps=lifting_dim_irreps,
                 )
             case _:
-                raise ValueError(
-                    f"Invalid equivariant lifting type: {lifting_type}, select from one of {LiftingType.__members__.keys()}"
-                )
+                raise ValueError(f"Invalid equivariant lifting type: {lifting_type}, select from one of {LiftingType.__members__.keys()}")
 
         self.transformer_blocks = nn.Sequential(
             *[
@@ -398,26 +374,16 @@ class ATOM(nn.Module):
         match projection_type:
             case ProjectionType.EQUIVARIANT:
                 if self.output_mode == OutputMode.POS_ONLY:
-                    self.projection_layer = EquivariantProjectPosOnly(
-                        lifting_dim_irreps, "1x1o"
-                    )
+                    self.projection_layer = EquivariantProjectPosOnly(lifting_dim_irreps, "1x1o")
                 else:
-                    self.projection_layer = EquivariantProjectFull(
-                        lifting_dim_irreps, "1x1o"
-                    )
+                    self.projection_layer = EquivariantProjectFull(lifting_dim_irreps, "1x1o")
             case ProjectionType.DECANONICALIZATION:
                 if self.output_mode == OutputMode.POS_ONLY:
-                    self.projection_layer = DecanonicalizationProjectPosOnly(
-                        lifting_dim_irreps, "1x1o"
-                    )
+                    self.projection_layer = DecanonicalizationProjectPosOnly(lifting_dim_irreps, "1x1o")
                 else:
-                    self.projection_layer = DecanonicalizationProject(
-                        lifting_dim_irreps, "1x1o"
-                    )
+                    self.projection_layer = DecanonicalizationProject(lifting_dim_irreps, "1x1o")
             case _:
-                raise ValueError(
-                    f"Invalid projection type: {projection_type}, select from one of {ProjectionType.__members__.keys()}"
-                )
+                raise ValueError(f"Invalid projection type: {projection_type}, select from one of {ProjectionType.__members__.keys()}")
 
         self._initialise_weights(self)
 
@@ -453,13 +419,9 @@ class ATOM(nn.Module):
 
         ## Lift
         if self.lifting_type == LiftingType.CANONICALIZATION:
-            lifted_x_0, lifted_v_0, lifted_concat_features, so3_matrix, x_0_mean = (
-                self.lifting_layer(x_0, v_0, concat_features, mask=mask)
-            )
+            lifted_x_0, lifted_v_0, lifted_concat_features, so3_matrix, x_0_mean = self.lifting_layer(x_0, v_0, concat_features, mask=mask)
         else:
-            lifted_x_0, lifted_v_0, lifted_concat_features = self.lifting_layer(
-                x_0, v_0, concat_features
-            )
+            lifted_x_0, lifted_v_0, lifted_concat_features = self.lifting_layer(x_0, v_0, concat_features)
             so3_matrix = None  # type: ignore
             x_0_mean = None  # type: ignore
 
@@ -528,30 +490,20 @@ class ATOM(nn.Module):
         energy_per_node: torch.Tensor
         energy_pred: torch.Tensor | None = None
         if self.projection_type == ProjectionType.DECANONICALIZATION:
-            assert so3_matrix is not None and x_0_mean is not None, (
-                "Decanonicalization requires canonicalization outputs (Q and x_0_mean)."
-            )
+            assert so3_matrix is not None and x_0_mean is not None, "Decanonicalization requires canonicalization outputs (Q and x_0_mean)."
             if self.output_mode == OutputMode.POS_ONLY:
-                final_pred_pos = self.projection_layer(
-                    lifted_x_0, lifted_concat_features, so3_matrix, x_0_mean
-                )
+                final_pred_pos = self.projection_layer(lifted_x_0, lifted_concat_features, so3_matrix, x_0_mean)
                 final_pred_vel = torch.empty(0, device=lifted_x_0.device)
                 energy_per_node = torch.empty(0, device=lifted_x_0.device)
             else:
-                final_pred_pos, final_pred_vel, energy_per_node = self.projection_layer(
-                    lifted_x_0, lifted_concat_features, so3_matrix, x_0_mean
-                )
+                final_pred_pos, final_pred_vel, energy_per_node = self.projection_layer(lifted_x_0, lifted_concat_features, so3_matrix, x_0_mean)
         else:
             if self.output_mode == OutputMode.POS_ONLY:
-                final_pred_pos = self.projection_layer(
-                    lifted_x_0, lifted_concat_features
-                )
+                final_pred_pos = self.projection_layer(lifted_x_0, lifted_concat_features)
                 final_pred_vel = torch.empty(0, device=lifted_x_0.device)
                 energy_per_node = torch.empty(0, device=lifted_x_0.device)
             else:
-                final_pred_pos, final_pred_vel, energy_per_node = self.projection_layer(
-                    lifted_x_0, lifted_concat_features
-                )
+                final_pred_pos, final_pred_vel, energy_per_node = self.projection_layer(lifted_x_0, lifted_concat_features)
 
         if self.delta_update:
             final_pred_pos = batch["x_0"][..., :3] + final_pred_pos
@@ -587,18 +539,14 @@ class ATOM(nn.Module):
                 if module.bias is not None:
                     _ = nn.init.zeros_(module.bias)
 
-    def _build_time_positional_encoding(
-        self, num_timesteps: int, dim: int
-    ) -> torch.Tensor:
+    def _build_time_positional_encoding(self, num_timesteps: int, dim: int) -> torch.Tensor:
         """Classic transformer sinusoidal positional encoding for time indices.
 
         Returns a tensor of shape [num_timesteps, dim].
         """
         pe = torch.zeros(num_timesteps, dim)
         position = torch.arange(0, num_timesteps, dtype=torch.float32).unsqueeze(1)
-        div_term = torch.exp(
-            torch.arange(0, dim, 2).float() * (-math.log(10000.0) / dim)
-        )
+        div_term = torch.exp(torch.arange(0, dim, 2).float() * (-math.log(10000.0) / dim))
         pe[:, 0::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)
         return pe
@@ -641,9 +589,7 @@ def get_in_irreps(rrwp_length: int) -> tuple[str, str, str]:
     x_0_in_irreps = "1x1o + 1x0e"  # (x,y,z, ||x||)
     v_0_in_irreps = "1x1o + 1x0e"  # (vx,vy,vz, ||v||)
 
-    concat_feats_in_irreps = (
-        "1x1o + 1x0e + 1x1o + 1x0e + 1x0e"  # (x,y,z, ||x||, vx,vy,vz, ||v||, Z)
-    )
+    concat_feats_in_irreps = "1x1o + 1x0e + 1x1o + 1x0e + 1x0e"  # (x,y,z, ||x||, vx,vy,vz, ||v||, Z)
     if rrwp_length > 0:
         concat_feats_in_irreps += f" + {rrwp_length}x0e"
 
@@ -652,11 +598,7 @@ def get_in_irreps(rrwp_length: int) -> tuple[str, str, str]:
 
 def get_lifting_dim_irreps(lifting_dim: int) -> str:
     vector_lifting_dim_irreps: int = lifting_dim // 3
-    scalar_lifting_dim_irreps: int = (
-        lifting_dim - vector_lifting_dim_irreps * 3
-    )  # Remainder
+    scalar_lifting_dim_irreps: int = lifting_dim - vector_lifting_dim_irreps * 3  # Remainder
 
-    lifting_dim_irreps: str = (
-        f"{vector_lifting_dim_irreps}x1o + {scalar_lifting_dim_irreps}x0e"
-    )
+    lifting_dim_irreps: str = f"{vector_lifting_dim_irreps}x1o + {scalar_lifting_dim_irreps}x0e"
     return lifting_dim_irreps

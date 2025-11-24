@@ -24,9 +24,7 @@ from atom.training import (
 )
 
 
-def train_model(
-    config: Config, model: nn.Module, benchmark_dir: Path, run_number: int
-) -> SingleRunResults:
+def train_model(config: Config, model: nn.Module, benchmark_dir: Path, run_number: int) -> SingleRunResults:
     """Full training pipeline."""
 
     if config.dataloader.multitask:
@@ -58,9 +56,7 @@ def train_model(
         position=2,
     )
     for epoch in progress_bar:
-        train_s2t_loss = train_epoch(
-            config, model, optimizer, train_loader, scheduler, scaler
-        )
+        train_s2t_loss = train_epoch(config, model, optimizer, train_loader, scheduler, scaler)
         val_s2t_loss, val_s2s_loss = eval_epoch(config, model, val_loader)
 
         # Log gate parameters and save to weights_dir if provided
@@ -132,30 +128,22 @@ def train_epoch(
     s2t_denominator: float = 0.0
 
     for batch in dataloader:
-        batch = TensorDict.from_dict(
-            batch, device=torch.device(config.training.device), auto_batch_size=True
-        )
+        batch = TensorDict.from_dict(batch, device=torch.device(config.training.device), auto_batch_size=True)
         if config.dataloader.multitask is False:
-            assert "padded_nodes_mask" not in batch, (
-                "padded_nodes_mask should not exist in batch when multitask is False"
-            )
+            assert "padded_nodes_mask" not in batch, "padded_nodes_mask should not exist in batch when multitask is False"
 
-        assert batch["x_0"].shape[1] == (config.dataloader.num_timesteps), (
-            f"{batch['x_0'].shape[1]} != {config.dataloader.num_timesteps}"
-        )
+        assert batch["x_0"].shape[1] == (config.dataloader.num_timesteps), f"{batch['x_0'].shape[1]} != {config.dataloader.num_timesteps}"
         target_coords: torch.Tensor = batch.pop("x_t")
         mask: torch.Tensor | None = batch.get("padded_nodes_mask", None)
 
         optimizer.zero_grad()
 
         if config.training.label_noise_std > 0.0:
-            batch["x_0"], batch["v_0"], batch["concatenated_features"] = (
-                add_brownian_noise(
-                    batch["x_0"],
-                    batch["v_0"],
-                    batch["concatenated_features"],
-                    config.training.label_noise_std,
-                )
+            batch["x_0"], batch["v_0"], batch["concatenated_features"] = add_brownian_noise(
+                batch["x_0"],
+                batch["v_0"],
+                batch["concatenated_features"],
+                config.training.label_noise_std,
             )
 
         with autocast(
@@ -175,15 +163,10 @@ def train_epoch(
                 pred_energy = None
 
             # Calculate MSE loss (positions only for backprop)
-            assert pred_coords.shape == target_coords.shape, (
-                f"{pred_coords.shape} != {target_coords.shape}"
-            )
+            assert pred_coords.shape == target_coords.shape, f"{pred_coords.shape} != {target_coords.shape}"
 
             # Do not compute gradients for heavy atoms if explicit_hydrogen is True and explicit_hydrogen_gradients is False
-            if (
-                config.dataloader.explicit_hydrogen
-                and config.dataloader.explicit_hydrogen_gradients is False
-            ):
+            if config.dataloader.explicit_hydrogen and config.dataloader.explicit_hydrogen_gradients is False:
                 # Use all timesteps (both UNIFORM and LAST)
                 heavy_atom_mask = batch["Z"][..., 0] > 1  # [B, T, N]
                 pred_heavy = pred_coords[heavy_atom_mask]
@@ -219,20 +202,11 @@ def train_epoch(
                                 per_m = (loss_raw_used * mask_m).sum() / denom_m
                                 per_mol_losses.append(per_m)
                         else:
-                            count_m = (
-                                sel.sum()
-                                * loss_raw_used.shape[1]
-                                * loss_raw_used.shape[2]
-                                * loss_raw_used.shape[3]
-                            ).to(loss_raw_used.dtype)
+                            count_m = (sel.sum() * loss_raw_used.shape[1] * loss_raw_used.shape[2] * loss_raw_used.shape[3]).to(loss_raw_used.dtype)
                             if count_m > 0:
                                 per_m = (loss_raw_used * sel).sum() / count_m
                                 per_mol_losses.append(per_m)
-                    loss = (
-                        torch.stack(per_mol_losses).mean()
-                        if per_mol_losses
-                        else loss_raw_used.mean()
-                    )
+                    loss = torch.stack(per_mol_losses).mean() if per_mol_losses else loss_raw_used.mean()
                     s2t_numerator += float(sum(p.item() for p in per_mol_losses))
                     s2t_denominator += float(len(per_mol_losses))
                 elif mask_used is not None:
@@ -241,12 +215,8 @@ def train_epoch(
                     s2t_numerator += (loss_raw_used * mask_expanded).sum().item()
                     s2t_denominator += mask_expanded.sum().item()
                     if pred_vel is not None and "v_t" in batch:
-                        vel_loss_raw = F.mse_loss(
-                            pred_vel, batch["v_t"], reduction="none"
-                        )
-                        vel_loss = (
-                            vel_loss_raw * mask_used.expand_as(vel_loss_raw)
-                        ).sum() / mask_used.expand_as(vel_loss_raw).sum()
+                        vel_loss_raw = F.mse_loss(pred_vel, batch["v_t"], reduction="none")
+                        vel_loss = (vel_loss_raw * mask_used.expand_as(vel_loss_raw)).sum() / mask_used.expand_as(vel_loss_raw).sum()
                         loss = loss + vel_loss
                     if pred_energy is not None and "E_t" in batch:
                         loss = loss + F.mse_loss(pred_energy, batch["E_t"])  # [B,T]
@@ -262,16 +232,12 @@ def train_epoch(
         _ = scaler.scale(loss).backward()
 
         scaler.unscale_(optimizer)
-        torch.nn.utils.clip_grad_norm_(
-            model.parameters(), config.training.max_grad_norm
-        )
+        torch.nn.utils.clip_grad_norm_(model.parameters(), config.training.max_grad_norm)
 
         scaler.step(optimizer)
         scaler.update()
 
-        if scheduler and not isinstance(
-            scheduler, optim.lr_scheduler.ReduceLROnPlateau
-        ):
+        if scheduler and not isinstance(scheduler, optim.lr_scheduler.ReduceLROnPlateau):
             scheduler.step()
 
     # Element-weighted MSE across the entire epoch
@@ -302,9 +268,7 @@ def eval_epoch(
 
     with torch.no_grad():
         for batch in loader:
-            batch = TensorDict.from_dict(
-                batch, device=torch.device(config.training.device), auto_batch_size=True
-            )
+            batch = TensorDict.from_dict(batch, device=torch.device(config.training.device), auto_batch_size=True)
             target_coords: torch.Tensor = batch.pop("x_t")
             # _ = batch.pop("v_t") if "v_t" in batch else None
             mask: torch.Tensor | None = batch.get("padded_nodes_mask", None)
@@ -315,41 +279,22 @@ def eval_epoch(
             else:
                 pred_coords = outputs
 
-            if (
-                config.dataloader.explicit_hydrogen
-                and config.dataloader.explicit_hydrogen_gradients is False
-            ):
+            if config.dataloader.explicit_hydrogen and config.dataloader.explicit_hydrogen_gradients is False:
                 # Get atomic numbers Z from batch and create mask for heavy atoms (Z > 1)
-                heavy_atom_mask_s2t: torch.Tensor = (
-                    batch["Z"][..., 0] > 1
-                )  # shape: [Batch, Time, Nodes]
-                pred_heavy_s2t: torch.Tensor = pred_coords[
-                    heavy_atom_mask_s2t
-                ]  # shape: [Total_selected_nodes, 3]
-                target_heavy_s2t: torch.Tensor = target_coords[
-                    heavy_atom_mask_s2t
-                ]  # shape: [Total_selected_nodes, 3]
+                heavy_atom_mask_s2t: torch.Tensor = batch["Z"][..., 0] > 1  # shape: [Batch, Time, Nodes]
+                pred_heavy_s2t: torch.Tensor = pred_coords[heavy_atom_mask_s2t]  # shape: [Total_selected_nodes, 3]
+                target_heavy_s2t: torch.Tensor = target_coords[heavy_atom_mask_s2t]  # shape: [Total_selected_nodes, 3]
                 # Aggregate over all selected elements
-                s2t_loss_raw = F.mse_loss(
-                    pred_heavy_s2t, target_heavy_s2t, reduction="none"
-                )
+                s2t_loss_raw = F.mse_loss(pred_heavy_s2t, target_heavy_s2t, reduction="none")
                 s2t_numerator += s2t_loss_raw.sum().item()
                 s2t_denominator += float(s2t_loss_raw.numel())
 
                 pred_last_t = pred_coords[:, -1, :, :]  # [B, N, 3]
                 target_last_t = target_coords[:, -1, :, :]  # [B, N, 3]
-                heavy_atom_mask_s2s: torch.Tensor = (
-                    batch["Z"][:, -1, :, 0] > 1
-                )  # [B, N]
-                pred_heavy_s2s: torch.Tensor = pred_last_t[
-                    heavy_atom_mask_s2s
-                ]  # [Total_selected_nodes, 3]
-                target_heavy_s2s: torch.Tensor = target_last_t[
-                    heavy_atom_mask_s2s
-                ]  # [Total_selected_nodes, 3]
-                s2s_loss_raw = F.mse_loss(
-                    pred_heavy_s2s, target_heavy_s2s, reduction="none"
-                )
+                heavy_atom_mask_s2s: torch.Tensor = batch["Z"][:, -1, :, 0] > 1  # [B, N]
+                pred_heavy_s2s: torch.Tensor = pred_last_t[heavy_atom_mask_s2s]  # [Total_selected_nodes, 3]
+                target_heavy_s2s: torch.Tensor = target_last_t[heavy_atom_mask_s2s]  # [Total_selected_nodes, 3]
+                s2s_loss_raw = F.mse_loss(pred_heavy_s2s, target_heavy_s2s, reduction="none")
                 s2s_numerator += s2s_loss_raw.sum().item()
                 s2s_denominator += float(s2s_loss_raw.numel())
             else:
@@ -368,12 +313,7 @@ def eval_epoch(
                                 per_m = (loss_raw_s2t * mask_m).sum() / denom_m
                                 per_mol_losses.append(per_m)
                         else:
-                            count_m = (
-                                sel.sum()
-                                * loss_raw_s2t.shape[1]
-                                * loss_raw_s2t.shape[2]
-                                * loss_raw_s2t.shape[3]
-                            ).to(loss_raw_s2t.dtype)
+                            count_m = (sel.sum() * loss_raw_s2t.shape[1] * loss_raw_s2t.shape[2] * loss_raw_s2t.shape[3]).to(loss_raw_s2t.dtype)
                             if count_m > 0:
                                 per_m = (loss_raw_s2t * sel).sum() / count_m
                                 per_mol_losses.append(per_m)
@@ -411,11 +351,7 @@ def eval_epoch(
                                 per_m2 = (loss_raw_s2s * mask_m2).sum() / denom_m2
                                 per_mol_losses2.append(per_m2)
                         else:
-                            count_m2 = (
-                                sel_b.sum()
-                                * loss_raw_s2s.shape[1]
-                                * loss_raw_s2s.shape[2]
-                            ).to(loss_raw_s2s.dtype)
+                            count_m2 = (sel_b.sum() * loss_raw_s2s.shape[1] * loss_raw_s2s.shape[2]).to(loss_raw_s2s.dtype)
                             if count_m2 > 0:
                                 per_m2 = (loss_raw_s2s * sel_b).sum() / count_m2
                                 per_mol_losses2.append(per_m2)
@@ -428,9 +364,7 @@ def eval_epoch(
                 else:
                     if mask is not None:
                         mask_last = mask[:, -1, :]  # Shape: [B, N, 1]
-                        mask_last = mask_last.expand_as(
-                            loss_raw_s2s
-                        )  # Now shape: [B, N, 3]
+                        mask_last = mask_last.expand_as(loss_raw_s2s)  # Now shape: [B, N, 3]
                         s2s_numerator += (loss_raw_s2s * mask_last).sum().item()
                         s2s_denominator += mask_last.sum().item()
                     else:

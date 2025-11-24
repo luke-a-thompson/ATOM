@@ -24,11 +24,7 @@ def _extract_benchmark_name(results_path: Path, data: dict) -> str:
     config_obj = data.get("config", {})
     benchmark_cfg: dict
     if isinstance(config_obj, dict):
-        benchmark_cfg = (
-            config_obj.get("benchmark", {})
-            if isinstance(config_obj.get("benchmark", {}), dict)
-            else {}
-        )
+        benchmark_cfg = config_obj.get("benchmark", {}) if isinstance(config_obj.get("benchmark", {}), dict) else {}
     else:
         benchmark_cfg = {}
 
@@ -88,9 +84,7 @@ def _load_scaling_metrics(results_files: list[Path]) -> dict[str, dict[str, floa
 
         # Require valid means; if missing or unparseable, skip this file.
         if s2s_mean is None or s2t_mean is None:
-            print(
-                f"[WARN] Skipping {path} because s2s/s2t mean values are missing or invalid."
-            )
+            print(f"[WARN] Skipping {path} because s2s/s2t mean values are missing or invalid.")
             continue
 
         # Std values may legitimately be missing/None (e.g., single run); treat as 0.
@@ -163,22 +157,12 @@ def plot_multitask_scaling(
     metrics = _load_scaling_metrics(results_files)
 
     benchmark_names: list[str] = _sorted_benchmark_names(metrics)
-    labels: list[str] = [
-        _canonical_label_from_benchmark_name(name) for name in benchmark_names
-    ]
+    labels: list[str] = [_canonical_label_from_benchmark_name(name) for name in benchmark_names]
 
-    s2s_means: list[float] = [
-        metrics[name]["s2s_mean"] * 100.0 for name in benchmark_names
-    ]
-    s2s_stds: list[float] = [
-        metrics[name]["s2s_std"] * 100.0 for name in benchmark_names
-    ]
-    s2t_means: list[float] = [
-        metrics[name]["s2t_mean"] * 100.0 for name in benchmark_names
-    ]
-    s2t_stds: list[float] = [
-        metrics[name]["s2t_std"] * 100.0 for name in benchmark_names
-    ]
+    s2s_means: list[float] = [metrics[name]["s2s_mean"] * 100.0 for name in benchmark_names]
+    s2s_stds: list[float] = [metrics[name]["s2s_std"] * 100.0 for name in benchmark_names]
+    s2t_means: list[float] = [metrics[name]["s2t_mean"] * 100.0 for name in benchmark_names]
+    s2t_stds: list[float] = [metrics[name]["s2t_std"] * 100.0 for name in benchmark_names]
 
     x = np.arange(len(benchmark_names), dtype=float)
     width = 0.6
@@ -253,19 +237,13 @@ def _parse_args() -> argparse.Namespace:
         "--benchmark-dir",
         type=str,
         required=True,
-        help=(
-            "Directory containing multitask scaling-law runs, e.g. "
-            "benchmark_runs/tg80_multitask_atom_scaling_law_20-Nov-2025_16-32-52"
-        ),
+        help=("Directory containing multitask scaling-law runs, e.g. benchmark_runs/tg80_multitask_atom_scaling_law_20-Nov-2025_16-32-52"),
     )
     parser.add_argument(
         "--output",
         type=str,
         default=None,
-        help=(
-            "Optional path to save the PDF; defaults to "
-            "Z_paper_content/multitask_scaling/multitask_scaling.pdf"
-        ),
+        help=("Optional path to save the PDF; defaults to Z_paper_content/multitask_scaling/multitask_scaling.pdf"),
     )
 
     return parser.parse_args()

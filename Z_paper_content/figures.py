@@ -63,11 +63,7 @@ def plot_invariance_results(invariance_to_plot: Literal["t", "p"]) -> None:
 
     # Get results files for all models
     s2t_results_files: list[Path] = list(invariance_dir.glob("**/results.json"))
-    s2t_results_files_no_trope: list[Path] = (
-        list(invariance_dir_no_trope.glob("**/results.json"))
-        if invariance_dir_no_trope
-        else []
-    )
+    s2t_results_files_no_trope: list[Path] = list(invariance_dir_no_trope.glob("**/results.json")) if invariance_dir_no_trope else []
     egno_results_files: list[Path] = list(egno_dir.glob("*.json"))
     egnn_results_files: list[Path] = list(egnn_dir.glob("*.json")) if egnn_dir else []
 
@@ -162,9 +158,7 @@ def plot_invariance_results(invariance_to_plot: Literal["t", "p"]) -> None:
                 if "runs" in data:
                     all_losses = [run["test_all_loss"] for run in data["runs"]]
                     mean = sum(all_losses) / len(all_losses)
-                    variance = sum((x - mean) ** 2 for x in all_losses) / len(
-                        all_losses
-                    )
+                    variance = sum((x - mean) ** 2 for x in all_losses) / len(all_losses)
                     std = variance**0.5
 
                     param_values.append(param_value)
@@ -180,9 +174,7 @@ def plot_invariance_results(invariance_to_plot: Literal["t", "p"]) -> None:
     egnn_param_values, egnn_means, egnn_stds = process_egno_files(egnn_results_files)
 
     # Sort all results by parameter values
-    def sort_results(
-        param_values: list[int], means: list[float], stds: list[float]
-    ) -> tuple[list[int], list[float], list[float]]:
+    def sort_results(param_values: list[int], means: list[float], stds: list[float]) -> tuple[list[int], list[float], list[float]]:
         sorted_indices = np.argsort(param_values)
         return (
             [param_values[i] for i in sorted_indices],
@@ -190,15 +182,9 @@ def plot_invariance_results(invariance_to_plot: Literal["t", "p"]) -> None:
             [stds[i] for i in sorted_indices],
         )
 
-    s2t_param_values, s2t_means, s2t_stds = sort_results(
-        s2t_param_values, s2t_means, s2t_stds
-    )
-    egno_param_values, egno_means, egno_stds = sort_results(
-        egno_param_values, egno_means, egno_stds
-    )
-    egnn_param_values, egnn_means, egnn_stds = sort_results(
-        egnn_param_values, egnn_means, egnn_stds
-    )
+    s2t_param_values, s2t_means, s2t_stds = sort_results(s2t_param_values, s2t_means, s2t_stds)
+    egno_param_values, egno_means, egno_stds = sort_results(egno_param_values, egno_means, egno_stds)
+    egnn_param_values, egnn_means, egnn_stds = sort_results(egnn_param_values, egnn_means, egnn_stds)
 
     # Sort ATOM no trope results if available
     if s2t_no_trope_param_values:
@@ -213,9 +199,7 @@ def plot_invariance_results(invariance_to_plot: Literal["t", "p"]) -> None:
         print(f"S2T no trope param values: {s2t_no_trope_param_values}")
 
     # Scale values by 10^2 for display
-    def scale_values(
-        means: list[float], stds: list[float]
-    ) -> tuple[list[float], list[float]]:
+    def scale_values(means: list[float], stds: list[float]) -> tuple[list[float], list[float]]:
         return [mean * 100 for mean in means], [std * 100 for std in stds]
 
     s2t_means_scaled, s2t_stds_scaled = scale_values(s2t_means, s2t_stds)
@@ -226,9 +210,7 @@ def plot_invariance_results(invariance_to_plot: Literal["t", "p"]) -> None:
     s2t_no_trope_means_scaled: list[float] = []
     s2t_no_trope_stds_scaled: list[float] = []
     if s2t_no_trope_param_values:
-        s2t_no_trope_means_scaled, s2t_no_trope_stds_scaled = scale_values(
-            s2t_no_trope_means, s2t_no_trope_stds
-        )
+        s2t_no_trope_means_scaled, s2t_no_trope_stds_scaled = scale_values(s2t_no_trope_means, s2t_no_trope_stds)
 
     # Create figure
     fig, ax = plt.subplots(figsize=(6, 4))
@@ -245,15 +227,9 @@ def plot_invariance_results(invariance_to_plot: Literal["t", "p"]) -> None:
     )
 
     # Calculate and plot 2SD range for S2T (with trope)
-    s2t_upper_bound = [
-        mean + 2 * std for mean, std in zip(s2t_means_scaled, s2t_stds_scaled)
-    ]
-    s2t_lower_bound = [
-        mean - 2 * std for mean, std in zip(s2t_means_scaled, s2t_stds_scaled)
-    ]
-    ax.fill_between(
-        s2t_param_values, s2t_lower_bound, s2t_upper_bound, color=blue, alpha=0.2
-    )
+    s2t_upper_bound = [mean + 2 * std for mean, std in zip(s2t_means_scaled, s2t_stds_scaled)]
+    s2t_lower_bound = [mean - 2 * std for mean, std in zip(s2t_means_scaled, s2t_stds_scaled)]
+    ax.fill_between(s2t_param_values, s2t_lower_bound, s2t_upper_bound, color=blue, alpha=0.2)
 
     # Plot the S2T mean line with triangle markers (without trope) if available
     if s2t_no_trope_param_values:
@@ -269,14 +245,8 @@ def plot_invariance_results(invariance_to_plot: Literal["t", "p"]) -> None:
         )
 
         # Calculate and plot 2SD range for S2T (without trope)
-        s2t_no_trope_upper_bound = [
-            mean + 2 * std
-            for mean, std in zip(s2t_no_trope_means_scaled, s2t_no_trope_stds_scaled)
-        ]
-        s2t_no_trope_lower_bound = [
-            mean - 2 * std
-            for mean, std in zip(s2t_no_trope_means_scaled, s2t_no_trope_stds_scaled)
-        ]
+        s2t_no_trope_upper_bound = [mean + 2 * std for mean, std in zip(s2t_no_trope_means_scaled, s2t_no_trope_stds_scaled)]
+        s2t_no_trope_lower_bound = [mean - 2 * std for mean, std in zip(s2t_no_trope_means_scaled, s2t_no_trope_stds_scaled)]
         ax.fill_between(
             s2t_no_trope_param_values,
             s2t_no_trope_lower_bound,
@@ -296,15 +266,9 @@ def plot_invariance_results(invariance_to_plot: Literal["t", "p"]) -> None:
             label="EGNO",
             markersize=6,
         )
-        egno_upper_bound = [
-            mean + 2 * std for mean, std in zip(egno_means_scaled, egno_stds_scaled)
-        ]
-        egno_lower_bound = [
-            mean - 2 * std for mean, std in zip(egno_means_scaled, egno_stds_scaled)
-        ]
-        ax.fill_between(
-            egno_param_values, egno_lower_bound, egno_upper_bound, color=red, alpha=0.2
-        )
+        egno_upper_bound = [mean + 2 * std for mean, std in zip(egno_means_scaled, egno_stds_scaled)]
+        egno_lower_bound = [mean - 2 * std for mean, std in zip(egno_means_scaled, egno_stds_scaled)]
+        ax.fill_between(egno_param_values, egno_lower_bound, egno_upper_bound, color=red, alpha=0.2)
 
     # Plot EGNN results if available
     if egnn_param_values:
@@ -317,12 +281,8 @@ def plot_invariance_results(invariance_to_plot: Literal["t", "p"]) -> None:
             label="EGNN",
             markersize=6,
         )
-        egnn_upper_bound = [
-            mean + 2 * std for mean, std in zip(egnn_means_scaled, egnn_stds_scaled)
-        ]
-        egnn_lower_bound = [
-            mean - 2 * std for mean, std in zip(egnn_means_scaled, egnn_stds_scaled)
-        ]
+        egnn_upper_bound = [mean + 2 * std for mean, std in zip(egnn_means_scaled, egnn_stds_scaled)]
+        egnn_lower_bound = [mean - 2 * std for mean, std in zip(egnn_means_scaled, egnn_stds_scaled)]
         ax.fill_between(
             egnn_param_values,
             egnn_lower_bound,

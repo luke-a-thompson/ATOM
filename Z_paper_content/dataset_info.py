@@ -34,44 +34,25 @@ def print_file_info(filepath: Path) -> None:
             displacements: npt.NDArray[np.float64] = np.diff(arr, axis=0)
 
             # Magnitude of displacement for each atom at each timestep
-            displacement_norms: npt.NDArray[np.float64] = np.linalg.norm(
-                displacements, axis=2
-            )
+            displacement_norms: npt.NDArray[np.float64] = np.linalg.norm(displacements, axis=2)
 
             # Average displacement per atom (measure of mobility)
-            avg_displacement_per_atom: npt.NDArray[np.float64] = np.mean(
-                displacement_norms, axis=0
-            )
-            print(
-                f"Most mobile atom: {np.argmax(avg_displacement_per_atom)}, "
-                f"displacement: {np.max(avg_displacement_per_atom):.6f}"
-            )
-            print(
-                f"Least mobile atom: {np.argmin(avg_displacement_per_atom)}, "
-                f"displacement: {np.min(avg_displacement_per_atom):.6f}"
-            )
+            avg_displacement_per_atom: npt.NDArray[np.float64] = np.mean(displacement_norms, axis=0)
+            print(f"Most mobile atom: {np.argmax(avg_displacement_per_atom)}, displacement: {np.max(avg_displacement_per_atom):.6f}")
+            print(f"Least mobile atom: {np.argmin(avg_displacement_per_atom)}, displacement: {np.min(avg_displacement_per_atom):.6f}")
 
             # Variance of displacement per atom (measure of chaotic movement)
-            var_displacement_per_atom: npt.NDArray[np.float64] = np.var(
-                displacement_norms, axis=0
-            )
-            print(
-                f"Most chaotic atom: {np.argmax(var_displacement_per_atom)}, "
-                f"variance: {np.max(var_displacement_per_atom):.6f}"
-            )
+            var_displacement_per_atom: npt.NDArray[np.float64] = np.var(displacement_norms, axis=0)
+            print(f"Most chaotic atom: {np.argmax(var_displacement_per_atom)}, variance: {np.max(var_displacement_per_atom):.6f}")
 
             # Overall trajectory statistics
-            total_path_length: npt.NDArray[np.float64] = np.sum(
-                displacement_norms, axis=0
-            )
+            total_path_length: npt.NDArray[np.float64] = np.sum(displacement_norms, axis=0)
             avg_path_length: float = np.mean(total_path_length)
             print(f"Average path length per atom: {avg_path_length:.6f}")
 
             # Measure of overall system volatility
             system_volatility: float = np.mean(var_displacement_per_atom)
-            print(
-                f"System volatility (mean variance of displacements): {system_volatility:.6f}"
-            )
+            print(f"System volatility (mean variance of displacements): {system_volatility:.6f}")
         else:
             print("\nNo 'R' array found in this file.")
 
@@ -88,9 +69,7 @@ def print_theory_summary(data_dir: Path) -> None:
             print(f"Theory: {data['theory']}\n")
 
 
-def create_corrected_volatility_visualization(
-    data_dir: Path, dataset_name: str, global_max_x: float
-) -> None:
+def create_corrected_volatility_visualization(data_dir: Path, dataset_name: str, global_max_x: float) -> None:
     """Create simplified visualization with proper log scaling and no color dimension."""
     # Lists to store data
     molecules: list[str] = []
@@ -121,25 +100,17 @@ def create_corrected_volatility_visualization(
 
         # 2. Step volatility
         displacements: npt.NDArray[np.float64] = np.diff(arr, axis=0)
-        displacement_norms: npt.NDArray[np.float64] = np.linalg.norm(
-            displacements, axis=2
-        )
-        var_displacement_per_atom: npt.NDArray[np.float64] = np.var(
-            displacement_norms, axis=0
-        )
+        displacement_norms: npt.NDArray[np.float64] = np.linalg.norm(displacements, axis=2)
+        var_displacement_per_atom: npt.NDArray[np.float64] = np.var(displacement_norms, axis=0)
         step_volatility: float = float(np.mean(var_displacement_per_atom))
 
         # Scale RMD17 data to match the 1e-5 to 1e-4 range
         if "rmd17" in data_dir.stem:
-            step_volatility = (
-                step_volatility * 1e-5
-            )  # Scale down to match other datasets
+            step_volatility = step_volatility * 1e-5  # Scale down to match other datasets
 
         # Scale up MD17 and RMD17 data to account for 0.5fs timestep
         if "md17" in data_dir.stem or "rmd17" in data_dir.stem:
-            step_volatility = (
-                step_volatility * 2.0
-            )  # Double the values for 0.5fs timestep
+            step_volatility = step_volatility * 2.0  # Double the values for 0.5fs timestep
 
         step_volatilities.append(step_volatility)
 
@@ -167,14 +138,8 @@ def create_corrected_volatility_visualization(
     # Add labels for each point
     for i, molecule in enumerate(molecules):
         # Calculate z-scores for both x and y values
-        x_zscore = abs(
-            (position_variances[i] - np.median(position_variances))
-            / np.std(position_variances)
-        )
-        y_zscore = abs(
-            (step_volatilities[i] - np.median(step_volatilities))
-            / np.std(step_volatilities)
-        )
+        x_zscore = abs((position_variances[i] - np.median(position_variances)) / np.std(position_variances))
+        y_zscore = abs((step_volatilities[i] - np.median(step_volatilities)) / np.std(step_volatilities))
 
         # Only label points that are more than 2 standard deviations from median in either direction
         if x_zscore > 2 or y_zscore > 2:
@@ -249,9 +214,7 @@ def create_corrected_volatility_visualization(
         f"/Z_paper_content/dataset/{dataset_name}_molecule_behavior_comparison.pdf",
         format="pdf",
     )
-    print(
-        f"Figure saved as PDF to /Z_paper_content/dataset/{dataset_name}_molecule_behavior_comparison.pdf"
-    )
+    print(f"Figure saved as PDF to /Z_paper_content/dataset/{dataset_name}_molecule_behavior_comparison.pdf")
 
 
 if __name__ == "__main__":

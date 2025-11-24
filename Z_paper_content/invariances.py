@@ -43,9 +43,7 @@ def _resolve_config_path(config_arg: str) -> Path:
         return path
     tomls: list[Path] = sorted(path.glob("*.toml"))
     if len(tomls) != 1:
-        raise FileNotFoundError(
-            f"Expected exactly one .toml in {path}, found {len(tomls)}"
-        )
+        raise FileNotFoundError(f"Expected exactly one .toml in {path}, found {len(tomls)}")
     return tomls[0]
 
 
@@ -58,9 +56,7 @@ def _resolve_model_paths(model_arg: str) -> list[Path]:
     if path.is_file():
         return [path]
     # Search recursively
-    best: list[Path] = sorted(
-        list(path.rglob("*best*.pt")) + list(path.rglob("*best*.pth"))
-    )
+    best: list[Path] = sorted(list(path.rglob("*best*.pt")) + list(path.rglob("*best*.pth")))
     if best:
         return best
     all_ckpts: list[Path] = sorted(list(path.rglob("*.pt")) + list(path.rglob("*.pth")))
@@ -99,9 +95,7 @@ def _select_label_from_model_path(model_path: Path) -> str:
     return model_path.stem
 
 
-def _label_and_color_for_series(
-    config_path: Path, model_anchor: Path
-) -> tuple[str, str]:
+def _label_and_color_for_series(config_path: Path, model_anchor: Path) -> tuple[str, str]:
     """Derive legend label and color for a series given its config and model path.
 
     If the config's benchmark_name == "NoPE", return ("ATOM NoPE", blue).
@@ -114,9 +108,7 @@ def _label_and_color_for_series(
 
     try:
         cfg = Config.from_toml(config_path)
-        bench_name = getattr(
-            getattr(cfg, "benchmark", object()), "benchmark_name", None
-        )
+        bench_name = getattr(getattr(cfg, "benchmark", object()), "benchmark_name", None)
         if isinstance(bench_name, str) and bench_name.strip().lower() == "nope":
             return "ATOM NoPE", blue
     except Exception:
@@ -139,9 +131,7 @@ def _run_single_eval(config: Config, model_path: Path) -> tuple[float, float]:
 
     # Initialize model and load weights
     model = initialize_model(config).to(config.training.device)
-    raw_sd = cast(
-        dict[str, torch.Tensor], torch.load(str(model_path), weights_only=True)
-    )
+    raw_sd = cast(dict[str, torch.Tensor], torch.load(str(model_path), weights_only=True))
     state_dict = clean_state_dict_prefixes(OrderedDict(raw_sd))
     _ = model.load_state_dict(state_dict, strict=False)
     _ = model.eval()
@@ -160,12 +150,8 @@ def run_p_invariance(
 
     Returns a dict mapping label -> list of (p, mean_s2t_mse, std_s2t_mse).
     """
-    cfg_args: list[str] = (
-        [config_paths] if isinstance(config_paths, str) else list(config_paths)
-    )
-    mdl_args: list[str] = (
-        [model_paths] if isinstance(model_paths, str) else list(model_paths)
-    )
+    cfg_args: list[str] = [config_paths] if isinstance(config_paths, str) else list(config_paths)
+    mdl_args: list[str] = [model_paths] if isinstance(model_paths, str) else list(model_paths)
     if len(cfg_args) != len(mdl_args):
         raise ValueError("--config and --model must have the same number of arguments")
 
@@ -216,18 +202,10 @@ def run_p_invariance(
     plt.legend(loc="best")
     plt.tight_layout()
 
-    out_dir = (
-        Path(save_dir)
-        if save_dir is not None
-        else Path("Z_paper_content/invariance_results")
-    )
+    out_dir = Path(save_dir) if save_dir is not None else Path("Z_paper_content/invariance_results")
     out_dir.mkdir(parents=True, exist_ok=True)
     # Save naming depends on number of series
-    out_name = (
-        "p_invariance_multi.pdf"
-        if len(series_results) > 1
-        else f"p_invariance_{next(iter(series_results)).replace(' ', '_')}.pdf"
-    )
+    out_name = "p_invariance_multi.pdf" if len(series_results) > 1 else f"p_invariance_{next(iter(series_results)).replace(' ', '_')}.pdf"
     out_path = out_dir / out_name
     plt.savefig(out_path, format="pdf", dpi=300, bbox_inches="tight")
     return series_results
@@ -243,12 +221,8 @@ def run_t_invariance(
 
     Returns a dict mapping label -> list of (t, mean_s2t_mse, std_s2t_mse).
     """
-    cfg_args: list[str] = (
-        [config_paths] if isinstance(config_paths, str) else list(config_paths)
-    )
-    mdl_args: list[str] = (
-        [model_paths] if isinstance(model_paths, str) else list(model_paths)
-    )
+    cfg_args: list[str] = [config_paths] if isinstance(config_paths, str) else list(config_paths)
+    mdl_args: list[str] = [model_paths] if isinstance(model_paths, str) else list(model_paths)
     if len(cfg_args) != len(mdl_args):
         raise ValueError("--config and --model must have the same number of arguments")
 
@@ -297,26 +271,16 @@ def run_t_invariance(
     plt.legend(loc="best")
     plt.tight_layout()
 
-    out_dir = (
-        Path(save_dir)
-        if save_dir is not None
-        else Path("Z_paper_content/invariance_results")
-    )
+    out_dir = Path(save_dir) if save_dir is not None else Path("Z_paper_content/invariance_results")
     out_dir.mkdir(parents=True, exist_ok=True)
-    out_name = (
-        "t_invariance_multi.pdf"
-        if len(series_results) > 1
-        else f"t_invariance_{next(iter(series_results)).replace(' ', '_')}.pdf"
-    )
+    out_name = "t_invariance_multi.pdf" if len(series_results) > 1 else f"t_invariance_{next(iter(series_results)).replace(' ', '_')}.pdf"
     out_path = out_dir / out_name
     plt.savefig(out_path, format="pdf", dpi=300, bbox_inches="tight")
     return series_results
 
 
 def main_p() -> None:
-    parser = argparse.ArgumentParser(
-        description="Evaluate P-invariance (num_timesteps) and plot MSE vs P."
-    )
+    parser = argparse.ArgumentParser(description="Evaluate P-invariance (num_timesteps) and plot MSE vs P.")
     parser.add_argument(
         "--p",
         dest="p",
@@ -340,9 +304,7 @@ def main_p() -> None:
         required=True,
         help="One or more paths to model checkpoints or directories (same count as --config).",
     )
-    parser.add_argument(
-        "--save-dir", dest="save_dir", type=str, required=False, default=None
-    )
+    parser.add_argument("--save-dir", dest="save_dir", type=str, required=False, default=None)
     args = parser.parse_args()
 
     p_values = _parse_numeric_list(args.p)
@@ -358,9 +320,7 @@ def main_p() -> None:
 
 
 def main_t() -> None:
-    parser = argparse.ArgumentParser(
-        description="Evaluate T-invariance (delta_T) and plot MSE vs Δt."
-    )
+    parser = argparse.ArgumentParser(description="Evaluate T-invariance (delta_T) and plot MSE vs Δt.")
     parser.add_argument(
         "--t",
         dest="t",
@@ -384,9 +344,7 @@ def main_t() -> None:
         required=True,
         help="One or more paths to model checkpoints or directories (same count as --config).",
     )
-    parser.add_argument(
-        "--save-dir", dest="save_dir", type=str, required=False, default=None
-    )
+    parser.add_argument("--save-dir", dest="save_dir", type=str, required=False, default=None)
     args = parser.parse_args()
 
     t_values = _parse_numeric_list(args.t)

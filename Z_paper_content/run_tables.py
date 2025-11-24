@@ -13,22 +13,16 @@ from Z_paper_content.create_runtime_tables import build_runtime_table, get_run_t
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(
-        description="Generate MSE and runtime tables into Z_paper_content/tables/."
-    )
+    parser = argparse.ArgumentParser(description="Generate MSE and runtime tables into Z_paper_content/tables/.")
     _ = parser.add_argument(
         "dirs",
         nargs="+",
         type=str,
         help="One or more directories with runs (contain results.json files)",
     )
-    _ = parser.add_argument(
-        "--no-bold", action="store_true", help="Do not bold best values in tables"
-    )
+    _ = parser.add_argument("--no-bold", action="store_true", help="Do not bold best values in tables")
     args: argparse.Namespace = parser.parse_args()
-    return run_tables_variadic(
-        [str(d) for d in args.dirs], bold_best=(not bool(args.no_bold))
-    )
+    return run_tables_variadic([str(d) for d in args.dirs], bold_best=(not bool(args.no_bold)))
 
 
 def run_tables(egno_dir: str, atom_dir: str) -> int:
@@ -58,9 +52,7 @@ def run_tables_variadic(dirs: list[str], bold_best: bool = True) -> int:
     # For pre-inference, if we have exactly two dirs and they are EGNO/ATOMS style, use the 2-dir collector,
     # otherwise collect across all provided dirs
     if len(dir_paths) == 2:
-        pre_inferred_token: str = _infer_dataset_token(
-            _collect_mse_results(egno_dir=dir_paths[0], atom_dir=dir_paths[1])
-        )
+        pre_inferred_token: str = _infer_dataset_token(_collect_mse_results(egno_dir=dir_paths[0], atom_dir=dir_paths[1]))
     else:
         from Z_paper_content.create_mse_tables import _collect_results_from_dirs
 
@@ -93,15 +85,11 @@ def run_tables_variadic(dirs: list[str], bold_best: bool = True) -> int:
             dataset=chosen_dataset,
             f_peak_tflops=15.0,
         )
-        _ = (tables_dir / f"runtime_{chosen_dataset}.tex").write_text(
-            runtime_tex, encoding="utf-8"
-        )
+        _ = (tables_dir / f"runtime_{chosen_dataset}.tex").write_text(runtime_tex, encoding="utf-8")
 
     # Build MSE table(s) and write with dataset name appended, split per time_lag_mode
     if len(dir_paths) == 2:
-        mse_by_mode: dict[str, str] = build_mse_tables(
-            egno_dir=dir_paths[0], atom_dir=dir_paths[1], bold_best=bold_best
-        )
+        mse_by_mode: dict[str, str] = build_mse_tables(egno_dir=dir_paths[0], atom_dir=dir_paths[1], bold_best=bold_best)
         results = _collect_mse_results(egno_dir=dir_paths[0], atom_dir=dir_paths[1])
     else:
         mse_by_mode = build_mse_tables_from_dirs(dir_paths, bold_best=bold_best)
@@ -109,9 +97,7 @@ def run_tables_variadic(dirs: list[str], bold_best: bool = True) -> int:
 
         results = _collect_results_from_dirs(dir_paths)
     inferred_from_molecules: str = _infer_dataset_token(results)
-    mse_dataset_token: str = (
-        chosen_dataset if chosen_dataset is not None else inferred_from_molecules
-    )
+    mse_dataset_token: str = chosen_dataset if chosen_dataset is not None else inferred_from_molecules
 
     for mode_key, mse_tex in mse_by_mode.items():
         if mse_dataset_token in {"md17", "md22", "rmd17", "tg80"}:

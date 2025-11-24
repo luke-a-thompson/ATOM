@@ -78,10 +78,7 @@ class SpectralConv1d(nn.Module):
             self.scale = 0.1
         else:
             self.scale = 1 / (in_channels * out_channels)
-        self.weights = nn.Parameter(
-            self.scale
-            * torch.rand(in_channels, out_channels, fourier_modes, 2, dtype=torch.float)
-        )
+        self.weights = nn.Parameter(self.scale * torch.rand(in_channels, out_channels, fourier_modes, 2, dtype=torch.float))
 
     @override
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -95,9 +92,7 @@ class SpectralConv1d(nn.Module):
 
         if self.conv_mode == TimeConvMode.TIME_CONV_X:
             # x_ft: [F, M, 3, in_channels] -> out_ft: [modes, M, 3, out_channels]
-            out_ft_modes = torch.einsum(
-                "mndi,iom->mndo", x_ft[:modes], weights_c[:, :, :modes]
-            )
+            out_ft_modes = torch.einsum("mndi,iom->mndo", x_ft[:modes], weights_c[:, :, :modes])
             # Zero-pad to full spectrum length F
             full_out_ft = torch.zeros(
                 max_freq,
@@ -110,9 +105,7 @@ class SpectralConv1d(nn.Module):
             full_out_ft[:modes] = out_ft_modes
         else:
             # x_ft: [F, M, in_channels] -> out_ft: [modes, M, out_channels]
-            out_ft_modes = torch.einsum(
-                "mni,iom->mno", x_ft[:modes], weights_c[:, :, :modes]
-            )
+            out_ft_modes = torch.einsum("mni,iom->mno", x_ft[:modes], weights_c[:, :, :modes])
             # Zero-pad to full spectrum length F
             full_out_ft = torch.zeros(
                 max_freq,
@@ -147,14 +140,10 @@ class TimeConv(nn.Module):
         """
         super().__init__()
         if mode == TimeConvMode.TIME_CONV:
-            self.time_conv = SpectralConv1d(
-                in_channels, out_channels, modes, num_timesteps, mode
-            )
+            self.time_conv = SpectralConv1d(in_channels, out_channels, modes, num_timesteps, mode)
             self.activation = get_activation(FFNActivation.LEAKY_RELU, out_channels)
         else:
-            self.time_conv = SpectralConv1d(
-                in_channels, out_channels, modes, num_timesteps, mode
-            )
+            self.time_conv = SpectralConv1d(in_channels, out_channels, modes, num_timesteps, mode)
             self.activation = None
 
     @override
@@ -195,9 +184,7 @@ class InvariantScalarNet(nn.Module):
         )
 
     @override
-    def forward(
-        self, vectors: torch.Tensor | list[torch.Tensor], scalars: torch.Tensor
-    ) -> torch.Tensor:
+    def forward(self, vectors: torch.Tensor | list[torch.Tensor], scalars: torch.Tensor) -> torch.Tensor:
         """
         :param vectors: torch.Tensor with shape [N, 3, K] or a list of torch.Tensor with shape [N, 3]
         :param scalars: torch.Tensor with shape [N, L] (Optional)
@@ -295,13 +282,9 @@ class EGNN_Layer(nn.Module):
         """ """
         row, col = edge_index[0].to(torch.long), edge_index[1].to(torch.long)
         rij = x[row] - x[col]  # Shape [B*T*E, 3] matches
-        hij = torch.cat(
-            (h[row], h[col], edge_attr), dim=-1
-        )  # Shape [B*T*E, 2K+T] matches; 1 missing from attr due to no stick indicies
+        hij = torch.cat((h[row], h[col], edge_attr), dim=-1)  # Shape [B*T*E, 2K+T] matches; 1 missing from attr due to no stick indicies
 
-        message: torch.Tensor = self.edge_message_net(
-            vectors=[rij], scalars=hij
-        )  # Shape [BM, 3] matches
+        message: torch.Tensor = self.edge_message_net(vectors=[rij], scalars=hij)  # Shape [BM, 3] matches
         coord_message: torch.Tensor = self.coord_net(message)  # Shape [BM, 1] matches
         f: torch.Tensor = (x[row] - x[col]) * coord_message  # Shape [BM, 3] matches
 
@@ -311,9 +294,7 @@ class EGNN_Layer(nn.Module):
             f = f * mask_f
             message = message * mask_f
 
-        tot_f = aggregate(
-            f, row, x.shape[0], AggregationMode.MEAN, edge_mask
-        )  # Shape [B*N*T, 3] matches
+        tot_f = aggregate(f, row, x.shape[0], AggregationMode.MEAN, edge_mask)  # Shape [B*N*T, 3] matches
         tot_f = torch.clamp(tot_f, min=-100, max=100)
 
         if v is not None:
@@ -321,9 +302,7 @@ class EGNN_Layer(nn.Module):
         else:
             x = x + tot_f  # [BN, 3]
 
-        tot_message = aggregate(
-            message, row, x.shape[0], AggregationMode.SUM, edge_mask
-        )  # [BN, K]
+        tot_message = aggregate(message, row, x.shape[0], AggregationMode.SUM, edge_mask)  # [BN, K]
         node_message = torch.cat((h, tot_message), dim=-1)  # Shape [BN, K+K] matches
         if self.h_update:
             h = h + self.node_net(node_message)  # [BN, K], corrected EGNN residual
@@ -368,10 +347,7 @@ class EGNN(nn.Module):
         edge_attr: torch.Tensor,
         v: torch.Tensor | None = None,
         edge_mask: torch.Tensor | None = None,
-    ) -> (
-        tuple[torch.Tensor, torch.Tensor | None, torch.Tensor]
-        | tuple[torch.Tensor, torch.Tensor]
-    ):
+    ) -> tuple[torch.Tensor, torch.Tensor | None, torch.Tensor] | tuple[torch.Tensor, torch.Tensor]:
         h = self.embedding(h)
         for i in range(len(self.layers)):
             x, v, h = self.layers[i](x, h, edge_index, edge_attr, v, edge_mask)

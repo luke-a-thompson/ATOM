@@ -166,10 +166,7 @@ def analyze_dataset():
             # --- Pre-computation criteria ---
             if any(atom.GetSymbol() not in allowed_atoms for atom in mol.GetAtoms()):
                 continue
-            if any(
-                sum(1 for atom in mol.GetAtoms() if atom.GetSymbol() == element) > count
-                for element, count in max_atoms_of_type.items()
-            ):
+            if any(sum(1 for atom in mol.GetAtoms() if atom.GetSymbol() == element) > count for element, count in max_atoms_of_type.items()):
                 continue
             if len(Chem.GetMolFrags(mol)) > 1:
                 continue
@@ -178,9 +175,7 @@ def analyze_dataset():
 
             if len(candidate_batch) >= batch_size:
                 # Process the batch
-                batch_fps = fp_gen.GetFingerprints(
-                    candidate_batch, numThreads=os.cpu_count() or 1
-                )
+                batch_fps = fp_gen.GetFingerprints(candidate_batch, numThreads=os.cpu_count() or 1)
                 for i in range(len(candidate_batch)):
                     candidate_fp = batch_fps[i]
 
@@ -190,11 +185,7 @@ def analyze_dataset():
                     total_similarity += max_similarity
                     total_molecules_processed += 1
 
-                    if (
-                        similarity_lower_bound
-                        <= max_similarity
-                        <= similarity_upper_bound
-                    ):
+                    if similarity_lower_bound <= max_similarity <= similarity_upper_bound:
                         million_satisfying_criteria += 1
 
                 candidate_batch = []  # Reset batch
@@ -203,29 +194,17 @@ def analyze_dataset():
             current_million_boundary = total_compounds_read // 1_000_000
             if current_million_boundary > last_million_boundary:
                 million_counter += 1
-                mean_similarity = (
-                    (total_similarity / total_molecules_processed)
-                    if total_molecules_processed > 0
-                    else 0.0
-                )
-                print(
-                    f"\n--- Stats for million #{million_counter} (total compounds read) ---"
-                )
-                print(
-                    f"Mean similarity to seeds (for {total_molecules_processed} filtered compounds): {mean_similarity:.4f}"
-                )
-                print(
-                    f"Molecules satisfying criteria in this million-chunk: {million_satisfying_criteria}"
-                )
+                mean_similarity = (total_similarity / total_molecules_processed) if total_molecules_processed > 0 else 0.0
+                print(f"\n--- Stats for million #{million_counter} (total compounds read) ---")
+                print(f"Mean similarity to seeds (for {total_molecules_processed} filtered compounds): {mean_similarity:.4f}")
+                print(f"Molecules satisfying criteria in this million-chunk: {million_satisfying_criteria}")
                 print("---------------------------\n")
                 million_satisfying_criteria = 0
                 last_million_boundary = current_million_boundary
 
         # Process any remaining molecules in the batch at the end of the file
         if candidate_batch:
-            batch_fps = fp_gen.GetFingerprints(
-                candidate_batch, numThreads=os.cpu_count() or 1
-            )
+            batch_fps = fp_gen.GetFingerprints(candidate_batch, numThreads=os.cpu_count() or 1)
             for i in range(len(candidate_batch)):
                 candidate_fp = batch_fps[i]
 

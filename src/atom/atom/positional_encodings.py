@@ -66,11 +66,7 @@ class TemporalRoPE(nn.Module):
 
         self.half_dim = d_head // 2
 
-        self.freqs = (
-            (1.0 / (self.base ** (2 * torch.arange(0, self.half_dim).float() / d_head)))
-            .unsqueeze(0)
-            .unsqueeze(0)
-        )  # [1, 1, half_dim]
+        self.freqs = (1.0 / (self.base ** (2 * torch.arange(0, self.half_dim).float() / d_head))).unsqueeze(0).unsqueeze(0)  # [1, 1, half_dim]
 
     @override
     def forward(
@@ -105,9 +101,7 @@ class TemporalRoPE(nn.Module):
         num_nodes = seq_len // self.num_timesteps
         assert H == self.n_heads, f"Expected n_heads={self.n_heads}, got {H}"
         assert d_head == self.d_head, f"Expected d_head={self.d_head}, got {d_head}"
-        assert seq_len % self.num_timesteps == 0, (
-            f"seq_len={seq_len} must be divisible by num_timesteps={self.num_timesteps}."
-        )
+        assert seq_len % self.num_timesteps == 0, f"seq_len={seq_len} must be divisible by num_timesteps={self.num_timesteps}."
 
         # 1) Build cumulative times per timestep from increments, then repeat per node
         # time_increments expected shape: [B, T] of per-step increments Δt_i
@@ -115,19 +109,10 @@ class TemporalRoPE(nn.Module):
         if time_increments is None:
             # Fallback to unit increments => times = [0,1,2,...,T-1]
             B = tensor.shape[0]
-            times_exclusive = (
-                torch.arange(
-                    self.num_timesteps, device=tensor.device, dtype=torch.float32
-                )
-                .unsqueeze(0)
-                .expand(B, -1)
-            )  # [B,T]
+            times_exclusive = torch.arange(self.num_timesteps, device=tensor.device, dtype=torch.float32).unsqueeze(0).expand(B, -1)  # [B,T]
         else:
             # Ensure float for angle computation
-            times_exclusive = (
-                torch.cumsum(time_increments.to(tensor.device).float(), dim=1)
-                - time_increments.to(tensor.device).float()
-            )  # [B,T]
+            times_exclusive = torch.cumsum(time_increments.to(tensor.device).float(), dim=1) - time_increments.to(tensor.device).float()  # [B,T]
 
         # Repeat each timestep time across nodes, then flatten
         # times_grid: [B, T, N]
@@ -136,9 +121,7 @@ class TemporalRoPE(nn.Module):
 
         # 2) Construct angles with scaling by tau and frequencies
         #    angle[b, pos, k] = (positions[b, pos] / tau) * freqs[k]
-        angle = (positions / max(self.tau, 1e-12)).unsqueeze(-1) * self.freqs.to(
-            tensor.device
-        )  # [B, seq_len, half_dim]
+        angle = (positions / max(self.tau, 1e-12)).unsqueeze(-1) * self.freqs.to(tensor.device)  # [B, seq_len, half_dim]
 
         # 3) cos, sin => each [B, seq_len, half_dim]
         cos_t = angle.cos()
@@ -238,11 +221,7 @@ class RoPE(nn.Module):
             self.register_buffer("offset", torch.zeros(n_heads), persistent=False)
 
         # Create freqs on CPU; move to the input device in forward
-        self.freqs = (
-            (1.0 / (self.base ** (2 * torch.arange(0, self.half_dim).float() / d_head)))
-            .unsqueeze(0)
-            .unsqueeze(0)
-        )  # [1, 1, half_dim]
+        self.freqs = (1.0 / (self.base ** (2 * torch.arange(0, self.half_dim).float() / d_head))).unsqueeze(0).unsqueeze(0)  # [1, 1, half_dim]
 
     @override
     def forward(self, tensor: torch.Tensor, mask: torch.Tensor | None) -> torch.Tensor:
@@ -275,9 +254,7 @@ class RoPE(nn.Module):
         positions = torch.arange(seq_len, device=tensor.device)
 
         # 2) Construct angles per head: shape => [H, seq_len, half_dim].
-        offset_broadcast = self.offset.to(tensor.device).unsqueeze(
-            -1
-        )  # [H, 1], this adds the head dim
+        offset_broadcast = self.offset.to(tensor.device).unsqueeze(-1)  # [H, 1], this adds the head dim
         positions_broadcast = positions.unsqueeze(0)  # [1, seq_len]
         shifted_positions = positions_broadcast + offset_broadcast
         angle = shifted_positions.unsqueeze(-1) * self.freqs.to(tensor.device)
@@ -343,9 +320,7 @@ class SinusoidalPositionalEmbedding(nn.Module):
 
         pe = torch.zeros(max_len, d_model)
         position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
-        div_term = torch.exp(
-            torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model)
-        )
+        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
         pe[:, 0::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)
         pe = pe.unsqueeze(0)  # Shape: [1, max_len, d_model]
@@ -379,9 +354,7 @@ class SinusoidalPositionalEmbedding(nn.Module):
 
         seq_len = x.shape[1]
         if seq_len > self.pe.shape[1]:
-            raise ValueError(
-                f"Sequence length {seq_len} exceeds max_len {self.pe.shape[1]}"
-            )
+            raise ValueError(f"Sequence length {seq_len} exceeds max_len {self.pe.shape[1]}")
 
         # Add positional embedding using broadcasting
         x = x + self.pe[:, :seq_len].to(x.device)

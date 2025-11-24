@@ -12,9 +12,7 @@ class EquivariantProjectPosOnly(nn.Module):
         self.linear_pos = o3.Linear(lifting_dim_irreps, out_irreps)
 
     @override
-    def forward(
-        self, lifted_x_0: torch.Tensor, lifted_concat_features: torch.Tensor
-    ) -> torch.Tensor:
+    def forward(self, lifted_x_0: torch.Tensor, lifted_concat_features: torch.Tensor) -> torch.Tensor:
         _ = lifted_concat_features
         pos = self.linear_pos(lifted_x_0)
         return pos
@@ -29,9 +27,7 @@ class EquivariantProjectFull(nn.Module):
         self.linear_energy = o3.Linear(lifting_dim_irreps, "1x0e")
 
     @override
-    def forward(
-        self, lifted_x_0: torch.Tensor, lifted_concat_features: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def forward(self, lifted_x_0: torch.Tensor, lifted_concat_features: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         _ = lifted_concat_features
         pos = self.linear_pos(lifted_x_0)
         vel = self.linear_vel(lifted_x_0)

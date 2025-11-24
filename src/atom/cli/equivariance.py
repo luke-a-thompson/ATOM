@@ -20,9 +20,7 @@ from atom.training import (
 
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments."""
-    parser = argparse.ArgumentParser(
-        description="Test model equivariance to 3D rotations"
-    )
+    parser = argparse.ArgumentParser(description="Test model equivariance to 3D rotations")
     _ = parser.add_argument("--config", type=str, help="Path to the config file")
     _ = parser.add_argument("--model", type=str, help="Path to the model checkpoint")
     _ = parser.add_argument(
@@ -56,9 +54,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def load_model_and_loader(
-    config_path: str, model_path: str
-) -> tuple[Config, torch.nn.Module, DataLoader]:
+def load_model_and_loader(config_path: str, model_path: str) -> tuple[Config, torch.nn.Module, DataLoader]:
     """Loads config, model, and the test dataloader."""
     try:
         config = Config.from_toml(Path(config_path))
@@ -67,9 +63,7 @@ def load_model_and_loader(
         sys.exit(1)
 
     try:
-        model_state_dict = torch.load(
-            model_path, map_location=config.training.device, weights_only=True
-        )
+        model_state_dict = torch.load(model_path, map_location=config.training.device, weights_only=True)
     except FileNotFoundError:
         print(f"Error: Model file {model_path} not found")
         sys.exit(1)
@@ -91,9 +85,7 @@ def fixed_rotation_matrix() -> npt.NDArray[np.float64]:
     return Rotation.from_euler("xyz", [0.3, -0.7, 1.1]).as_matrix()
 
 
-def generate_random_rotations(
-    seed: int, num_rotations: int
-) -> list[npt.NDArray[np.float64]]:
+def generate_random_rotations(seed: int, num_rotations: int) -> list[npt.NDArray[np.float64]]:
     """Generate multiple random rotation matrices using a seed.
 
     Args:
@@ -114,9 +106,7 @@ def generate_random_rotations(
     return rotations
 
 
-def apply_rotation(
-    data: TensorDict, rotation_matrix: npt.NDArray[np.float64]
-) -> TensorDict:
+def apply_rotation(data: TensorDict, rotation_matrix: npt.NDArray[np.float64]) -> TensorDict:
     """Applies a rotation matrix to the spatial components of the data dictionary."""
     rotated_data = data.clone()
 
@@ -130,9 +120,7 @@ def apply_rotation(
         "output": {"xyz": slice(0, 3), "invariant": slice(3, None)},
     }
 
-    def _rotate_slice(
-        tensor: torch.Tensor, rot_mat: npt.NDArray[np.float64], xyz_slice: slice
-    ) -> torch.Tensor:
+    def _rotate_slice(tensor: torch.Tensor, rot_mat: npt.NDArray[np.float64], xyz_slice: slice) -> torch.Tensor:
         xyz = tensor[..., xyz_slice].cpu().numpy()
         original_shape = xyz.shape
         xyz_reshaped = xyz.reshape(-1, 3)
@@ -149,9 +137,7 @@ def apply_rotation(
     for key in ["x_0", "v_0"]:
         if key in rotated_data:
             xyz_slice = feature_config[key]["xyz"]
-            rotated_data[key] = _rotate_slice(
-                rotated_data[key], rotation_matrix, xyz_slice
-            )
+            rotated_data[key] = _rotate_slice(rotated_data[key], rotation_matrix, xyz_slice)
 
     if "concatenated_features" in rotated_data:
         tensor = rotated_data["concatenated_features"]
@@ -211,20 +197,14 @@ def test_model_equivariance(
             break
 
         batch_on_device = {k: v.to(device) for k, v in batch.items()}
-        data_sample = TensorDict(
-            batch_on_device, batch_size=batch_on_device["x_0"].shape[0]
-        )
+        data_sample = TensorDict(batch_on_device, batch_size=batch_on_device["x_0"].shape[0])
 
         print(f"\nBatch {batch_index + 1}: computing original output...")
         with torch.no_grad():
             original_output = model(data_sample)
 
         # Model may return a dict (e.g., {"pos": tensor, ...}) or a raw tensor
-        original_pos = (
-            original_output["pos"]
-            if isinstance(original_output, dict)
-            else original_output
-        )
+        original_pos = original_output["pos"] if isinstance(original_output, dict) else original_output
         original_xyz = original_pos[..., xyz_slice].cpu().numpy()
         batch_size, timesteps, nodes, _ = original_xyz.shape
 
@@ -241,11 +221,7 @@ def test_model_equivariance(
             with torch.no_grad():
                 rotated_output = model(rotated_data_sample)
 
-            rotated_pos = (
-                rotated_output["pos"]
-                if isinstance(rotated_output, dict)
-                else rotated_output
-            )
+            rotated_pos = rotated_output["pos"] if isinstance(rotated_output, dict) else rotated_output
             rotated_xyz = rotated_pos[..., xyz_slice].cpu().numpy()
 
             # Compute MSE vs rotated ground truth
@@ -284,9 +260,7 @@ def test_model_equivariance(
         f"MSE vs GT (unrot input) over {len(mse_unrot_vs_gt_list)} batch(es): "
         f"{mse_unrot_vs_gt_mean_scaled:.2f} ± {mse_unrot_vs_gt_2std_scaled:.2f} {scale_label}"
     )
-    print(
-        f"\nMSE vs GT (rot input) over {len(mse_rot_vs_gt_list)} (batch, rotation) pairs:"
-    )
+    print(f"\nMSE vs GT (rot input) over {len(mse_rot_vs_gt_list)} (batch, rotation) pairs:")
     print(f"  Mean: {mse_rot_vs_gt_mean_scaled:.2f} {scale_label}")
     print(f"  2Std: {mse_rot_vs_gt_2std_scaled:.2f} {scale_label}")
     print(f"  Min:  {mse_rot_vs_gt_min_scaled:.2f} {scale_label}")
@@ -321,46 +295,31 @@ def test_model_equivariance_defect_mc(
     xyz_slice = output_spec["xyz"]
 
     # Generate random rotations once and move to device
-    print(
-        f"Generating {num_rotations} random rotations with seed {rotation_seed} for equivariance defect..."
-    )
+    print(f"Generating {num_rotations} random rotations with seed {rotation_seed} for equivariance defect...")
     rotation_matrices_np = generate_random_rotations(rotation_seed, num_rotations)
-    rotation_matrices_torch: list[torch.Tensor] = [
-        torch.tensor(R_np, device=device, dtype=torch.float32)
-        for R_np in rotation_matrices_np
-    ]
+    rotation_matrices_torch: list[torch.Tensor] = [torch.tensor(R_np, device=device, dtype=torch.float32) for R_np in rotation_matrices_np]
 
     all_norms: list[np.ndarray] = []
 
-    print(
-        f"Estimating equivariance defect over {num_rotations} rotations and up to {num_batches} batch(es)..."
-    )
+    print(f"Estimating equivariance defect over {num_rotations} rotations and up to {num_batches} batch(es)...")
     for batch_index, batch in enumerate(test_loader):
         if batch_index >= num_batches:
             break
 
         batch_on_device = {k: v.to(device) for k, v in batch.items()}
-        data_sample = TensorDict(
-            batch_on_device, batch_size=batch_on_device["x_0"].shape[0]
-        )
+        data_sample = TensorDict(batch_on_device, batch_size=batch_on_device["x_0"].shape[0])
 
         print(f"\nBatch {batch_index + 1}: computing original output...")
         with torch.no_grad():
             original_output = model(data_sample)
 
         # Model may return a dict (e.g., {"pos": tensor, ...}) or a raw tensor
-        original_pos = (
-            original_output["pos"]
-            if isinstance(original_output, dict)
-            else original_output
-        )
+        original_pos = original_output["pos"] if isinstance(original_output, dict) else original_output
         original_xyz: torch.Tensor = original_pos[..., xyz_slice]
         batch_size, timesteps, nodes, _ = original_xyz.shape
 
         dtype: torch.dtype = original_xyz.dtype
-        rotation_matrices_batch: list[torch.Tensor] = [
-            R.to(device=device, dtype=dtype) for R in rotation_matrices_torch
-        ]
+        rotation_matrices_batch: list[torch.Tensor] = [R.to(device=device, dtype=dtype) for R in rotation_matrices_torch]
 
         # Accumulate Monte Carlo estimates of the two group-averaged terms for this batch
         sum_f_phi: torch.Tensor = torch.zeros_like(original_xyz)
@@ -374,20 +333,14 @@ def test_model_equivariance_defect_mc(
             rotated_data_sample = apply_rotation(data_sample, R_np)
             with torch.no_grad():
                 rotated_output = model(rotated_data_sample)
-            rotated_pos = (
-                rotated_output["pos"]
-                if isinstance(rotated_output, dict)
-                else rotated_output
-            )
+            rotated_pos = rotated_output["pos"] if isinstance(rotated_output, dict) else rotated_output
             f_phi_R_x: torch.Tensor = rotated_pos[..., xyz_slice]
             sum_f_phi = sum_f_phi + f_phi_R_x
 
             # 2) rho(R)(f(x)): rotate the original prediction
             original_flat: torch.Tensor = original_xyz.reshape(-1, 3)
             rho_R_fx_flat: torch.Tensor = original_flat @ R.T
-            rho_R_fx: torch.Tensor = rho_R_fx_flat.reshape(
-                batch_size, timesteps, nodes, 3
-            )
+            rho_R_fx: torch.Tensor = rho_R_fx_flat.reshape(batch_size, timesteps, nodes, 3)
             sum_rho_fx = sum_rho_fx + rho_R_fx
 
         # Compute Monte Carlo averages over sampled rotations for this batch
@@ -419,9 +372,7 @@ def test_model_equivariance_defect_mc(
     eps_2std_scaled: float = float(2.0 * eps_std * scale_factor)
     eps_max_scaled: float = float(eps_max * scale_factor)
 
-    print(
-        f"Average ||defect||: {eps_mean_scaled:.2f} ± {eps_2std_scaled:.2f} {scale_label}"
-    )
+    print(f"Average ||defect||: {eps_mean_scaled:.2f} ± {eps_2std_scaled:.2f} {scale_label}")
     print(f"Max     ||defect||: {eps_max_scaled:.2f} {scale_label}")
 
 
@@ -459,9 +410,7 @@ def main() -> None:
     args = parse_args()
     if args.test_model_equiv_defect:
         if not args.config or not args.model:
-            print(
-                "Error: --test_model_equiv_defect requires both --config and --model."
-            )
+            print("Error: --test_model_equiv_defect requires both --config and --model.")
             sys.exit(2)
         test_model_equivariance_defect_mc(
             args.config,

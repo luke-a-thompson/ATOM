@@ -68,9 +68,7 @@ def discover_atom_runs(atom_run_dir: Path) -> list[tuple[str, Path, Path]]:
         (molecule_name, path_to_run_1_best_val_model, path_to_config_toml)
     """
     if not atom_run_dir.exists():
-        raise FileNotFoundError(
-            f"ATOM benchmark directory does not exist: {atom_run_dir}"
-        )
+        raise FileNotFoundError(f"ATOM benchmark directory does not exist: {atom_run_dir}")
 
     runs: list[tuple[str, Path, Path]] = []
 
@@ -102,9 +100,7 @@ def discover_atom_runs(atom_run_dir: Path) -> list[tuple[str, Path, Path]]:
             print(f"[WARN] No .toml config found in {subdir}, skipping.")
             continue
         if len(toml_files) > 1:
-            print(
-                f"[WARN] Multiple .toml files found in {subdir}, using the first one."
-            )
+            print(f"[WARN] Multiple .toml files found in {subdir}, using the first one.")
         config_path: Path = toml_files[0]
 
         model_path: Path = subdir / "run_1" / "best_val_model.pth"
@@ -132,9 +128,7 @@ def run_single_atom_inference(
     """Run timed ATOM inference on a single (model, config) pair."""
     config: Config = Config.from_toml(config_path)
 
-    model_state = torch.load(
-        str(model_path), map_location=config.training.device, weights_only=True
-    )
+    model_state = torch.load(str(model_path), map_location=config.training.device, weights_only=True)
     model_state_clean = clean_state_dict_prefixes(model_state)
 
     if config.dataloader.multitask:
@@ -205,8 +199,7 @@ def run_experiment(
 
     if not discovered:
         raise FileNotFoundError(
-            "No ATOM runs remain after applying molecule filter. "
-            "Check --molecules or the benchmark directory contents.",
+            "No ATOM runs remain after applying molecule filter. Check --molecules or the benchmark directory contents.",
         )
 
     atom_results: list[AtomInferenceResult] = []
@@ -244,10 +237,7 @@ def parse_args() -> argparse.Namespace:
         "--atom-run-dir",
         type=str,
         required=True,
-        help=(
-            "Directory containing MD17 ATOM benchmark runs, e.g. "
-            "benchmark_runs/md17/md17_uniform_paper_atom_25-Sep-2025_03-36-08"
-        ),
+        help=("Directory containing MD17 ATOM benchmark runs, e.g. benchmark_runs/md17/md17_uniform_paper_atom_25-Sep-2025_03-36-08"),
     )
     parser.add_argument(
         "--num-repeats",

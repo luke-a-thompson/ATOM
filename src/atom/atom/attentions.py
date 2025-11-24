@@ -112,9 +112,7 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
             case PositionalEncodingType.NONE:
                 self.positional_encoding = None
             case _:
-                raise ValueError(
-                    f"Invalid positional encoding type: {positional_encoding}"
-                )
+                raise ValueError(f"Invalid positional encoding type: {positional_encoding}")
 
     @override
     def forward(
@@ -152,32 +150,18 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         key_mask_for_scores: torch.Tensor | None = None
         rope_mask_for_rope: torch.Tensor | None = None
         if mask is not None:
-            assert mask.shape == (B, T, N, 1), (
-                f"Expected mask shape (B,T,N,1) but got {mask.shape}"
-            )
+            assert mask.shape == (B, T, N, 1), f"Expected mask shape (B,T,N,1) but got {mask.shape}"
             reshaped_mask = mask.reshape(B, T * N)
             key_mask_for_scores = reshaped_mask.unsqueeze(1).unsqueeze(1)
             rope_mask_for_rope = reshaped_mask.unsqueeze(1).unsqueeze(-1)
 
         # Project Q => [B, num_heads, N*T, d_head]
-        q_proj: torch.Tensor = (
-            self.query(q_data_flat)
-            .view(B, T * N, self.num_heads, self.d_head)
-            .permute(0, 2, 1, 3)
-        )
+        q_proj: torch.Tensor = self.query(q_data_flat).view(B, T * N, self.num_heads, self.d_head).permute(0, 2, 1, 3)
 
         # Apply RoPE-like PE after projection if configured
-        if (
-            self.positional_encoding_type == PositionalEncodingType.TROPE
-            and self.positional_encoding is not None
-        ):
-            q_proj = self.positional_encoding(
-                q_proj, rope_mask_for_rope, time_increments
-            )
-        elif (
-            self.positional_encoding_type == PositionalEncodingType.ROPE
-            and self.positional_encoding is not None
-        ):
+        if self.positional_encoding_type == PositionalEncodingType.TROPE and self.positional_encoding is not None:
+            q_proj = self.positional_encoding(q_proj, rope_mask_for_rope, time_increments)
+        elif self.positional_encoding_type == PositionalEncodingType.ROPE and self.positional_encoding is not None:
             q_proj = self.positional_encoding(q_proj, rope_mask_for_rope)
 
         accumulated_out = torch.zeros_like(q_proj)
@@ -185,9 +169,7 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
         hetero_features: list[torch.Tensor | None] = [
             x_0.view(B, T * N, d) if x_0 is not None else None,
             v_0.view(B, T * N, d) if v_0 is not None else None,
-            concatenated_features.view(B, T * N, d)
-            if concatenated_features is not None
-            else None,
+            concatenated_features.view(B, T * N, d) if concatenated_features is not None else None,
         ]
 
         gates = F.softmax(self.feature_weights, dim=0)
@@ -199,44 +181,24 @@ class QuadraticHeterogenousCrossAttention(nn.Module):
                 f"Expected shape (B, T*N, d) as {(B, T * N, self.lifting_dim)} but got {h_feat_flat.shape}"
             )
 
-            k_proj_i: torch.Tensor = (
-                self.key(h_feat_flat)
-                .view(B, N * T, self.num_heads, self.d_head)
-                .permute(0, 2, 1, 3)
-            )
-            v_proj_i: torch.Tensor = (
-                self.value(h_feat_flat)
-                .view(B, N * T, self.num_heads, self.d_head)
-                .permute(0, 2, 1, 3)
-            )
+            k_proj_i: torch.Tensor = self.key(h_feat_flat).view(B, N * T, self.num_heads, self.d_head).permute(0, 2, 1, 3)
+            v_proj_i: torch.Tensor = self.value(h_feat_flat).view(B, N * T, self.num_heads, self.d_head).permute(0, 2, 1, 3)
 
-            if (
-                self.positional_encoding_type == PositionalEncodingType.TROPE
-                and self.positional_encoding is not None
-            ):
-                k_proj_i = self.positional_encoding(
-                    k_proj_i, rope_mask_for_rope, time_increments
-                )
-            elif (
-                self.positional_encoding_type == PositionalEncodingType.ROPE
-                and self.positional_encoding is not None
-            ):
+            if self.positional_encoding_type == PositionalEncodingType.TROPE and self.positional_encoding is not None:
+                k_proj_i = self.positional_encoding(k_proj_i, rope_mask_for_rope, time_increments)
+            elif self.positional_encoding_type == PositionalEncodingType.ROPE and self.positional_encoding is not None:
                 k_proj_i = self.positional_encoding(k_proj_i, rope_mask_for_rope)
 
             scores = (q_proj @ k_proj_i.transpose(-2, -1)) / self.sqrt_dhead
             if key_mask_for_scores is not None:
                 scores = scores.masked_fill(key_mask_for_scores == 0, float("-inf"))
 
-            attn_weights: torch.Tensor = self.attention_dropout(
-                F.softmax(scores, dim=-1)
-            )
+            attn_weights: torch.Tensor = self.attention_dropout(F.softmax(scores, dim=-1))
             feat_i_out = attn_weights @ v_proj_i
 
             accumulated_out = accumulated_out + gates[i] * feat_i_out
 
-        permuted_accumulated_out = accumulated_out.permute(0, 2, 1, 3).reshape(
-            B, T * N, self.lifting_dim
-        )
+        permuted_accumulated_out = accumulated_out.permute(0, 2, 1, 3).reshape(B, T * N, self.lifting_dim)
         final_out_projection: torch.Tensor = self.out_proj(permuted_accumulated_out)
         assert final_out_projection.shape == (B, T * N, self.lifting_dim), (
             f"Expected (B, T*N, d) as {(B, T * N, self.lifting_dim)} but got {final_out_projection.shape}"
@@ -301,9 +263,7 @@ class LinearHeterogenousCrossAttention(nn.Module):
             case PositionalEncodingType.NONE:
                 self.positional_encoding = None
             case _:
-                raise ValueError(
-                    f"Invalid positional encoding type: {positional_encoding}"
-                )
+                raise ValueError(f"Invalid positional encoding type: {positional_encoding}")
 
     @override
     def forward(
@@ -321,45 +281,27 @@ class LinearHeterogenousCrossAttention(nn.Module):
 
         rope_mask_for_rope: torch.Tensor | None = None
         if mask is not None:
-            assert mask.shape == (B, T, N, 1), (
-                f"Expected mask shape (B,T,N,1) but got {mask.shape}"
-            )
+            assert mask.shape == (B, T, N, 1), f"Expected mask shape (B,T,N,1) but got {mask.shape}"
             reshaped_mask = mask.reshape(B, T * N)
-            rope_mask_for_rope = reshaped_mask.unsqueeze(1).unsqueeze(
-                -1
-            )  # [B, 1, T*N, 1]
+            rope_mask_for_rope = reshaped_mask.unsqueeze(1).unsqueeze(-1)  # [B, 1, T*N, 1]
         else:
             reshaped_mask = None  # type: ignore
 
         # No additive sinusoidal PE in attention
 
         # Project Q => [B, heads, seq_q, d_head]
-        q_proj: torch.Tensor = (
-            self.query(q_data_flat)
-            .view(B, T * N, self.num_heads, self.d_head)
-            .permute(0, 2, 1, 3)
-        )
+        q_proj: torch.Tensor = self.query(q_data_flat).view(B, T * N, self.num_heads, self.d_head).permute(0, 2, 1, 3)
 
         # Apply RoPE-like PE after projection if configured
-        if (
-            self.positional_encoding_type == PositionalEncodingType.TROPE
-            and self.positional_encoding is not None
-        ):
-            q_proj = self.positional_encoding(
-                q_proj, rope_mask_for_rope, time_increments
-            )
-        elif (
-            self.positional_encoding_type == PositionalEncodingType.ROPE
-            and self.positional_encoding is not None
-        ):
+        if self.positional_encoding_type == PositionalEncodingType.TROPE and self.positional_encoding is not None:
+            q_proj = self.positional_encoding(q_proj, rope_mask_for_rope, time_increments)
+        elif self.positional_encoding_type == PositionalEncodingType.ROPE and self.positional_encoding is not None:
             q_proj = self.positional_encoding(q_proj, rope_mask_for_rope)
 
         # Linear attention uses softmax over feature dim for q and k
         q_lin = F.softmax(q_proj, dim=-1)
         if reshaped_mask is not None:
-            query_mask_expand = reshaped_mask.unsqueeze(1).unsqueeze(
-                -1
-            )  # [B, 1, seq, 1]
+            query_mask_expand = reshaped_mask.unsqueeze(1).unsqueeze(-1)  # [B, 1, seq, 1]
             q_lin = q_lin * query_mask_expand
 
         accumulated_out = torch.zeros_like(q_lin)
@@ -367,9 +309,7 @@ class LinearHeterogenousCrossAttention(nn.Module):
         hetero_features: list[torch.Tensor | None] = [
             x_0.view(B, T * N, d) if x_0 is not None else None,
             v_0.view(B, T * N, d) if v_0 is not None else None,
-            concatenated_features.view(B, T * N, d)
-            if concatenated_features is not None
-            else None,
+            concatenated_features.view(B, T * N, d) if concatenated_features is not None else None,
         ]
 
         gates = F.softmax(self.feature_weights, dim=0)
@@ -383,35 +323,17 @@ class LinearHeterogenousCrossAttention(nn.Module):
                 f"Expected shape (B, T*N, d) as {B, T * N, self.lifting_dim} but got {h_feat_flat.shape}"
             )
 
-            k_proj_i: torch.Tensor = (
-                self.key(h_feat_flat)
-                .view(B, N * T, self.num_heads, self.d_head)
-                .permute(0, 2, 1, 3)
-            )
-            v_proj_i: torch.Tensor = (
-                self.value(h_feat_flat)
-                .view(B, N * T, self.num_heads, self.d_head)
-                .permute(0, 2, 1, 3)
-            )
+            k_proj_i: torch.Tensor = self.key(h_feat_flat).view(B, N * T, self.num_heads, self.d_head).permute(0, 2, 1, 3)
+            v_proj_i: torch.Tensor = self.value(h_feat_flat).view(B, N * T, self.num_heads, self.d_head).permute(0, 2, 1, 3)
 
-            if (
-                self.positional_encoding_type == PositionalEncodingType.TROPE
-                and self.positional_encoding is not None
-            ):
-                k_proj_i = self.positional_encoding(
-                    k_proj_i, rope_mask_for_rope, time_increments
-                )
-            elif (
-                self.positional_encoding_type == PositionalEncodingType.ROPE
-                and self.positional_encoding is not None
-            ):
+            if self.positional_encoding_type == PositionalEncodingType.TROPE and self.positional_encoding is not None:
+                k_proj_i = self.positional_encoding(k_proj_i, rope_mask_for_rope, time_increments)
+            elif self.positional_encoding_type == PositionalEncodingType.ROPE and self.positional_encoding is not None:
                 k_proj_i = self.positional_encoding(k_proj_i, rope_mask_for_rope)
 
             k_lin = F.softmax(k_proj_i, dim=-1)
             if reshaped_mask is not None:
-                key_mask_expand = reshaped_mask.unsqueeze(1).unsqueeze(
-                    -1
-                )  # [B,1,seq,1]
+                key_mask_expand = reshaped_mask.unsqueeze(1).unsqueeze(-1)  # [B,1,seq,1]
                 k_lin = k_lin * key_mask_expand
                 v_proj_i = v_proj_i * key_mask_expand
 
@@ -426,9 +348,7 @@ class LinearHeterogenousCrossAttention(nn.Module):
 
             accumulated_out = accumulated_out + gates[i] * out_i
 
-        permuted_accumulated_out = accumulated_out.permute(0, 2, 1, 3).reshape(
-            B, T * N, self.lifting_dim
-        )
+        permuted_accumulated_out = accumulated_out.permute(0, 2, 1, 3).reshape(B, T * N, self.lifting_dim)
         final_out_projection: torch.Tensor = self.out_proj(permuted_accumulated_out)
         assert final_out_projection.shape == (B, T * N, self.lifting_dim), (
             f"Expected (B, T*N, d) as {B, T * N, self.lifting_dim} but got {final_out_projection.shape}"
@@ -442,13 +362,9 @@ def get_lifting_dim_irreps(lifting_dim: int) -> str:
     Returns the irreps for the lifting dimension.
     """
     vector_lifting_dim_irreps: int = lifting_dim // 3
-    scalar_lifting_dim_irreps: int = (
-        lifting_dim - vector_lifting_dim_irreps * 3
-    )  # Remainder
+    scalar_lifting_dim_irreps: int = lifting_dim - vector_lifting_dim_irreps * 3  # Remainder
 
-    lifting_dim_irreps: str = (
-        f"{vector_lifting_dim_irreps}x1o + {scalar_lifting_dim_irreps}x0e"
-    )
+    lifting_dim_irreps: str = f"{vector_lifting_dim_irreps}x1o + {scalar_lifting_dim_irreps}x0e"
     return lifting_dim_irreps
 
 
@@ -526,17 +442,13 @@ class QuadraticSelfAttention(nn.Module):
                     tau=self.rope_tau,
                 )
             case PositionalEncodingType.ROPE:
-                self.positional_encoding = RoPE(
-                    d_head=self.d_head, n_heads=self.num_heads, base=self.rope_base
-                )
+                self.positional_encoding = RoPE(d_head=self.d_head, n_heads=self.num_heads, base=self.rope_base)
             case PositionalEncodingType.SINUSOIDAL:
                 self.positional_encoding = None
             case PositionalEncodingType.NONE:
                 self.positional_encoding = None
             case _:
-                raise ValueError(
-                    f"Invalid positional encoding type: {positional_encoding}"
-                )
+                raise ValueError(f"Invalid positional encoding type: {positional_encoding}")
 
     @override
     def forward(
@@ -580,40 +492,19 @@ class QuadraticSelfAttention(nn.Module):
         key_mask_for_scores: torch.Tensor | None = None
         rope_mask_for_rope: torch.Tensor | None = None
         if mask is not None:
-            assert mask.shape == (B, T, N, 1), (
-                f"Expected mask shape (B,T,N,1) but got {mask.shape}"
-            )
+            assert mask.shape == (B, T, N, 1), f"Expected mask shape (B,T,N,1) but got {mask.shape}"
             reshaped_mask = mask.reshape(B, T * N)
-            key_mask_for_scores = reshaped_mask.unsqueeze(1).unsqueeze(
-                1
-            )  # [B, 1, 1, T*N] for attention scores
-            rope_mask_for_rope = reshaped_mask.unsqueeze(1).unsqueeze(
-                -1
-            )  # [B, 1, T*N, 1] for RoPE
+            key_mask_for_scores = reshaped_mask.unsqueeze(1).unsqueeze(1)  # [B, 1, 1, T*N] for attention scores
+            rope_mask_for_rope = reshaped_mask.unsqueeze(1).unsqueeze(-1)  # [B, 1, T*N, 1] for RoPE
 
-        if (
-            self.positional_encoding_type == PositionalEncodingType.SINUSOIDAL
-            and self.positional_encoding is not None
-        ):
+        if self.positional_encoding_type == PositionalEncodingType.SINUSOIDAL and self.positional_encoding is not None:
             tensor_flat = self.positional_encoding(tensor_flat)
 
-        q_proj: torch.Tensor = (
-            self.query(tensor_flat)
-            .view(B, T * N, self.num_heads, self.d_head)
-            .permute(0, 2, 1, 3)
-        )
+        q_proj: torch.Tensor = self.query(tensor_flat).view(B, T * N, self.num_heads, self.d_head).permute(0, 2, 1, 3)
 
-        if (
-            self.positional_encoding_type == PositionalEncodingType.TROPE
-            and self.positional_encoding is not None
-        ):
-            q_proj = self.positional_encoding(
-                q_proj, rope_mask_for_rope, time_increments
-            )
-        elif (
-            self.positional_encoding_type == PositionalEncodingType.ROPE
-            and self.positional_encoding is not None
-        ):
+        if self.positional_encoding_type == PositionalEncodingType.TROPE and self.positional_encoding is not None:
+            q_proj = self.positional_encoding(q_proj, rope_mask_for_rope, time_increments)
+        elif self.positional_encoding_type == PositionalEncodingType.ROPE and self.positional_encoding is not None:
             q_proj = self.positional_encoding(q_proj, rope_mask_for_rope)
 
         kv: torch.Tensor = self.kv_projs(tensor_flat)
@@ -621,17 +512,9 @@ class QuadraticSelfAttention(nn.Module):
         k_proj = k_proj.view(B, N * T, self.num_heads, self.d_head).permute(0, 2, 1, 3)
         v_proj = v_proj.view(B, N * T, self.num_heads, self.d_head).permute(0, 2, 1, 3)
 
-        if (
-            self.positional_encoding_type == PositionalEncodingType.TROPE
-            and self.positional_encoding is not None
-        ):
-            k_proj = self.positional_encoding(
-                k_proj, rope_mask_for_rope, time_increments
-            )
-        elif (
-            self.positional_encoding_type == PositionalEncodingType.ROPE
-            and self.positional_encoding is not None
-        ):
+        if self.positional_encoding_type == PositionalEncodingType.TROPE and self.positional_encoding is not None:
+            k_proj = self.positional_encoding(k_proj, rope_mask_for_rope, time_increments)
+        elif self.positional_encoding_type == PositionalEncodingType.ROPE and self.positional_encoding is not None:
             k_proj = self.positional_encoding(k_proj, rope_mask_for_rope)
 
         scores: torch.Tensor = (q_proj @ k_proj.transpose(-2, -1)) / self.sqrt_dhead
@@ -641,12 +524,8 @@ class QuadraticSelfAttention(nn.Module):
         attn_weights: torch.Tensor = self.attention_dropout(F.softmax(scores, dim=-1))
         processed_out = attn_weights @ v_proj
 
-        permuted_processed_out = processed_out.permute(0, 2, 1, 3).reshape(
-            B, T * N, self.lifting_dim
-        )
-        final_out_projection: torch.Tensor = self.out_proj(permuted_processed_out).view(
-            B, T, N, self.lifting_dim
-        )
+        permuted_processed_out = processed_out.permute(0, 2, 1, 3).reshape(B, T * N, self.lifting_dim)
+        final_out_projection: torch.Tensor = self.out_proj(permuted_processed_out).view(B, T, N, self.lifting_dim)
         return final_out_projection
 
 
@@ -677,9 +556,7 @@ class GATv2GraphAttention(nn.Module):
         self.rope_base = float(rope_base)
         self.d_head = self.lifting_dim // self.num_heads
 
-        assert self.lifting_dim % self.num_heads == 0, (
-            f"lifting_dim ({lifting_dim}) must be divisible by num_heads ({num_heads})"
-        )
+        assert self.lifting_dim % self.num_heads == 0, f"lifting_dim ({lifting_dim}) must be divisible by num_heads ({num_heads})"
         assert self.d_head % 2 == 0, "d_head must be even"
 
         # Linear projection for node features
@@ -714,9 +591,7 @@ class GATv2GraphAttention(nn.Module):
             case PositionalEncodingType.NONE:
                 self.positional_encoding = None
             case _:
-                raise ValueError(
-                    f"Invalid positional encoding type: {positional_encoding}"
-                )
+                raise ValueError(f"Invalid positional encoding type: {positional_encoding}")
 
         nn.init.xavier_uniform_(self.attn)
 
@@ -743,14 +618,10 @@ class GATv2GraphAttention(nn.Module):
             Tensor of shape `[B, T, N, d]` with updated node features.
         """
         B, T, N, d = tensor.shape
-        assert d == self.lifting_dim, (
-            f"Expected feature dim {self.lifting_dim}, got {d}"
-        )
+        assert d == self.lifting_dim, f"Expected feature dim {self.lifting_dim}, got {d}"
 
         src, dst = edge_index
-        assert src.shape == dst.shape, (
-            f"Source and target edge indices must have same shape, got {src.shape} and {dst.shape}"
-        )
+        assert src.shape == dst.shape, f"Source and target edge indices must have same shape, got {src.shape} and {dst.shape}"
 
         # Normalize edge_index shapes to [B, E]
         if src.dim() == 1:
@@ -767,44 +638,28 @@ class GATv2GraphAttention(nn.Module):
 
         # Project node features with explicit [B, T, N, d] structure
         node_proj_out = self.node_proj(tensor)  # [B, T, N, d]
-        h = node_proj_out.view(B, T, N, self.num_heads, self.d_head).permute(
-            0, 3, 1, 2, 4
-        )
+        h = node_proj_out.view(B, T, N, self.num_heads, self.d_head).permute(0, 3, 1, 2, 4)
         # h: [B, heads, T, N, d_head]
 
         # Build mask for positional encoding over flattened [T*N] dimension
         rope_mask_for_rope: torch.Tensor | None = None
         if mask is not None:
-            assert mask.shape == (B, T, N, 1), (
-                f"Expected mask shape (B,T,N,1) but got {mask.shape}"
-            )
+            assert mask.shape == (B, T, N, 1), f"Expected mask shape (B,T,N,1) but got {mask.shape}"
             mask_flat_seq = mask.view(B, T * N, 1)
-            rope_mask_for_rope = mask_flat_seq.unsqueeze(1).unsqueeze(
-                -1
-            )  # [B, 1, T*N, 1]
+            rope_mask_for_rope = mask_flat_seq.unsqueeze(1).unsqueeze(-1)  # [B, 1, T*N, 1]
 
         # Apply positional encoding if configured (on [B, heads, T*N, d_head])
-        if (
-            self.positional_encoding_type == PositionalEncodingType.TROPE
-            and self.positional_encoding is not None
-        ):
+        if self.positional_encoding_type == PositionalEncodingType.TROPE and self.positional_encoding is not None:
             h_seq = h.reshape(B, self.num_heads, T * N, self.d_head)
             h_seq = self.positional_encoding(h_seq, rope_mask_for_rope, time_increments)
             h = h_seq.view(B, self.num_heads, T, N, self.d_head)
-        elif (
-            self.positional_encoding_type == PositionalEncodingType.ROPE
-            and self.positional_encoding is not None
-        ):
+        elif self.positional_encoding_type == PositionalEncodingType.ROPE and self.positional_encoding is not None:
             h_seq = h.reshape(B, self.num_heads, T * N, self.d_head)
             h_seq = self.positional_encoding(h_seq, rope_mask_for_rope)
             h = h_seq.view(B, self.num_heads, T, N, self.d_head)
 
         # Collapse (B, T) for edge-based processing: [B, heads, T, N, d_head] -> [B*T, heads, N, d_head]
-        h_proj = (
-            h.permute(0, 2, 1, 3, 4)
-            .contiguous()
-            .view(B * T, self.num_heads, N, self.d_head)
-        )
+        h_proj = h.permute(0, 2, 1, 3, 4).contiguous().view(B * T, self.num_heads, N, self.d_head)
 
         # Expand edges over time dimension: src_b, dst_b are [B, E]; reuse same per-node indices at each timestep
         src_bte = src_b.unsqueeze(1).expand(B, T, E)  # [B, T, E]
@@ -813,18 +668,8 @@ class GATv2GraphAttention(nn.Module):
         dst_bt = dst_bte.reshape(B * T, E)
 
         # Gather per-edge node features: [B*T, heads, E, d_head]
-        batch_indices = (
-            torch.arange(B * T, device=tensor.device)
-            .unsqueeze(1)
-            .unsqueeze(2)
-            .expand(-1, self.num_heads, E)
-        )
-        head_indices = (
-            torch.arange(self.num_heads, device=tensor.device)
-            .unsqueeze(0)
-            .unsqueeze(-1)
-            .expand(B * T, -1, E)
-        )
+        batch_indices = torch.arange(B * T, device=tensor.device).unsqueeze(1).unsqueeze(2).expand(-1, self.num_heads, E)
+        head_indices = torch.arange(self.num_heads, device=tensor.device).unsqueeze(0).unsqueeze(-1).expand(B * T, -1, E)
         src_gather = src_bt.unsqueeze(1).expand(-1, self.num_heads, -1)
         dst_gather = dst_bt.unsqueeze(1).expand(-1, self.num_heads, -1)
 
@@ -833,10 +678,7 @@ class GATv2GraphAttention(nn.Module):
 
         # Concatenate and score: [B*T, heads, E, 2*d_head] -> [B*T, heads, E]
         h_cat = torch.cat([h_src, h_dst], dim=-1)
-        attn_scores = (
-            self.attn.view(1, self.num_heads, 1, 2 * self.d_head)
-            * self.leaky_relu(h_cat)
-        ).sum(dim=-1)
+        attn_scores = (self.attn.view(1, self.num_heads, 1, 2 * self.d_head) * self.leaky_relu(h_cat)).sum(dim=-1)
 
         # Apply edge_mask (e.g. for padded edges in multitask)
         if edge_mask is not None:
@@ -844,13 +686,9 @@ class GATv2GraphAttention(nn.Module):
                 edge_mask_b = edge_mask.unsqueeze(0).expand(B, -1)
             else:
                 edge_mask_b = edge_mask
-            assert edge_mask_b.shape == (B, E), (
-                f"edge_mask must have shape (B, E); got {edge_mask_b.shape}"
-            )
+            assert edge_mask_b.shape == (B, E), f"edge_mask must have shape (B, E); got {edge_mask_b.shape}"
             edge_mask_bt = edge_mask_b.unsqueeze(1).expand(B, T, E).reshape(B * T, E)
-            attn_scores = attn_scores.masked_fill(
-                edge_mask_bt.unsqueeze(1) == 0, float("-inf")
-            )
+            attn_scores = attn_scores.masked_fill(edge_mask_bt.unsqueeze(1) == 0, float("-inf"))
 
         # Build dense attention matrix [B*T, heads, N, N]
         attn_matrix = torch.full(
@@ -860,24 +698,12 @@ class GATv2GraphAttention(nn.Module):
             dtype=attn_scores.dtype,
         )
 
-        batch_idx = (
-            torch.arange(B * T, device=tensor.device)
-            .unsqueeze(1)
-            .unsqueeze(2)
-            .expand(-1, self.num_heads, E)
-        )
-        head_idx = (
-            torch.arange(self.num_heads, device=tensor.device)
-            .unsqueeze(0)
-            .unsqueeze(-1)
-            .expand(B * T, -1, E)
-        )
+        batch_idx = torch.arange(B * T, device=tensor.device).unsqueeze(1).unsqueeze(2).expand(-1, self.num_heads, E)
+        head_idx = torch.arange(self.num_heads, device=tensor.device).unsqueeze(0).unsqueeze(-1).expand(B * T, -1, E)
         dst_idx = dst_bt.unsqueeze(1).expand(-1, self.num_heads, -1)
         src_idx = src_bt.unsqueeze(1).expand(-1, self.num_heads, -1)
 
-        attn_matrix.index_put_(
-            (batch_idx, head_idx, dst_idx, src_idx), attn_scores, accumulate=False
-        )
+        attn_matrix.index_put_((batch_idx, head_idx, dst_idx, src_idx), attn_scores, accumulate=False)
 
         # Apply node mask to invalidate attention where either endpoint is padded
         if mask is not None:

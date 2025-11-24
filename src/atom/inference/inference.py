@@ -28,9 +28,7 @@ def run_single_inference(model_path: str, config_path: str) -> InferenceRunResul
         raise FileNotFoundError(f"Config file {config_path} not found")
 
     try:
-        model_state_dict: OrderedDict[str, torch.Tensor] = torch.load(
-            str(model_path), weights_only=True
-        )
+        model_state_dict: OrderedDict[str, torch.Tensor] = torch.load(str(model_path), weights_only=True)
     except FileNotFoundError:
         raise FileNotFoundError(f"Model file {model_path} not found")
 
@@ -85,18 +83,10 @@ def main() -> None:
         print("SUMMARY STATISTICS:")
         print("=" * 80)
         print(f"Number of runs: {len(results)}")
-        print(
-            f"Molecule type: {results[0].molecule_type} ({results[0].inference_type})"
-        )
-        print(
-            f"S2S Test Loss: {multi_results.s2s_mean * 100:.2f}x10^-2 ± {multi_results.s2s_std * 100:.2f}x10^-2"
-        )
-        print(
-            f"S2T Test Loss: {multi_results.s2t_mean * 100:.2f}x10^-2 ± {multi_results.s2t_std * 100:.2f}x10^-2"
-        )
-        print(
-            f"Latency: {multi_results.latency_mean:.2f}s ± {multi_results.latency_std:.2f}s"
-        )
+        print(f"Molecule type: {results[0].molecule_type} ({results[0].inference_type})")
+        print(f"S2S Test Loss: {multi_results.s2s_mean * 100:.2f}x10^-2 ± {multi_results.s2s_std * 100:.2f}x10^-2")
+        print(f"S2T Test Loss: {multi_results.s2t_mean * 100:.2f}x10^-2 ± {multi_results.s2t_std * 100:.2f}x10^-2")
+        print(f"Latency: {multi_results.latency_mean:.2f}s ± {multi_results.latency_std:.2f}s")
 
         print("\nIndividual results:")
         for i, result in enumerate(results, 1):

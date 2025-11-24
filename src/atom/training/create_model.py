@@ -45,14 +45,8 @@ def initialize_model(config: Config) -> nn.Module:
             if egno_config is None:
                 raise ValueError("EGNO model requires 'egno_config' to be set.")
             return EGNO(
-                num_node_features=2
-                if config.dataloader.dataset
-                in [Datasets.md17, Datasets.rmd17, Datasets.tg80, Datasets.md22]
-                else 1,
-                num_edge_features=5
-                if config.dataloader.dataset
-                in [Datasets.md17, Datasets.rmd17, Datasets.tg80, Datasets.md22]
-                else 2,
+                num_node_features=2 if config.dataloader.dataset in [Datasets.md17, Datasets.rmd17, Datasets.tg80, Datasets.md22] else 1,
+                num_edge_features=5 if config.dataloader.dataset in [Datasets.md17, Datasets.rmd17, Datasets.tg80, Datasets.md22] else 2,
                 num_layers=egno_config.num_layers,
                 lifting_dim=egno_config.lifting_dim,
                 activation=egno_config.activation,
@@ -66,14 +60,8 @@ def initialize_model(config: Config) -> nn.Module:
             if egnn_config is None:
                 raise ValueError("EGNN_S model requires 'egnn_config' to be set.")
             return EGNNSequential(
-                num_node_features=2
-                if config.dataloader.dataset
-                in [Datasets.md17, Datasets.rmd17, Datasets.tg80, Datasets.md22]
-                else 1,
-                num_edge_features=5
-                if config.dataloader.dataset
-                in [Datasets.md17, Datasets.rmd17, Datasets.tg80, Datasets.md22]
-                else 2,
+                num_node_features=2 if config.dataloader.dataset in [Datasets.md17, Datasets.rmd17, Datasets.tg80, Datasets.md22] else 1,
+                num_edge_features=5 if config.dataloader.dataset in [Datasets.md17, Datasets.rmd17, Datasets.tg80, Datasets.md22] else 2,
                 num_layers=egnn_config.num_layers,
                 lifting_dim=egnn_config.lifting_dim,
                 activation=egnn_config.activation,
@@ -84,14 +72,8 @@ def initialize_model(config: Config) -> nn.Module:
             if egnn_config is None:
                 raise ValueError("EGNN_R model requires 'egnn_config' to be set.")
             return EGNNRollout(
-                num_node_features=2
-                if config.dataloader.dataset
-                in [Datasets.md17, Datasets.rmd17, Datasets.tg80, Datasets.md22]
-                else 1,
-                num_edge_features=5
-                if config.dataloader.dataset
-                in [Datasets.md17, Datasets.rmd17, Datasets.tg80, Datasets.md22]
-                else 2,
+                num_node_features=2 if config.dataloader.dataset in [Datasets.md17, Datasets.rmd17, Datasets.tg80, Datasets.md22] else 1,
+                num_edge_features=5 if config.dataloader.dataset in [Datasets.md17, Datasets.rmd17, Datasets.tg80, Datasets.md22] else 2,
                 num_layers=egnn_config.num_layers,
                 lifting_dim=egnn_config.lifting_dim,
                 activation=egnn_config.activation,

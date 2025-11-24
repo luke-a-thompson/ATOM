@@ -26,39 +26,27 @@ class MultiInferenceResults:
 
     @property
     def s2t_mean(self) -> float:
-        return sum(result.s2t_test_loss for result in self.run_results) / len(
-            self.run_results
-        )
+        return sum(result.s2t_test_loss for result in self.run_results) / len(self.run_results)
 
     @property
     def s2t_std(self) -> float:
-        return torch.std(
-            torch.tensor([result.s2t_test_loss for result in self.run_results])
-        ).item()
+        return torch.std(torch.tensor([result.s2t_test_loss for result in self.run_results])).item()
 
     @property
     def s2s_mean(self) -> float:
-        return sum(result.s2s_test_loss for result in self.run_results) / len(
-            self.run_results
-        )
+        return sum(result.s2s_test_loss for result in self.run_results) / len(self.run_results)
 
     @property
     def s2s_std(self) -> float:
-        return torch.std(
-            torch.tensor([result.s2s_test_loss for result in self.run_results])
-        ).item()
+        return torch.std(torch.tensor([result.s2s_test_loss for result in self.run_results])).item()
 
     @property
     def latency_mean(self) -> float:
-        return sum(result.latency for result in self.run_results) / len(
-            self.run_results
-        )
+        return sum(result.latency for result in self.run_results) / len(self.run_results)
 
     @property
     def latency_std(self) -> float:
-        return torch.std(
-            torch.tensor([result.latency for result in self.run_results])
-        ).item()
+        return torch.std(torch.tensor([result.latency for result in self.run_results])).item()
 
 
 def parse_inference_args() -> argparse.Namespace:
@@ -97,16 +85,12 @@ def parse_model_config_pairs(args: argparse.Namespace) -> list[tuple[str, str]]:
                 model_path, config_path = run_spec.split(",")
                 pairs.append((model_path.strip(), config_path.strip()))
             except ValueError:
-                raise ValueError(
-                    f"Invalid format for run specification: {run_spec}. Expected format: model.pth,config.toml"
-                )
+                raise ValueError(f"Invalid format for run specification: {run_spec}. Expected format: model.pth,config.toml")
     elif args.model and args.config:
         # Single run format: --model model.pth --config config.toml
         pairs.append((args.model, args.config))
     else:
-        raise ValueError(
-            "Must provide either --runs for multiple runs or both --model and --config for single run"
-        )
+        raise ValueError("Must provide either --runs for multiple runs or both --model and --config for single run")
 
     return pairs
 

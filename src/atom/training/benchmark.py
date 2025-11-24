@@ -37,16 +37,12 @@ def singletask_benchmark(
     # Determine final destination directory but do not create it yet
     if benchmark_dir is None:
         timestamp = datetime.now().strftime("%d-%b-%Y_%H-%M-%S")
-        benchmark_dir = Path(
-            f"benchmark_runs/{config.benchmark.benchmark_name}_singletask_{timestamp}"
-        )
+        benchmark_dir = Path(f"benchmark_runs/{config.benchmark.benchmark_name}_singletask_{timestamp}")
 
     created_final_dir: bool = False
     single_run_results: list[SingleRunResults] = []
 
-    runs_progress_bar = tqdm(
-        range(config.benchmark.runs), leave=False, unit="run", position=1
-    )
+    runs_progress_bar = tqdm(range(config.benchmark.runs), leave=False, unit="run", position=1)
     with TemporaryDirectory() as tmp_root_str:
         tmp_root: Path = Path(tmp_root_str)
         for run in runs_progress_bar:
@@ -72,17 +68,13 @@ def singletask_benchmark(
                 if config_path is not None and config_path.exists():
                     try:
                         # Name the inner config after the experiment directory
-                        inner_config_path: Path = (
-                            benchmark_dir / f"{benchmark_dir.name}.toml"
-                        )
+                        inner_config_path: Path = benchmark_dir / f"{benchmark_dir.name}.toml"
                         _ = copy2(config_path, inner_config_path)
                     except Exception as e:
                         tqdm.write(f"Warning: failed to copy config TOML: {e}")
                 # Print model parameter counts once (computed before compilation)
                 total_params: int = sum(p.numel() for p in model.parameters())
-                trainable_params: int = sum(
-                    p.numel() for p in model.parameters() if p.requires_grad
-                )
+                trainable_params: int = sum(p.numel() for p in model.parameters() if p.requires_grad)
                 tqdm.write(f"Total params: {total_params:,}")
                 tqdm.write(f"Total trainable params: {trainable_params:,}")
                 created_final_dir = True
@@ -94,17 +86,13 @@ def singletask_benchmark(
                     str(benchmark_dir / f"run_{run + 1}"),
                 )
             except Exception as e:
-                tqdm.write(
-                    f"Warning: failed to move run directory for run {run + 1}: {e}"
-                )
+                tqdm.write(f"Warning: failed to move run directory for run {run + 1}: {e}")
 
     # If no runs completed successfully, avoid creating output
     if not created_final_dir:
         return None
 
-    multi_run_results = MultiRunResults(
-        single_run_results=single_run_results, config=config
-    )
+    multi_run_results = MultiRunResults(single_run_results=single_run_results, config=config)
 
     # Save to JSON
     multi_run_results_json = multi_run_results.model_dump_json(
@@ -127,22 +115,14 @@ def singletask_benchmark(
         _ = f.write(multi_run_results_json)
 
     tqdm.write(f"\nSaved benchmark results to {results_filename}")
-    tqdm.write(
-        f"Benchmark Results ({config.benchmark.runs} runs, {config.training.epochs} epochs/run):"
-    )
+    tqdm.write(f"Benchmark Results ({config.benchmark.runs} runs, {config.training.epochs} epochs/run):")
     tqdm.write(
         f"  Average S2S Test Loss Final Timestep: {multi_run_results.s2s_test_loss_mean * 100:.2f}x10^-2 ± {multi_run_results.s2s_test_loss_std * 100:.2f}x10^-2"
     )  # type: ignore
-    tqdm.write(
-        f"  Average S2T Test Loss: {multi_run_results.s2t_test_loss_mean * 100:.2f}x10^-2 ± {multi_run_results.s2t_test_loss_std * 100:.2f}"
-    )  # type: ignore
+    tqdm.write(f"  Average S2T Test Loss: {multi_run_results.s2t_test_loss_mean * 100:.2f}x10^-2 ± {multi_run_results.s2t_test_loss_std * 100:.2f}")  # type: ignore
     tqdm.write(f"  Average Time per Run: {multi_run_results.mean_secs_per_run:.1f}s")
-    tqdm.write(
-        f"  Average Time per Epoch: {multi_run_results.mean_secs_per_epoch:.1f}s"
-    )
-    tqdm.write(
-        f"  Average Best Val Loss Epoch: {multi_run_results.mean_best_val_loss_epoch:.1f}"
-    )
+    tqdm.write(f"  Average Time per Epoch: {multi_run_results.mean_secs_per_epoch:.1f}s")
+    tqdm.write(f"  Average Best Val Loss Epoch: {multi_run_results.mean_best_val_loss_epoch:.1f}")
 
 
 def multitask_benchmark(
@@ -153,16 +133,12 @@ def multitask_benchmark(
     # Determine final destination directory but do not create it yet
     if benchmark_dir is None:
         timestamp = datetime.now().strftime("%d-%b-%Y_%H-%M-%S")
-        benchmark_dir = Path(
-            f"benchmark_runs/{config.benchmark.benchmark_name}_multitask_{timestamp}"
-        )
+        benchmark_dir = Path(f"benchmark_runs/{config.benchmark.benchmark_name}_multitask_{timestamp}")
 
     created_final_dir: bool = False
     run_results: list[SingleRunResults] = []
 
-    runs_progress_bar = tqdm(
-        range(config.benchmark.runs), leave=False, unit="run", position=1
-    )
+    runs_progress_bar = tqdm(range(config.benchmark.runs), leave=False, unit="run", position=1)
     with TemporaryDirectory() as tmp_root_str:
         tmp_root: Path = Path(tmp_root_str)
         for run in runs_progress_bar:
@@ -193,9 +169,7 @@ def multitask_benchmark(
                         tqdm.write(f"Warning: failed to copy config TOML: {e}")
                 # Print model parameter counts once (computed before compilation)
                 total_params: int = sum(p.numel() for p in model.parameters())
-                trainable_params: int = sum(
-                    p.numel() for p in model.parameters() if p.requires_grad
-                )
+                trainable_params: int = sum(p.numel() for p in model.parameters() if p.requires_grad)
                 tqdm.write(f"Total params: {total_params:,}")
                 tqdm.write(f"Total trainable params: {trainable_params:,}")
                 created_final_dir = True
@@ -207,9 +181,7 @@ def multitask_benchmark(
                     str(benchmark_dir / f"run_{run + 1}"),
                 )
             except Exception as e:
-                tqdm.write(
-                    f"Warning: failed to move run directory for run {run + 1}: {e}"
-                )
+                tqdm.write(f"Warning: failed to move run directory for run {run + 1}: {e}")
 
     # If no runs completed successfully, avoid creating output
     if not created_final_dir:
@@ -233,9 +205,7 @@ def multitask_benchmark(
         _ = f.write(multi_run_results_json)
 
     tqdm.write(f"\nSaved benchmark results to {results_filename}")
-    tqdm.write(
-        f"Benchmark Results ({config.benchmark.runs} runs, {config.training.epochs} epochs/run):"
-    )
+    tqdm.write(f"Benchmark Results ({config.benchmark.runs} runs, {config.training.epochs} epochs/run):")
     tqdm.write(
         f"  Average S2S Test Loss: {multi_run_results.s2s_test_loss_mean * 100:.2f}x10^-2 ± {multi_run_results.s2s_test_loss_std * 100:.2f}x10^-2"
     )
@@ -243,9 +213,5 @@ def multitask_benchmark(
         f"  Average S2T Test Loss: {multi_run_results.s2t_test_loss_mean * 100:.2f}x10^-2 ± {multi_run_results.s2t_test_loss_std * 100:.2f}x10^-2"
     )
     tqdm.write(f"  Average Time per Run: {multi_run_results.mean_secs_per_run:.1f}s")
-    tqdm.write(
-        f"  Average Time per Epoch: {multi_run_results.mean_secs_per_epoch:.1f}s"
-    )
-    tqdm.write(
-        f"  Average Best Val Loss Epoch: {multi_run_results.mean_best_val_loss_epoch:.1f}"
-    )
+    tqdm.write(f"  Average Time per Epoch: {multi_run_results.mean_secs_per_epoch:.1f}s")
+    tqdm.write(f"  Average Best Val Loss Epoch: {multi_run_results.mean_best_val_loss_epoch:.1f}")

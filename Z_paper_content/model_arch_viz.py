@@ -21,9 +21,7 @@ def clean_state_dict_prefixes(
     return new_state_dict
 
 
-def analyze_model_architecture(
-    model_path: str, max_depth: int | None = None
-) -> dict[str, Any]:
+def analyze_model_architecture(model_path: str, max_depth: int | None = None) -> dict[str, Any]:
     """
     Analyze a PyTorch model file and return its architecture information.
 
@@ -79,9 +77,7 @@ def analyze_model_architecture(
 
         # Analyze children
         for child_name, child_module in module.named_children():
-            module_info["children"][child_name] = analyze_module(
-                f"{name}.{child_name}" if name else child_name, child_module, depth + 1
-            )
+            module_info["children"][child_name] = analyze_module(f"{name}.{child_name}" if name else child_name, child_module, depth + 1)
 
         return module_info
 
@@ -94,9 +90,7 @@ def analyze_model_architecture(
         architecture["parameter_groups"][module_name][param_name] = {
             "shape": list(param_tensor.shape),
             "dtype": str(param_tensor.dtype),
-            "requires_grad": param_tensor.requires_grad
-            if hasattr(param_tensor, "requires_grad")
-            else None,
+            "requires_grad": param_tensor.requires_grad if hasattr(param_tensor, "requires_grad") else None,
         }
 
     return architecture
@@ -158,18 +152,10 @@ def print_model_architecture(
                 for module_name, params in arch["parameter_groups"].items():
                     print(f"\n{module_name}:")
                     for param_name, param_info in params.items():
-                        shape_str = (
-                            f"shape={param_info['shape']}" if show_shapes else ""
-                        )
-                        dtype_str = (
-                            f"dtype={param_info['dtype']}" if show_shapes else ""
-                        )
+                        shape_str = f"shape={param_info['shape']}" if show_shapes else ""
+                        dtype_str = f"dtype={param_info['dtype']}" if show_shapes else ""
                         info_parts = [shape_str, dtype_str] if show_shapes else []
-                        info_str = (
-                            f" ({', '.join(filter(None, info_parts))})"
-                            if info_parts
-                            else ""
-                        )
+                        info_str = f" ({', '.join(filter(None, info_parts))})" if info_parts else ""
                         print(f"  {param_name}{info_str}")
 
             print(f"\n{'=' * 60}")
@@ -184,9 +170,7 @@ def print_model_architecture(
         print(f"Error analyzing model: {e}")
 
 
-def print_model_tree(
-    model: nn.Module, max_depth: int | None = None, prefix: str = "", depth: int = 0
-) -> None:
+def print_model_tree(model: nn.Module, max_depth: int | None = None, prefix: str = "", depth: int = 0) -> None:
     """
     Recursively print the model hierarchy in a tree structure.
 
@@ -216,9 +200,7 @@ def print_model_tree(
         print_model_tree(child, max_depth, "", depth + 1)
 
 
-def compare_model_architectures(
-    model_path1: str, model_path2: str, max_depth: int | None = None
-) -> None:
+def compare_model_architectures(model_path1: str, model_path2: str, max_depth: int | None = None) -> None:
     """
     Compare two PyTorch model files and highlight differences.
 
@@ -250,9 +232,7 @@ def compare_model_architectures(
         print("\nPARAMETER GROUP COMPARISON:")
         print("-" * 40)
 
-        all_modules = set(arch1["parameter_groups"].keys()) | set(
-            arch2["parameter_groups"].keys()
-        )
+        all_modules = set(arch1["parameter_groups"].keys()) | set(arch2["parameter_groups"].keys())
 
         for module in sorted(all_modules):
             params1 = arch1["parameter_groups"].get(module, {})
@@ -311,6 +291,4 @@ if __name__ == "__main__":
         model_path2 = sys.argv[2]
         compare_model_architectures(model_path, model_path2)
     else:
-        print(
-            "Too many arguments. Use: python model_arch_viz.py <model_path> [model_path2]"
-        )
+        print("Too many arguments. Use: python model_arch_viz.py <model_path> [model_path2]")

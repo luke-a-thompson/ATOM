@@ -73,9 +73,7 @@ class BenchmarkConfig(BaseModel):
     @classmethod
     def check_compile(cls, value: bool) -> bool:
         if value and torch.cuda.get_device_capability() < (7, 0):
-            raise ValueError(
-                "CUDA 7.0 or higher is required to compile the model. We recommend CUDA 11.0 or higher."
-            )
+            raise ValueError("CUDA 7.0 or higher is required to compile the model. We recommend CUDA 11.0 or higher.")
         return value
 
     @field_validator("log_weights")
@@ -90,49 +88,26 @@ class DataloaderConfig(BaseModel):
     multitask: bool
     dataset: Datasets
     # Single-task dataloader parameters
-    molecule_type: (
-        MD17MoleculeType
-        | RMD17MoleculeType
-        | TG80MoleculeType
-        | MD22MoleculeType
-        | None
-    ) = None
+    molecule_type: MD17MoleculeType | RMD17MoleculeType | TG80MoleculeType | MD22MoleculeType | None = None
 
     # Multitask dataloader parameters
-    train_molecules: (
-        list[MD17MoleculeType | RMD17MoleculeType | TG80MoleculeType | MD22MoleculeType]
-        | None
-    ) = None
-    validation_molecules: (
-        list[MD17MoleculeType | RMD17MoleculeType | TG80MoleculeType | MD22MoleculeType]
-        | None
-    ) = None
-    test_molecules: (
-        list[MD17MoleculeType | RMD17MoleculeType | TG80MoleculeType | MD22MoleculeType]
-        | None
-    ) = None
+    train_molecules: list[MD17MoleculeType | RMD17MoleculeType | TG80MoleculeType | MD22MoleculeType] | None = None
+    validation_molecules: list[MD17MoleculeType | RMD17MoleculeType | TG80MoleculeType | MD22MoleculeType] | None = None
+    test_molecules: list[MD17MoleculeType | RMD17MoleculeType | TG80MoleculeType | MD22MoleculeType] | None = None
 
     num_timesteps: Annotated[PositiveInt, Field(description="Must be greater than 0.")]
     # Accept either a fixed integer lag or a (min, max) tuple for stochastic sampling
     delta_T: int | tuple[int, int]
     explicit_hydrogen: bool
     explicit_hydrogen_gradients: bool
-    radius_graph_threshold: Annotated[
-        NonNegativeFloat, Field(description="Must be greater than or equal to 0.0.")
-    ]
-    rrwp_length: Annotated[
-        NonNegativeInt, Field(description="Must be greater than or equal to 0.")
-    ]
+    radius_graph_threshold: Annotated[NonNegativeFloat, Field(description="Must be greater than or equal to 0.0.")]
+    rrwp_length: Annotated[NonNegativeInt, Field(description="Must be greater than or equal to 0.")]
     time_lag_mode: TimeLagMode
     normalize_z: bool
     persistent_workers: bool
-    num_workers: Annotated[
-        NonNegativeInt, Field(description="Must be greater than or equal to 0.")
-    ]
+    num_workers: Annotated[NonNegativeInt, Field(description="Must be greater than or equal to 0.")]
     pin_memory: bool
-    prefetch_factor: Annotated[
-        PositiveInt, Field(description="Must be greater than 0.")
-    ]
+    prefetch_factor: Annotated[PositiveInt, Field(description="Must be greater than 0.")]
     force_regenerate: bool
 
     @field_validator("delta_T", mode="before")
@@ -141,24 +116,18 @@ class DataloaderConfig(BaseModel):
         # Allow TOML arrays to become tuples
         if isinstance(value, list):
             if len(value) != 2:
-                raise ValueError(
-                    "If 'delta_T' is a list, it must have exactly two elements."
-                )
+                raise ValueError("If 'delta_T' is a list, it must have exactly two elements.")
             try:
                 return (int(value[0]), int(value[1]))
             except Exception as e:
-                raise ValueError(
-                    "Could not coerce 'delta_T' list elements to integers."
-                ) from e
+                raise ValueError("Could not coerce 'delta_T' list elements to integers.") from e
         if isinstance(value, int):
             return value
         if isinstance(value, tuple):
             try:
                 return (int(value[0]), int(value[1]))
             except Exception as e:
-                raise ValueError(
-                    "Could not coerce 'delta_T' tuple elements to integers."
-                ) from e
+                raise ValueError("Could not coerce 'delta_T' tuple elements to integers.") from e
         raise ValueError("'delta_T' must be an int or a tuple/list of two ints.")
 
     @model_validator(mode="after")
@@ -171,31 +140,19 @@ class DataloaderConfig(BaseModel):
 
         # multitask presence checks
         if self.multitask:
-            if (
-                not self.train_molecules
-                or not self.validation_molecules
-                or not self.test_molecules
-            ):
-                raise ValueError(
-                    "If 'multitask' is True, 'train_molecules', 'validation_molecules', and 'test_molecules' must be specified."
-                )
+            if not self.train_molecules or not self.validation_molecules or not self.test_molecules:
+                raise ValueError("If 'multitask' is True, 'train_molecules', 'validation_molecules', and 'test_molecules' must be specified.")
 
             # overlap checks
             train_set = set(self.train_molecules)
             val_set = set(self.validation_molecules)
             test_set = set(self.test_molecules)
             if train_set.intersection(val_set):
-                warnings.warn(
-                    f"Train and validation molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(val_set))}"
-                )
+                warnings.warn(f"Train and validation molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(val_set))}")
             if train_set.intersection(test_set):
-                warnings.warn(
-                    f"Train and test molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(test_set))}."
-                )
+                warnings.warn(f"Train and test molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(test_set))}.")
             if val_set.intersection(test_set):
-                warnings.warn(
-                    f"Validation and test molecule sets overlap: {', '.join(str(mol) for mol in val_set.intersection(test_set))}"
-                )
+                warnings.warn(f"Validation and test molecule sets overlap: {', '.join(str(mol) for mol in val_set.intersection(test_set))}")
 
         # dataset-specific enum type enforcement
         match self.dataset:
@@ -218,17 +175,11 @@ class DataloaderConfig(BaseModel):
         ]:
             if self.multitask:
                 if self.train_molecules:
-                    self.train_molecules = [
-                        enum_type(mol) for mol in self.train_molecules
-                    ]
+                    self.train_molecules = [enum_type(mol) for mol in self.train_molecules]
                 if self.validation_molecules:
-                    self.validation_molecules = [
-                        enum_type(mol) for mol in self.validation_molecules
-                    ]
+                    self.validation_molecules = [enum_type(mol) for mol in self.validation_molecules]
                 if self.test_molecules:
-                    self.test_molecules = [
-                        enum_type(mol) for mol in self.test_molecules
-                    ]
+                    self.test_molecules = [enum_type(mol) for mol in self.test_molecules]
             else:
                 if self.molecule_type:
                     self.molecule_type = enum_type(self.molecule_type)
@@ -239,9 +190,7 @@ class DataloaderConfig(BaseModel):
                 raise ValueError("'delta_T' tuple must have exactly two elements.")
             dt_min, dt_max = int(self.delta_T[0]), int(self.delta_T[1])
             if dt_min <= 0 or dt_max <= 0:
-                raise ValueError(
-                    "Both elements of 'delta_T' must be positive integers."
-                )
+                raise ValueError("Both elements of 'delta_T' must be positive integers.")
             if dt_min > dt_max:
                 raise ValueError("'delta_T' lower bound must be <= upper bound.")
         else:
@@ -258,14 +207,10 @@ class TrainingConfig(BaseModel):
     seed: int
     batch_size: Annotated[PositiveInt, Field(description="Must be greater than 0.")]
     epochs: Annotated[PositiveInt, Field(description="Must be greater than 0.")]
-    max_grad_norm: Annotated[
-        NonNegativeFloat, Field(description="Must be greater than or equal to 0.0.")
-    ]
+    max_grad_norm: Annotated[NonNegativeFloat, Field(description="Must be greater than or equal to 0.0.")]
     label_noise_std: Annotated[
         NonNegativeFloat,
-        Field(
-            description="Label noise standard deviation must be greater than or equal to 0.0."
-        ),
+        Field(description="Label noise standard deviation must be greater than or equal to 0.0."),
     ]
 
     class Config:
@@ -274,24 +219,16 @@ class TrainingConfig(BaseModel):
     @model_validator(mode="after")
     def validate_amp_dtype(self) -> "TrainingConfig":
         if self.use_amp and self.amp_dtype not in [torch.float16, torch.bfloat16]:
-            raise ValueError(
-                "'amp_dtype' must be 'float16' or 'bfloat16' if 'use_amp' is True."
-            )
+            raise ValueError("'amp_dtype' must be 'float16' or 'bfloat16' if 'use_amp' is True.")
         return self
 
 
 class OptimizerConfig(BaseModel):
     type: OptimizerType
-    learning_rate: Annotated[
-        NonNegativeFloat, Field(description="Must be greater than or equal to 0.0.")
-    ]
-    weight_decay: Annotated[
-        NonNegativeFloat, Field(description="Must be greater than or equal to 0.0.")
-    ]
+    learning_rate: Annotated[NonNegativeFloat, Field(description="Must be greater than or equal to 0.0.")]
+    weight_decay: Annotated[NonNegativeFloat, Field(description="Must be greater than or equal to 0.0.")]
     adam_betas: tuple[float, float]
-    adam_eps: Annotated[
-        NonNegativeFloat, Field(description="Must be greater than or equal to 0.0.")
-    ]
+    adam_eps: Annotated[NonNegativeFloat, Field(description="Must be greater than or equal to 0.0.")]
 
 
 class SchedulerConfig(BaseModel):
@@ -317,12 +254,8 @@ class ATOMConfig(BaseModel):
     # Attention parameters
     heterogenous_attention_type: AttentionType
     positional_encoding: PositionalEncodingType
-    rope_base: Annotated[
-        NonNegativeFloat, Field(description="Must be greater than or equal to 0.0.")
-    ]
-    rope_tau: Annotated[
-        NonNegativeFloat, Field(description="Must be greater than or equal to 0.0.")
-    ]
+    rope_base: Annotated[NonNegativeFloat, Field(description="Must be greater than or equal to 0.0.")]
+    rope_tau: Annotated[NonNegativeFloat, Field(description="Must be greater than or equal to 0.0.")]
     # Feature parameters
     lifting_type: LiftingType
     projection_type: ProjectionType
@@ -343,20 +276,10 @@ class ATOMConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate_lifting_type_and_projection_type(self) -> "ATOMConfig":
-        if (
-            self.lifting_type == LiftingType.CANONICALIZATION
-            and self.projection_type != ProjectionType.DECANONICALIZATION
-        ):
-            raise ValueError(
-                "If 'lifting_type' is 'canonicalization', 'projection_type' must be 'decanonicalization'."
-            )
-        elif (
-            self.lifting_type == LiftingType.NON_EQUIVARIANT
-            and self.projection_type == ProjectionType.DECANONICALIZATION
-        ):
-            raise ValueError(
-                "If 'lifting_type' is 'none', 'projection_type' must be 'equivariant'."
-            )
+        if self.lifting_type == LiftingType.CANONICALIZATION and self.projection_type != ProjectionType.DECANONICALIZATION:
+            raise ValueError("If 'lifting_type' is 'canonicalization', 'projection_type' must be 'decanonicalization'.")
+        elif self.lifting_type == LiftingType.NON_EQUIVARIANT and self.projection_type == ProjectionType.DECANONICALIZATION:
+            raise ValueError("If 'lifting_type' is 'none', 'projection_type' must be 'equivariant'.")
         return self
 
 
@@ -374,9 +297,7 @@ class EGNOConfig(BaseModel):
     activation: FFNActivation
     normalise_scalars: bool
     use_time_conv: bool
-    num_fourier_modes: Annotated[
-        PositiveInt, Field(description="Must be greater than 0.")
-    ]
+    num_fourier_modes: Annotated[PositiveInt, Field(description="Must be greater than 0.")]
     time_embed_dim: int
 
 
@@ -413,9 +334,7 @@ class Config(BaseModel):
             and self.atom_config.output_heads > 1
             and self.dataloader.multitask is False
         ):
-            print(
-                "Are you sure you want to use multiple output heads for a single-task model? This is unusual, but maybe you're onto something."
-            )
+            print("Are you sure you want to use multiple output heads for a single-task model? This is unusual, but maybe you're onto something.")
         return self
 
     @model_validator(mode="after")
@@ -425,23 +344,17 @@ class Config(BaseModel):
                 if self.atom_config is None:
                     raise ValueError("ATOM model requires 'atom_config' to be set.")
                 if self.egno_config is not None or self.egnn_config is not None:
-                    raise ValueError(
-                        "ATOM model should not define 'egno_config' or 'egnn_config'."
-                    )
+                    raise ValueError("ATOM model should not define 'egno_config' or 'egnn_config'.")
             case ModelType.EGNO:
                 if self.egno_config is None:
                     raise ValueError("EGNO model requires 'egno_config' to be set.")
                 if self.atom_config is not None or self.egnn_config is not None:
-                    raise ValueError(
-                        "EGNO model should not define 'atom_config' or 'egnn_config'."
-                    )
+                    raise ValueError("EGNO model should not define 'atom_config' or 'egnn_config'.")
             case ModelType.EGNN_S | ModelType.EGNN_R:
                 if self.egnn_config is None:
                     raise ValueError("EGNN model requires 'egnn_config' to be set.")
                 if self.atom_config is not None or self.egno_config is not None:
-                    raise ValueError(
-                        "EGNN model should not define 'atom_config' or 'egno_config'."
-                    )
+                    raise ValueError("EGNN model should not define 'atom_config' or 'egno_config'.")
         return self
 
     @classmethod
@@ -459,8 +372,6 @@ class Config(BaseModel):
             with open(path, "rb") as f:
                 config_dict = tomllib.load(f)
         except IsADirectoryError:
-            raise ValueError(
-                f"Path '{path}' is a directory, not a file. Use --config <path> if you want to run multiple configurations."
-            )
+            raise ValueError(f"Path '{path}' is a directory, not a file. Use --config <path> if you want to run multiple configurations.")
 
         return cls.model_validate(config_dict)

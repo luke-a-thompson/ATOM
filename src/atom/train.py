@@ -28,12 +28,8 @@ def main() -> None:
         # Preserve directory structure under benchmark_runs
         base_dir_name: str = single_config_path.parent.name
         config_stem: str = single_config_path.stem
-        base_benchmark_dir: Path = (
-            Path("benchmark_runs") / f"{base_dir_name}_{invocation_timestamp}"
-        )
-        experiment_dir: Path = (
-            base_benchmark_dir / f"{config_stem}_{invocation_timestamp}"
-        )
+        base_benchmark_dir: Path = Path("benchmark_runs") / f"{base_dir_name}_{invocation_timestamp}"
+        experiment_dir: Path = base_benchmark_dir / f"{config_stem}_{invocation_timestamp}"
 
         if config.dataloader.multitask:
             multitask_benchmark(config, single_config_path, experiment_dir)
@@ -54,16 +50,11 @@ def main() -> None:
             set_environment_variables(config)
 
             try:
-                relative_path: Path = (
-                    Path(config_path).resolve().relative_to(base_configs_dir)
-                )
+                relative_path: Path = Path(config_path).resolve().relative_to(base_configs_dir)
             except Exception:
                 relative_path = Path(Path(config_path).name)
 
-            base_benchmark_root: Path = (
-                Path("benchmark_runs")
-                / f"{base_configs_dir.name}_{invocation_timestamp}"
-            )
+            base_benchmark_root: Path = Path("benchmark_runs") / f"{base_configs_dir.name}_{invocation_timestamp}"
             if relative_path.suffix:
                 rel_config_stem: str = relative_path.stem
                 rel_parent_dir: Path = relative_path.parent
@@ -71,11 +62,7 @@ def main() -> None:
                 rel_config_stem = Path(relative_path).stem
                 rel_parent_dir = Path("")
 
-            rel_experiment_dir: Path = (
-                base_benchmark_root
-                / rel_parent_dir
-                / f"{rel_config_stem}_{invocation_timestamp}"
-            ).resolve()
+            rel_experiment_dir: Path = (base_benchmark_root / rel_parent_dir / f"{rel_config_stem}_{invocation_timestamp}").resolve()
 
             try:
                 if config.dataloader.multitask:
