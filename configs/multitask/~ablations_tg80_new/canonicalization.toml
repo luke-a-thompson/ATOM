@@ -155,7 +155,6 @@ heterogenous_attention_type = "ghca"
 positional_encoding = "none"
 rope_base = 1000
 rope_tau = 24_000
-learnable_attention_denom = false
 # Feature parameters
 lifting_type = "canonicalization"
 projection_type = "decanonicalization"

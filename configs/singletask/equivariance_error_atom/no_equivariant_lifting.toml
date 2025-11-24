@@ -70,7 +70,6 @@ heterogenous_attention_type = "ghca"
 positional_encoding = "trope"
 rope_base = 1000
 rope_tau = 10000
-learnable_attention_denom = false
 # Feature parameters
 lifting_type = "non_equivariant"
 projection_type = "equivariant"
