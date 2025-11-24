@@ -35,6 +35,9 @@ def run_single_inference(model_path: str, config_path: str) -> InferenceRunResul
     _ = model.load_state_dict(clean_model_state_dict)
     _ = model.eval()
 
+    param_count = sum(p.numel() for p in model.parameters())
+    print(f"Model parameter count: {param_count:,}")
+
     test_s2t_loss, test_s2s_loss = eval_epoch(config, model, test_loader)
 
     latency = time.time() - start_time
