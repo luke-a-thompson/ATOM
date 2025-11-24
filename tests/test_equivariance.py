@@ -8,7 +8,12 @@ import sys
 from tensordict import TensorDict
 from e3nn import o3
 
-from atom.training import Config, initialize_model, create_dataloaders_single, create_dataloaders_multitask
+from atom.training import (
+    Config,
+    initialize_model,
+    create_dataloaders_single,
+    create_dataloaders_multitask,
+)
 from atom.inference.inference_utils import clean_state_dict_prefixes
 from atom.atom.lifting_layers import CanonicalizationLift
 
@@ -30,12 +35,20 @@ FEATURE_CONFIG: dict[str, dict[str, slice]] = {
 
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments for simple directory-based evaluation."""
-    parser = argparse.ArgumentParser(description="Evaluate equivariance MSEs over an experiments directory")
-    _ = parser.add_argument("root_dir", type=str, help="Path to root directory containing experiment subdirectories")
+    parser = argparse.ArgumentParser(
+        description="Evaluate equivariance MSEs over an experiments directory"
+    )
+    _ = parser.add_argument(
+        "root_dir",
+        type=str,
+        help="Path to root directory containing experiment subdirectories",
+    )
     return parser.parse_args()
 
 
-def load_model_and_data(config_path: str, model_path: str) -> tuple[Config, torch.nn.Module, TensorDict]:
+def load_model_and_data(
+    config_path: str, model_path: str
+) -> tuple[Config, torch.nn.Module, TensorDict]:
     """Loads config, model, and a single data sample."""
     try:
         config = Config.from_toml(Path(config_path))
@@ -44,7 +57,9 @@ def load_model_and_data(config_path: str, model_path: str) -> tuple[Config, torc
         sys.exit(1)
 
     try:
-        model_state_dict = torch.load(model_path, map_location=config.training.device, weights_only=True)
+        model_state_dict = torch.load(
+            model_path, map_location=config.training.device, weights_only=True
+        )
     except FileNotFoundError:
         print(f"Error: Model file {model_path} not found")
         sys.exit(1)
@@ -67,17 +82,25 @@ def load_model_and_data(config_path: str, model_path: str) -> tuple[Config, torc
     return config, model, data_sample
 
 
-def apply_rotation(data: TensorDict, rotation_matrix: npt.NDArray[np.float64]) -> TensorDict:
+def apply_rotation(
+    data: TensorDict, rotation_matrix: npt.NDArray[np.float64]
+) -> TensorDict:
     """Applies a rotation matrix to the spatial components of the data dictionary."""
     rotated_data = data.clone()
 
-    def _rotate_slice(tensor: torch.Tensor, rot_mat: npt.NDArray[np.float64], xyz_slice: slice) -> torch.Tensor:
+    def _rotate_slice(
+        tensor: torch.Tensor, rot_mat: npt.NDArray[np.float64], xyz_slice: slice
+    ) -> torch.Tensor:
         """Helper to rotate a specific slice of a tensor."""
         xyz = tensor[..., xyz_slice].cpu().numpy()
         original_shape = xyz.shape
         xyz_reshaped = xyz.reshape(-1, 3)
         rotated_xyz = xyz_reshaped @ rot_mat.T
-        rotated_xyz_tensor = torch.tensor(rotated_xyz.reshape(original_shape), device=tensor.device, dtype=tensor.dtype)
+        rotated_xyz_tensor = torch.tensor(
+            rotated_xyz.reshape(original_shape),
+            device=tensor.device,
+            dtype=tensor.dtype,
+        )
 
         new_tensor = tensor.clone()
         new_tensor[..., xyz_slice] = rotated_xyz_tensor
@@ -87,7 +110,9 @@ def apply_rotation(data: TensorDict, rotation_matrix: npt.NDArray[np.float64]) -
     for key in ["x_0", "v_0"]:
         if key in rotated_data:
             xyz_slice = FEATURE_CONFIG[key]["xyz"]
-            rotated_data[key] = _rotate_slice(rotated_data[key], rotation_matrix, xyz_slice)
+            rotated_data[key] = _rotate_slice(
+                rotated_data[key], rotation_matrix, xyz_slice
+            )
 
     # Handle concatenated_features which may have multiple vectors
     if "concatenated_features" in rotated_data:
@@ -103,7 +128,11 @@ def apply_rotation(data: TensorDict, rotation_matrix: npt.NDArray[np.float64]) -
             original_shape = xyz.shape
             xyz_reshaped = xyz.reshape(-1, 3)
             rotated_xyz = xyz_reshaped @ rotation_matrix.T
-            rotated_xyz_tensor = torch.tensor(rotated_xyz.reshape(original_shape), device=tensor.device, dtype=tensor.dtype)
+            rotated_xyz_tensor = torch.tensor(
+                rotated_xyz.reshape(original_shape),
+                device=tensor.device,
+                dtype=tensor.dtype,
+            )
             new_tensor[..., xyz_slice] = rotated_xyz_tensor
 
         rotated_data["concatenated_features"] = new_tensor
@@ -191,7 +220,9 @@ def run_equivariance_ablations(root_dir: str) -> None:
             per_run_rot.append(res["mse_rot"])
 
         mean_unrot = float(np.mean(per_run_unrot))
-        sd_unrot = float(np.std(per_run_unrot, ddof=1)) if len(per_run_unrot) > 1 else 0.0
+        sd_unrot = (
+            float(np.std(per_run_unrot, ddof=1)) if len(per_run_unrot) > 1 else 0.0
+        )
         mean_rot = float(np.mean(per_run_rot))
         sd_rot = float(np.std(per_run_rot, ddof=1)) if len(per_run_rot) > 1 else 0.0
 
@@ -210,9 +241,15 @@ def run_equivariance_ablations(root_dir: str) -> None:
         two_sd_diff_scaled = (2 * sd_diff) * scale
 
         print(f"{exp.name} ({len(model_paths)} runs)")
-        print(f"  S2T MSE vs ground truth (unrotated input): \\({mean_unrot_scaled:.3f}{{\\scriptstyle \\pm{two_sd_unrot_scaled:.3f}}}\\) \\times 10^{{-2}}")
-        print(f"  S2T MSE vs ground truth (rotated input):   \\({mean_rot_scaled:.3f}{{\\scriptstyle \\pm{two_sd_rot_scaled:.3f}}}\\) \\times 10^{{-2}}")
-        print(f"  Difference (rotated − unrotated):      \\({mean_diff_scaled:.3f}{{\\scriptstyle \\pm{two_sd_diff_scaled:.3f}}}\\) \\times 10^{{-2}}")
+        print(
+            f"  S2T MSE vs ground truth (unrotated input): \\({mean_unrot_scaled:.3f}{{\\scriptstyle \\pm{two_sd_unrot_scaled:.3f}}}\\) \\times 10^{{-2}}"
+        )
+        print(
+            f"  S2T MSE vs ground truth (rotated input):   \\({mean_rot_scaled:.3f}{{\\scriptstyle \\pm{two_sd_rot_scaled:.3f}}}\\) \\times 10^{{-2}}"
+        )
+        print(
+            f"  Difference (rotated − unrotated):      \\({mean_diff_scaled:.3f}{{\\scriptstyle \\pm{two_sd_diff_scaled:.3f}}}\\) \\times 10^{{-2}}"
+        )
 
 
 def test_e3nn_linear_equivariance() -> None:
@@ -238,14 +275,20 @@ def test_e3nn_linear_equivariance() -> None:
         original_output = e3nn_linear(input_tensor)
 
     # 2. Use a fixed deterministic rotation matrix (Euler xyz: 0.3, -0.7, 1.1)
-    random_rotation: npt.NDArray[np.float64] = Rotation.from_euler("xyz", [0.3, -0.7, 1.1]).as_matrix()
+    random_rotation: npt.NDArray[np.float64] = Rotation.from_euler(
+        "xyz", [0.3, -0.7, 1.1]
+    ).as_matrix()
     print(f"Generated rotation matrix:\n{random_rotation}")
 
     # 3. Apply rotation to the input
     # Reshape for easier processing
     input_reshaped = input_tensor.reshape(-1, 3).cpu().numpy()
     rotated_input_np = input_reshaped @ random_rotation.T
-    rotated_input = torch.tensor(rotated_input_np.reshape(batch_size, timesteps, nodes, 3), device=device, dtype=input_tensor.dtype)
+    rotated_input = torch.tensor(
+        rotated_input_np.reshape(batch_size, timesteps, nodes, 3),
+        device=device,
+        dtype=input_tensor.dtype,
+    )
 
     # 4. Get output for the rotated input
     with torch.no_grad():
@@ -269,7 +312,7 @@ def test_e3nn_linear_equivariance() -> None:
     mean_error = np.mean(error)
     mse = np.mean((rotated_xyz - expected_rotated_xyz) ** 2)
 
-    print(f"\n=== E3NN LINEAR LAYER TEST RESULTS ===")
+    print("\n=== E3NN LINEAR LAYER TEST RESULTS ===")
     print(f"Max error: {max_error:.2e}")
     print(f"Mean error: {mean_error:.2e}")
     print(f"MSE: {mse:.2e}")
@@ -309,7 +352,9 @@ def test_canonicalizer_equivariance(config_path: str, model_path: str) -> None:
     _, _, _, Q = canonicalizer(x, v, Z)
 
     # Use a fixed deterministic rotation (Euler xyz: 0.3, -0.7, 1.1)
-    R_np: npt.NDArray[np.float64] = Rotation.from_euler("xyz", [0.3, -0.7, 1.1]).as_matrix()
+    R_np: npt.NDArray[np.float64] = Rotation.from_euler(
+        "xyz", [0.3, -0.7, 1.1]
+    ).as_matrix()
     R: torch.Tensor = torch.tensor(R_np, device=x.device, dtype=x.dtype)
     x_rot: torch.Tensor = x @ R.T
     v_rot: torch.Tensor = v @ R.T
@@ -318,7 +363,9 @@ def test_canonicalizer_equivariance(config_path: str, model_path: str) -> None:
     _, _, _, Q_rot = canonicalizer(x_rot, v_rot, Z)
 
     # The frame should transform as Q_rot = R @ Q
-    assert torch.allclose(Q_rot, R @ Q, atol=1e-5), f"Frame does not transform correctly, ||Q_rot - RQ||={torch.norm(Q_rot - R @ Q)}"
+    assert torch.allclose(Q_rot, R @ Q, atol=1e-5), (
+        f"Frame does not transform correctly, ||Q_rot - RQ||={torch.norm(Q_rot - R @ Q)}"
+    )
 
     # Canonicalized coordinates should be invariant
     x_can: torch.Tensor = x @ Q
@@ -326,8 +373,12 @@ def test_canonicalizer_equivariance(config_path: str, model_path: str) -> None:
     x_can_rot: torch.Tensor = x_rot @ Q_rot
     v_can_rot: torch.Tensor = v_rot @ Q_rot
 
-    assert torch.allclose(x_can, x_can_rot, atol=1e-5), f"x canonicalization is not equivariant, error: {torch.norm(x_can - x_can_rot)}"
-    assert torch.allclose(v_can, v_can_rot, atol=1e-5), f"v canonicalization is not equivariant, error: {torch.norm(v_can - v_can_rot)}"
+    assert torch.allclose(x_can, x_can_rot, atol=1e-5), (
+        f"x canonicalization is not equivariant, error: {torch.norm(x_can - x_can_rot)}"
+    )
+    assert torch.allclose(v_can, v_can_rot, atol=1e-5), (
+        f"v canonicalization is not equivariant, error: {torch.norm(v_can - v_can_rot)}"
+    )
 
     print("Canonicalizer module equivariance test passed.")
 

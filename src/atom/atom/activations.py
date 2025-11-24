@@ -21,7 +21,9 @@ class SwiGLU(nn.Module):
     def __init__(self, input_dim: int):  # 'dim' is the input dimension
         super().__init__()
         self.linear_gate = nn.Linear(input_dim, input_dim)  # Linear layer for the gate
-        self.linear_value = nn.Linear(input_dim, input_dim)  # Linear layer for the value
+        self.linear_value = nn.Linear(
+            input_dim, input_dim
+        )  # Linear layer for the value
 
     @override
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -30,7 +32,9 @@ class SwiGLU(nn.Module):
         return F.silu(gate) * value  # Element-wise product
 
 
-def get_activation(activation: FFNActivation, input_dim: int | None = None) -> nn.Module:
+def get_activation(
+    activation: FFNActivation, input_dim: int | None = None
+) -> nn.Module:
     if activation == FFNActivation.SWIGLU and input_dim is None:
         raise ValueError("input_dim must be provided for SwiGLU activation")
 
@@ -50,6 +54,8 @@ def get_activation(activation: FFNActivation, input_dim: int | None = None) -> n
             assert input_dim is not None
             activation_fn = SwiGLU(input_dim=input_dim)
         case _:
-            raise ValueError(f"Invalid activation function: {activation}, select from one of {FFNActivation.__members__.keys()}")
+            raise ValueError(
+                f"Invalid activation function: {activation}, select from one of {FFNActivation.__members__.keys()}"
+            )
 
     return activation_fn

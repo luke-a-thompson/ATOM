@@ -1,7 +1,6 @@
 import numpy as np
 import numpy.typing as npt
 import matplotlib.pyplot as plt
-import matplotlib.font_manager as fm
 from pathlib import Path
 from usyd_colors import get_palette
 from figures import set_matplotlib_style
@@ -9,7 +8,11 @@ from figures import set_matplotlib_style
 grey, red, blue, yellow, white = get_palette("primary").hex_colors()
 
 
-def plot_lambda_value_residuals(weights_dir: Path, figure_file_name: str, figure_dir: Path = Path("Z_paper_content/lambda_value_residuals")) -> None:
+def plot_lambda_value_residuals(
+    weights_dir: Path,
+    figure_file_name: str,
+    figure_dir: Path = Path("Z_paper_content/lambda_value_residuals"),
+) -> None:
     """
     Plot the lambda values as a line chart showing their evolution over time.
 
@@ -49,7 +52,13 @@ def plot_lambda_value_residuals(weights_dir: Path, figure_file_name: str, figure
 
     # Plot each lambda value as a separate line
     for i in range(n_lambda_values):
-        ax.plot(x, lambda_values[:, i], label=f"λ{i+1}", color=colors[i % len(colors)], linewidth=2)
+        ax.plot(
+            x,
+            lambda_values[:, i],
+            label=f"λ{i + 1}",
+            color=colors[i % len(colors)],
+            linewidth=2,
+        )
 
     # Add vertical lines at selected timesteps
     for idx in selected_indices:
@@ -98,7 +107,9 @@ def plot_learnable_attention_weights(
         None
     """
 
-    weights: npt.NDArray[np.float32] = np.load(weights_dir / data_file_name, allow_pickle=True)
+    weights: npt.NDArray[np.float32] = np.load(
+        weights_dir / data_file_name, allow_pickle=True
+    )
     attention_denom: npt.NDArray[np.float32] = weights["attention_denom"]
     print(f"Attention denom shape: {attention_denom.shape}")
 
@@ -113,7 +124,9 @@ def plot_learnable_attention_weights(
     n_layers: int = attention_denom.shape[1]
     n_heads: int = attention_denom.shape[2]
     attention_denom = attention_denom.reshape(n_timesteps, n_layers * n_heads)
-    print(f"Reshaped attention denom: {attention_denom.shape} (timesteps, layers*heads)")
+    print(
+        f"Reshaped attention denom: {attention_denom.shape} (timesteps, layers*heads)"
+    )
 
     # Select indices at regular intervals based on step_size
     selected_indices: list[int] = list(range(0, n_timesteps, step_size))
@@ -175,7 +188,15 @@ def plot_learnable_attention_weights(
 
 if __name__ == "__main__":
     set_matplotlib_style()
-    plot_learnable_attention_weights(Path("benchmark_runs/denom_aspirin_md17_22-May-2025_17-09-23/run_1"), "aspirin")
-    plot_lambda_value_residuals(Path("benchmark_runs/denom_aspirin_md17_22-May-2025_17-09-23/run_1"), "aspirin")
-    plot_learnable_attention_weights(Path("benchmark_runs/denom_uracil_md17_22-May-2025_17-24-37/run_1"), "uracil")
-    plot_lambda_value_residuals(Path("benchmark_runs/denom_uracil_md17_22-May-2025_17-24-37/run_1"), "uracil")
+    plot_learnable_attention_weights(
+        Path("benchmark_runs/denom_aspirin_md17_22-May-2025_17-09-23/run_1"), "aspirin"
+    )
+    plot_lambda_value_residuals(
+        Path("benchmark_runs/denom_aspirin_md17_22-May-2025_17-09-23/run_1"), "aspirin"
+    )
+    plot_learnable_attention_weights(
+        Path("benchmark_runs/denom_uracil_md17_22-May-2025_17-24-37/run_1"), "uracil"
+    )
+    plot_lambda_value_residuals(
+        Path("benchmark_runs/denom_uracil_md17_22-May-2025_17-24-37/run_1"), "uracil"
+    )

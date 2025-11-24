@@ -52,7 +52,14 @@ def get_mol_supplier(filename: str) -> Chem.ForwardSDMolSupplier | None:
         try:
             with tempfile.NamedTemporaryFile(delete=False) as tmp:
                 with gzip.open(filename, "rb") as f_in:
-                    with tqdm(total=total_size, unit="B", unit_scale=True, desc="Unzipping", position=1, leave=False) as pbar:
+                    with tqdm(
+                        total=total_size,
+                        unit="B",
+                        unit_scale=True,
+                        desc="Unzipping",
+                        position=1,
+                        leave=False,
+                    ) as pbar:
                         while True:
                             buf = f_in.read(1024 * 1024)  # 1MB chunks
                             if not buf:
@@ -125,7 +132,7 @@ def analyze_dataset():
 
     # --- Processing Loop ---
     while file_counter <= 100:  # Safety break
-        candidate_file = f"/mnt/d/PubChem/Compound_{(file_counter-1)*500000+1:09d}_{file_counter*500000:09d}.sdf.gz"
+        candidate_file = f"/mnt/d/PubChem/Compound_{(file_counter - 1) * 500000 + 1:09d}_{file_counter * 500000:09d}.sdf.gz"
 
         sup = get_mol_supplier(candidate_file)
         if sup is None:
@@ -134,8 +141,8 @@ def analyze_dataset():
 
             # Try alternative naming patterns
             alt_files = [
-                f"/mnt/d/PubChem/Compound_{(file_counter-1)*500000+1:09d}_{file_counter*500000:09d}.sdf",
-                f"/mnt/d/PubChem/compound_{(file_counter-1)*500000+1:09d}_{file_counter*500000:09d}.sdf.gz",
+                f"/mnt/d/PubChem/Compound_{(file_counter - 1) * 500000 + 1:09d}_{file_counter * 500000:09d}.sdf",
+                f"/mnt/d/PubChem/compound_{(file_counter - 1) * 500000 + 1:09d}_{file_counter * 500000:09d}.sdf.gz",
             ]
 
             sup = None
@@ -159,7 +166,10 @@ def analyze_dataset():
             # --- Pre-computation criteria ---
             if any(atom.GetSymbol() not in allowed_atoms for atom in mol.GetAtoms()):
                 continue
-            if any(sum(1 for atom in mol.GetAtoms() if atom.GetSymbol() == element) > count for element, count in max_atoms_of_type.items()):
+            if any(
+                sum(1 for atom in mol.GetAtoms() if atom.GetSymbol() == element) > count
+                for element, count in max_atoms_of_type.items()
+            ):
                 continue
             if len(Chem.GetMolFrags(mol)) > 1:
                 continue
@@ -168,7 +178,9 @@ def analyze_dataset():
 
             if len(candidate_batch) >= batch_size:
                 # Process the batch
-                batch_fps = fp_gen.GetFingerprints(candidate_batch, numThreads=os.cpu_count() or 1)
+                batch_fps = fp_gen.GetFingerprints(
+                    candidate_batch, numThreads=os.cpu_count() or 1
+                )
                 for i in range(len(candidate_batch)):
                     candidate_fp = batch_fps[i]
 
@@ -178,7 +190,11 @@ def analyze_dataset():
                     total_similarity += max_similarity
                     total_molecules_processed += 1
 
-                    if similarity_lower_bound <= max_similarity <= similarity_upper_bound:
+                    if (
+                        similarity_lower_bound
+                        <= max_similarity
+                        <= similarity_upper_bound
+                    ):
                         million_satisfying_criteria += 1
 
                 candidate_batch = []  # Reset batch
@@ -187,17 +203,29 @@ def analyze_dataset():
             current_million_boundary = total_compounds_read // 1_000_000
             if current_million_boundary > last_million_boundary:
                 million_counter += 1
-                mean_similarity = (total_similarity / total_molecules_processed) if total_molecules_processed > 0 else 0.0
-                print(f"\n--- Stats for million #{million_counter} (total compounds read) ---")
-                print(f"Mean similarity to seeds (for {total_molecules_processed} filtered compounds): {mean_similarity:.4f}")
-                print(f"Molecules satisfying criteria in this million-chunk: {million_satisfying_criteria}")
+                mean_similarity = (
+                    (total_similarity / total_molecules_processed)
+                    if total_molecules_processed > 0
+                    else 0.0
+                )
+                print(
+                    f"\n--- Stats for million #{million_counter} (total compounds read) ---"
+                )
+                print(
+                    f"Mean similarity to seeds (for {total_molecules_processed} filtered compounds): {mean_similarity:.4f}"
+                )
+                print(
+                    f"Molecules satisfying criteria in this million-chunk: {million_satisfying_criteria}"
+                )
                 print("---------------------------\n")
                 million_satisfying_criteria = 0
                 last_million_boundary = current_million_boundary
 
         # Process any remaining molecules in the batch at the end of the file
         if candidate_batch:
-            batch_fps = fp_gen.GetFingerprints(candidate_batch, numThreads=os.cpu_count() or 1)
+            batch_fps = fp_gen.GetFingerprints(
+                candidate_batch, numThreads=os.cpu_count() or 1
+            )
             for i in range(len(candidate_batch)):
                 candidate_fp = batch_fps[i]
 

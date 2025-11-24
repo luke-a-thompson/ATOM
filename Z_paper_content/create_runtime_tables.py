@@ -20,7 +20,9 @@ def get_run_times(directory: Path) -> dict[str, dict[str, list[float]]]:
     Returns:
         Dictionary mapping dataset names to dictionaries of molecule names to lists of run times
     """
-    run_times: dict[str, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
+    run_times: dict[str, dict[str, list[float]]] = defaultdict(
+        lambda: defaultdict(list)
+    )
 
     # Find all results.json files
     json_files = glob.glob(os.path.join(directory, "**/results.json"), recursive=True)
@@ -127,13 +129,13 @@ def format_scientific(value: float) -> str:
         String in LaTeX scientific notation format
     """
     if value >= 1e12:
-        return f"{value/1e12:.2f}\\times 10^{{12}}"
+        return f"{value / 1e12:.2f}\\times 10^{{12}}"
     elif value >= 1e9:
-        return f"{value/1e9:.2f}\\times 10^{{9}}"
+        return f"{value / 1e9:.2f}\\times 10^{{9}}"
     elif value >= 1e6:
-        return f"{value/1e6:.2f}\\times 10^{{6}}"
+        return f"{value / 1e6:.2f}\\times 10^{{6}}"
     elif value >= 1e3:
-        return f"{value/1e3:.2f}\\times 10^{{3}}"
+        return f"{value / 1e3:.2f}\\times 10^{{3}}"
     else:
         return f"{value:.2f}"
 
@@ -195,7 +197,9 @@ def _safe_std(values: list[float]) -> float:
     return float(np.std(values)) if len(values) > 0 else float("nan")
 
 
-def _collect_model_stats(directory: Path, dataset: str, f_peak_tflops: float) -> dict[str, dict[str, float]]:
+def _collect_model_stats(
+    directory: Path, dataset: str, f_peak_tflops: float
+) -> dict[str, dict[str, float]]:
     """Collect per-molecule runtime statistics for a single model directory.
 
     Returns a mapping: molecule -> { mean_seconds, std_seconds, total_flops_1e12, epochs_per_min }
@@ -208,7 +212,9 @@ def _collect_model_stats(directory: Path, dataset: str, f_peak_tflops: float) ->
         mean_seconds: float = _safe_mean([float(t) for t in times])
         std_seconds: float = _safe_std([float(t) for t in times])
         mean_minutes: float = mean_seconds / 60.0
-        total_flops: float = calculate_total_flops(f_peak_tflops, mean_minutes)  # in FLOPS
+        total_flops: float = calculate_total_flops(
+            f_peak_tflops, mean_minutes
+        )  # in FLOPS
         total_flops_1e12: float = total_flops / 1e12
         epochs_per_min: float = calculate_epochs_per_minute(mean_seconds)
         mol_to_stats[molecule] = {
@@ -220,10 +226,16 @@ def _collect_model_stats(directory: Path, dataset: str, f_peak_tflops: float) ->
     return mol_to_stats
 
 
-def build_runtime_table(egno_dir: Path, atom_dir: Path, dataset: str, f_peak_tflops: float = 15.0) -> str:
+def build_runtime_table(
+    egno_dir: Path, atom_dir: Path, dataset: str, f_peak_tflops: float = 15.0
+) -> str:
     """Build LaTeX for the runtime table comparing EGNO vs ATOMS for one dataset."""
-    egno_stats: dict[str, dict[str, float]] = _collect_model_stats(egno_dir, dataset, f_peak_tflops)
-    atom_stats: dict[str, dict[str, float]] = _collect_model_stats(atom_dir, dataset, f_peak_tflops)
+    egno_stats: dict[str, dict[str, float]] = _collect_model_stats(
+        egno_dir, dataset, f_peak_tflops
+    )
+    atom_stats: dict[str, dict[str, float]] = _collect_model_stats(
+        atom_dir, dataset, f_peak_tflops
+    )
 
     all_molecules: list[str] = sorted(set(egno_stats.keys()) | set(atom_stats.keys()))
     if len(all_molecules) == 0:
@@ -234,7 +246,12 @@ def build_runtime_table(egno_dir: Path, atom_dir: Path, dataset: str, f_peak_tfl
     lines: list[str] = []
     lines.append("\\begin{tabular}{l" + ("c" * (len(molecule_order) + 2)) + "}")
     lines.append("        \\toprule")
-    header_cells: list[str] = ["Model", "", *[_display_molecule_name(m) for m in molecule_order], "Mean \\%"]
+    header_cells: list[str] = [
+        "Model",
+        "",
+        *[_display_molecule_name(m) for m in molecule_order],
+        "Mean \\%",
+    ]
     lines.append("        " + " & ".join(header_cells) + " \\")
     lines.append("        \\midrule")
 
@@ -247,7 +264,9 @@ def build_runtime_table(egno_dir: Path, atom_dir: Path, dataset: str, f_peak_tfl
             if s is None:
                 row_cells.append("")
             else:
-                row_cells.append(_format_minutes_with_std(s["mean_seconds"], s["std_seconds"]))
+                row_cells.append(
+                    _format_minutes_with_std(s["mean_seconds"], s["std_seconds"])
+                )
         row_cells.append("")
         lines.append("        " + " & ".join(row_cells) + " \\")
 
@@ -301,7 +320,14 @@ def build_runtime_table(egno_dir: Path, atom_dir: Path, dataset: str, f_peak_tfl
         mean_red_cell = f"\\(\\mathbf{{{mean_red:.2f}\\%}}\\)"
 
     lines.append("        \\rowcolor{gray!20}")
-    lines.append("        \\multicolumn{2}{c}{Total FLOPS Reduction (\\%)} " + " & " + " & ".join(reductions) + " & " + mean_red_cell + " \\")
+    lines.append(
+        "        \\multicolumn{2}{c}{Total FLOPS Reduction (\\%)} "
+        + " & "
+        + " & ".join(reductions)
+        + " & "
+        + mean_red_cell
+        + " \\"
+    )
     lines.append("        \\bottomrule")
     lines.append("    \\end{tabular}")
     return "\n".join(lines) + "\n"
@@ -349,7 +375,9 @@ def main(directory: Path, datasets: list[str], model_type: str) -> dict[str, flo
             molecule_flops[molecule] = total_flops
 
             print(f"\t{molecule}")
-            print(f"\t\tTime (mins): \\( {format_latex_time(mean_time)}{{\\scriptstyle \\pm{format_latex_time(std_time)}}} \\)")
+            print(
+                f"\t\tTime (mins): \\( {format_latex_time(mean_time)}{{\\scriptstyle \\pm{format_latex_time(std_time)}}} \\)"
+            )
             print(f"\t\tTotal FLOPS: \\( {format_scientific(total_flops)} \\)")
             print(f"\t\tEpochs/min: \\( {epochs_per_min:.2f} \\)")
 
@@ -358,10 +386,14 @@ def main(directory: Path, datasets: list[str], model_type: str) -> dict[str, flo
             dataset_mean_time_seconds = dataset_means[dataset]
             dataset_mean_minutes = dataset_mean_time_seconds / 60
             dataset_total_flops = calculate_total_flops(f_peak, dataset_mean_minutes)
-            dataset_epochs_per_min = calculate_epochs_per_minute(dataset_mean_time_seconds)
+            dataset_epochs_per_min = calculate_epochs_per_minute(
+                dataset_mean_time_seconds
+            )
 
-            print(f"\nDataset mean:")
-            print(f"\tTime (mins): \\( {format_latex_time(dataset_means[dataset])}{{\\scriptstyle \\pm{format_latex_time(dataset_stds[dataset])}}} \\)")
+            print("\nDataset mean:")
+            print(
+                f"\tTime (mins): \\( {format_latex_time(dataset_means[dataset])}{{\\scriptstyle \\pm{format_latex_time(dataset_stds[dataset])}}} \\)"
+            )
             print(f"\tTotal FLOPS: \\( {format_scientific(dataset_total_flops)} \\)")
             print(f"\tEpochs/min: \\( {dataset_epochs_per_min:.2f} \\)")
 
@@ -369,11 +401,31 @@ def main(directory: Path, datasets: list[str], model_type: str) -> dict[str, flo
 
 
 def runtime_table_cli() -> int:
-    parser = argparse.ArgumentParser(description="Build runtime LaTeX table and write to Z_paper_content/tables.")
-    _ = parser.add_argument("egno_dir", type=str, help="Directory with EGNO runs (contains results.json files)")
-    _ = parser.add_argument("atom_dir", type=str, help="Directory with ATOMS/GTNO runs (contains results.json files)")
-    _ = parser.add_argument("--dataset", type=str, default="md17", help="Dataset key to aggregate (e.g., md17, rmd17, tg80)")
-    _ = parser.add_argument("--f-peak", type=float, default=15.0, help="Peak TFLOPS of the GPU (default: 15.0)")
+    parser = argparse.ArgumentParser(
+        description="Build runtime LaTeX table and write to Z_paper_content/tables."
+    )
+    _ = parser.add_argument(
+        "egno_dir",
+        type=str,
+        help="Directory with EGNO runs (contains results.json files)",
+    )
+    _ = parser.add_argument(
+        "atom_dir",
+        type=str,
+        help="Directory with ATOMS/GTNO runs (contains results.json files)",
+    )
+    _ = parser.add_argument(
+        "--dataset",
+        type=str,
+        default="md17",
+        help="Dataset key to aggregate (e.g., md17, rmd17, tg80)",
+    )
+    _ = parser.add_argument(
+        "--f-peak",
+        type=float,
+        default=15.0,
+        help="Peak TFLOPS of the GPU (default: 15.0)",
+    )
 
     args = parser.parse_args()
     egno_dir: Path = Path(args.egno_dir).expanduser().resolve()
@@ -383,9 +435,16 @@ def runtime_table_cli() -> int:
     if not atom_dir.exists():
         raise SystemExit(f"ATOMS directory does not exist: {atom_dir}")
 
-    latex_text: str = build_runtime_table(egno_dir=egno_dir, atom_dir=atom_dir, dataset=str(args.dataset), f_peak_tflops=float(args.f_peak))
+    latex_text: str = build_runtime_table(
+        egno_dir=egno_dir,
+        atom_dir=atom_dir,
+        dataset=str(args.dataset),
+        f_peak_tflops=float(args.f_peak),
+    )
 
-    out_path: Path = (Path(__file__).resolve().parent / "tables" / f"runtime_{args.dataset}.tex").resolve()
+    out_path: Path = (
+        Path(__file__).resolve().parent / "tables" / f"runtime_{args.dataset}.tex"
+    ).resolve()
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(latex_text, encoding="utf-8")
     return 0

@@ -58,7 +58,13 @@ class ExperimentResult:
     time_lag_mode: str
 
 
-def _format_mean_std_latex(mean_value: float, std_value: float, decimals: int = 2, scale_multiplier: float = 1.0, suffix: str = "") -> str:
+def _format_mean_std_latex(
+    mean_value: float,
+    std_value: float,
+    decimals: int = 2,
+    scale_multiplier: float = 1.0,
+    suffix: str = "",
+) -> str:
     """Format a LaTeX cell as mean±std.
 
     - decimals: number of decimal places for both mean and std (default 2)
@@ -99,11 +105,17 @@ def _aggregate_folds(results: list[ExperimentResult]) -> list[ExperimentResult]:
     grouped: dict[tuple[str, str, str], list[ExperimentResult]] = defaultdict(list)
     all_molecules: list[str] = []
     for r in results:
-        key: tuple[str, str, str] = (r.time_lag_mode, _canonicalize_model_type(r.model_type), r.molecule)
+        key: tuple[str, str, str] = (
+            r.time_lag_mode,
+            _canonicalize_model_type(r.model_type),
+            r.molecule,
+        )
         grouped[key].append(r)
         all_molecules.append(r.molecule)
 
-    is_multitask_folds: bool = len(all_molecules) > 0 and all(m.startswith("fold") and m[4:].isdigit() for m in all_molecules)
+    is_multitask_folds: bool = len(all_molecules) > 0 and all(
+        m.startswith("fold") and m[4:].isdigit() for m in all_molecules
+    )
 
     aggregated: list[ExperimentResult] = []
     for (mode_key, model_key, molecule), bucket in grouped.items():
@@ -126,8 +138,12 @@ def _aggregate_folds(results: list[ExperimentResult]) -> list[ExperimentResult]:
 
             # For multitask folds, scale values by 1e2 but do NOT append any suffix; caption will note ×10^{-2}
             scale: float = 100.0 if is_multitask_folds else 1.0
-            latex_s2s: str = _format_mean_std_latex(s2s_m, s2s_s, decimals=2, scale_multiplier=scale, suffix="")
-            latex_s2t: str = _format_mean_std_latex(s2t_m, s2t_s, decimals=2, scale_multiplier=scale, suffix="")
+            latex_s2s: str = _format_mean_std_latex(
+                s2s_m, s2s_s, decimals=2, scale_multiplier=scale, suffix=""
+            )
+            latex_s2t: str = _format_mean_std_latex(
+                s2t_m, s2t_s, decimals=2, scale_multiplier=scale, suffix=""
+            )
 
         aggregated.append(
             ExperimentResult(
@@ -198,7 +214,9 @@ def load_experiment_result(results_path: Path) -> ExperimentResult | None:
             dataloader_cfg = {}
 
         model_type: str = str(benchmark_cfg.get("model_type", "UNKNOWN")).strip()
-        molecule: str = str(dataloader_cfg.get("molecule_type", "unknown")).strip().lower()
+        molecule: str = (
+            str(dataloader_cfg.get("molecule_type", "unknown")).strip().lower()
+        )
 
         # If directory name encodes a fold (e.g., "..._fold3_...") treat the fold as the column key
         # so that multitask runs render each fold as its own column.
@@ -242,7 +260,9 @@ def load_experiment_result(results_path: Path) -> ExperimentResult | None:
         return None
 
 
-def group_results_by_model(results: list[ExperimentResult]) -> dict[str, dict[str, ExperimentResult]]:
+def group_results_by_model(
+    results: list[ExperimentResult],
+) -> dict[str, dict[str, ExperimentResult]]:
     """Group results by model -> molecule -> {s2s, s2t}.
 
     Returns a nested dict: {model_type: {molecule: ExperimentResult}}
@@ -250,7 +270,9 @@ def group_results_by_model(results: list[ExperimentResult]) -> dict[str, dict[st
     grouped: dict[str, dict[str, ExperimentResult]] = {}
     for r in results:
         canonical_model: str = _canonicalize_model_type(r.model_type)
-        model_group: dict[str, ExperimentResult] = grouped.setdefault(canonical_model, {})
+        model_group: dict[str, ExperimentResult] = grouped.setdefault(
+            canonical_model, {}
+        )
         # If duplicates for the same molecule/model exist, keep the latest by mtime
         model_group[r.molecule] = r
     return grouped
@@ -274,7 +296,9 @@ def _bold_latex_value(latex_value: str) -> str:
     return f"\\(\\mathbf{{{latex_value}}}\\)"
 
 
-def _compute_molecule_order(grouped: dict[str, dict[str, ExperimentResult]]) -> list[str]:
+def _compute_molecule_order(
+    grouped: dict[str, dict[str, ExperimentResult]],
+) -> list[str]:
     molecules: set[str] = set()
     for model_map in grouped.values():
         molecules.update(model_map.keys())
@@ -300,7 +324,11 @@ def _display_molecule_name(molecule: str) -> str:
     return molecule.replace("_", " ").title()
 
 
-def _best_model_for_each_molecule(grouped: dict[str, dict[str, ExperimentResult]], molecule_order: list[str], metric: str) -> dict[str, str]:
+def _best_model_for_each_molecule(
+    grouped: dict[str, dict[str, ExperimentResult]],
+    molecule_order: list[str],
+    metric: str,
+) -> dict[str, str]:
     best_model_for_molecule: dict[str, str] = {}
     for molecule in molecule_order:
         best_model: str | None = None
@@ -318,7 +346,9 @@ def _best_model_for_each_molecule(grouped: dict[str, dict[str, ExperimentResult]
     return best_model_for_molecule
 
 
-def build_tables(egno_dir: Path, atom_dir: Path, bold_best: bool = True) -> dict[str, str]:
+def build_tables(
+    egno_dir: Path, atom_dir: Path, bold_best: bool = True
+) -> dict[str, str]:
     """Build LaTeX tables per time_lag_mode and return {mode: latex_str}.
 
     Two directories are required: one for EGNO runs and one for ATOMS (GTNO) runs.
@@ -328,7 +358,9 @@ def build_tables(egno_dir: Path, atom_dir: Path, bold_best: bool = True) -> dict
     all_results: list[ExperimentResult] = []
     for d in [egno_dir, atom_dir]:
         results_files: list[Path] = find_results_files(d)
-        results_maybe: list[ExperimentResult | None] = [load_experiment_result(p) for p in results_files]
+        results_maybe: list[ExperimentResult | None] = [
+            load_experiment_result(p) for p in results_files
+        ]
         all_results.extend([r for r in results_maybe if r is not None])
 
     # Aggregate across folds for the same (mode, model, molecule)
@@ -340,16 +372,26 @@ def build_tables(egno_dir: Path, atom_dir: Path, bold_best: bool = True) -> dict
 
     mode_to_grouped: dict[str, dict[str, dict[str, ExperimentResult]]] = {}
     for r in all_results:
-        mode_key: str = r.time_lag_mode if r.time_lag_mode in {"uniform", "last"} else str(r.time_lag_mode)
-        mode_map: dict[str, dict[str, ExperimentResult]] = mode_to_grouped.setdefault(mode_key, {})
+        mode_key: str = (
+            r.time_lag_mode
+            if r.time_lag_mode in {"uniform", "last"}
+            else str(r.time_lag_mode)
+        )
+        mode_map: dict[str, dict[str, ExperimentResult]] = mode_to_grouped.setdefault(
+            mode_key, {}
+        )
         canonical_model: str = _canonicalize_model_type(r.model_type)
-        model_map: dict[str, ExperimentResult] = mode_map.setdefault(canonical_model, {})
+        model_map: dict[str, ExperimentResult] = mode_map.setdefault(
+            canonical_model, {}
+        )
         model_map[r.molecule] = r
 
     for mode_key, grouped in mode_to_grouped.items():
         if len(grouped) == 0:
             continue
-        outputs[mode_key] = build_combined_table_with_two_sections(grouped, bold_best=bold_best)
+        outputs[mode_key] = build_combined_table_with_two_sections(
+            grouped, bold_best=bold_best
+        )
 
     return outputs
 
@@ -363,12 +405,16 @@ def _collect_results_from_dirs(directories: list[Path]) -> list[ExperimentResult
     all_results: list[ExperimentResult] = []
     for d in directories:
         results_files: list[Path] = find_results_files(d)
-        results_maybe: list[ExperimentResult | None] = [load_experiment_result(p) for p in results_files]
+        results_maybe: list[ExperimentResult | None] = [
+            load_experiment_result(p) for p in results_files
+        ]
         all_results.extend([r for r in results_maybe if r is not None])
     return all_results
 
 
-def build_tables_from_dirs(model_dirs: list[Path], bold_best: bool = True) -> dict[str, str]:
+def build_tables_from_dirs(
+    model_dirs: list[Path], bold_best: bool = True
+) -> dict[str, str]:
     """Build LaTeX tables per time_lag_mode from a variable number of model directories.
 
     - Accepts one or more directories. Each directory can correspond to any model type
@@ -384,16 +430,26 @@ def build_tables_from_dirs(model_dirs: list[Path], bold_best: bool = True) -> di
 
     mode_to_grouped: dict[str, dict[str, dict[str, ExperimentResult]]] = {}
     for r in all_results:
-        mode_key: str = r.time_lag_mode if r.time_lag_mode in {"uniform", "last"} else str(r.time_lag_mode)
-        mode_map: dict[str, dict[str, ExperimentResult]] = mode_to_grouped.setdefault(mode_key, {})
+        mode_key: str = (
+            r.time_lag_mode
+            if r.time_lag_mode in {"uniform", "last"}
+            else str(r.time_lag_mode)
+        )
+        mode_map: dict[str, dict[str, ExperimentResult]] = mode_to_grouped.setdefault(
+            mode_key, {}
+        )
         canonical_model: str = _canonicalize_model_type(r.model_type)
-        model_map: dict[str, ExperimentResult] = mode_map.setdefault(canonical_model, {})
+        model_map: dict[str, ExperimentResult] = mode_map.setdefault(
+            canonical_model, {}
+        )
         model_map[r.molecule] = r
 
     for mode_key, grouped in mode_to_grouped.items():
         if len(grouped) == 0:
             continue
-        outputs[mode_key] = build_combined_table_with_two_sections(grouped, bold_best=bold_best)
+        outputs[mode_key] = build_combined_table_with_two_sections(
+            grouped, bold_best=bold_best
+        )
 
     return outputs
 
@@ -415,7 +471,12 @@ def _format_percent_value(value: float) -> str:
     return f"\\({value:+.2f}\\%\\)"
 
 
-def _build_rows_for_metric(grouped: dict[str, dict[str, ExperimentResult]], molecule_order: list[str], metric: str, bold_best: bool) -> list[str]:
+def _build_rows_for_metric(
+    grouped: dict[str, dict[str, ExperimentResult]],
+    molecule_order: list[str],
+    metric: str,
+    bold_best: bool,
+) -> list[str]:
     lines: list[str] = []
     # Preferred row order (top to bottom): EGNN-R, EGNN-S, EGNO, ATOM (GTNO)
     preferred_order: list[str] = ["EGNN_R", "EGNN_S", "EGNO", "GTNO"]
@@ -423,7 +484,9 @@ def _build_rows_for_metric(grouped: dict[str, dict[str, ExperimentResult]], mole
     # Append any unexpected models at the end in sorted order
     remaining: list[str] = sorted([m for m in grouped.keys() if m not in model_rows])
     model_rows.extend(remaining)
-    best_per_molecule: dict[str, str] = _best_model_for_each_molecule(grouped, molecule_order, metric)
+    best_per_molecule: dict[str, str] = _best_model_for_each_molecule(
+        grouped, molecule_order, metric
+    )
     for model in model_rows:
         display_name: str = MODEL_DISPLAY.get(model, model)
         row_cells: list[str] = [display_name]
@@ -440,7 +503,11 @@ def _build_rows_for_metric(grouped: dict[str, dict[str, ExperimentResult]], mole
     return lines
 
 
-def _build_improvement_row(grouped: dict[str, dict[str, ExperimentResult]], molecule_order: list[str], metric: str) -> str:
+def _build_improvement_row(
+    grouped: dict[str, dict[str, ExperimentResult]],
+    molecule_order: list[str],
+    metric: str,
+) -> str:
     # Gap is ATOM (GTNO) vs best non-ATOM model: (best_other - atom) / best_other * 100
     if "GTNO" not in grouped:
         return ""
@@ -481,7 +548,9 @@ def _build_improvement_row(grouped: dict[str, dict[str, ExperimentResult]], mole
     return "    " + "\\rowcolor{gray!20} Gap" + " & " + " & ".join(improvements) + " \\"
 
 
-def build_combined_table_with_two_sections(grouped: dict[str, dict[str, ExperimentResult]], bold_best: bool = True) -> str:
+def build_combined_table_with_two_sections(
+    grouped: dict[str, dict[str, ExperimentResult]], bold_best: bool = True
+) -> str:
     molecule_order: list[str] = _compute_molecule_order(grouped)
     headers: list[str] = ["", *[_display_molecule_name(m) for m in molecule_order]]
     lines: list[str] = []
@@ -490,12 +559,20 @@ def build_combined_table_with_two_sections(grouped: dict[str, dict[str, Experime
     lines.append("    " + " & ".join(headers) + " \\")
     lines.append("    \\midrule")
     # Top section: S2S
-    lines.extend(_build_rows_for_metric(grouped, molecule_order, metric="s2s", bold_best=bold_best))
+    lines.extend(
+        _build_rows_for_metric(
+            grouped, molecule_order, metric="s2s", bold_best=bold_best
+        )
+    )
     lines.append("    \\midrule")
     lines.append(_build_improvement_row(grouped, molecule_order, metric="s2s"))
     lines.append("    \\midrule")
     # Bottom section: S2T
-    lines.extend(_build_rows_for_metric(grouped, molecule_order, metric="s2t", bold_best=bold_best))
+    lines.extend(
+        _build_rows_for_metric(
+            grouped, molecule_order, metric="s2t", bold_best=bold_best
+        )
+    )
     lines.append("    \\midrule")
     lines.append(_build_improvement_row(grouped, molecule_order, metric="s2t"))
     lines.append("    \\bottomrule")
@@ -508,7 +585,9 @@ def _collect_results(egno_dir: Path, atom_dir: Path) -> list[ExperimentResult]:
     all_results: list[ExperimentResult] = []
     for d in [egno_dir, atom_dir]:
         results_files: list[Path] = find_results_files(d)
-        results_maybe: list[ExperimentResult | None] = [load_experiment_result(p) for p in results_files]
+        results_maybe: list[ExperimentResult | None] = [
+            load_experiment_result(p) for p in results_files
+        ]
         all_results.extend([r for r in results_maybe if r is not None])
     return all_results
 
@@ -526,7 +605,9 @@ def _infer_dataset_token_from_results(results: list[ExperimentResult]) -> str:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Build LaTeX tables from MD17 results.json files.")
+    parser = argparse.ArgumentParser(
+        description="Build LaTeX tables from MD17 results.json files."
+    )
     _ = parser.add_argument(
         "egno_dir",
         type=str,
@@ -557,7 +638,11 @@ def main() -> int:
 
     # Write a file per mode (e.g., md17_uniform_tables.tex, md17_last_tables.tex)
     for mode_key, latex_text in tables_by_mode.items():
-        suffix: str = f"{dataset_token}_{mode_key}_tables.tex" if dataset_token in {"md17", "md22"} else f"tables_{mode_key}.tex"
+        suffix: str = (
+            f"{dataset_token}_{mode_key}_tables.tex"
+            if dataset_token in {"md17", "md22"}
+            else f"tables_{mode_key}.tex"
+        )
         out_path: Path = (base_dir / suffix).resolve()
         _ = out_path.write_text(latex_text, encoding="utf-8")
         # Do not print LaTeX table to stdout; means are printed during construction

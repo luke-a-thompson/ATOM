@@ -141,7 +141,9 @@ tg_80_smiles = {
 print(f"Length of tg_80_smiles: {len(tg_80_smiles)}")
 
 
-def write_toml_split(filename: str, train: list[str], val: list[str], test: list[str]) -> None:
+def write_toml_split(
+    filename: str, train: list[str], val: list[str], test: list[str]
+) -> None:
     with open(filename, "w") as f:
         _ = f.write("train_molecules = [\n")
         for m in train:
@@ -189,7 +191,9 @@ def _names_to_smiles(names: list[str], raw_map: dict[str, str]) -> list[str]:
     return smiles_list
 
 
-def _compute_ecfp4_dense(smiles: list[str], fp_size: int = 1024) -> npt.NDArray[np.float32]:
+def _compute_ecfp4_dense(
+    smiles: list[str], fp_size: int = 1024
+) -> npt.NDArray[np.float32]:
     fpgen = rdFingerprintGenerator.GetMorganGenerator(radius=2, fpSize=fp_size)
     X = np.zeros((len(smiles), fp_size), dtype=np.float32)
     for i, s in enumerate(smiles):
@@ -203,10 +207,24 @@ def _compute_ecfp4_dense(smiles: list[str], fp_size: int = 1024) -> npt.NDArray[
     return X
 
 
-def _save_umap_plot(names: list[str], X: npt.NDArray[np.float32], train: list[str], val: list[str], test: list[str], out_path: str) -> None:
+def _save_umap_plot(
+    names: list[str],
+    X: npt.NDArray[np.float32],
+    train: list[str],
+    val: list[str],
+    test: list[str],
+    out_path: str,
+) -> None:
     import matplotlib.pyplot as plt
 
-    reducer2d = umap.UMAP(n_components=2, random_state=BASE_SEED, n_neighbors=15, min_dist=0.1, metric="jaccard", n_jobs=-1)
+    reducer2d = umap.UMAP(
+        n_components=2,
+        random_state=BASE_SEED,
+        n_neighbors=15,
+        min_dist=0.1,
+        metric="jaccard",
+        n_jobs=-1,
+    )
     emb2d = reducer2d.fit_transform(X)
 
     name_to_idx: dict[str, int] = {n: i for i, n in enumerate(names)}
@@ -215,7 +233,9 @@ def _save_umap_plot(names: list[str], X: npt.NDArray[np.float32], train: list[st
     idx_test = np.array([name_to_idx[n] for n in test], dtype=np.int64)
 
     fig, ax = plt.subplots(figsize=(8, 6), dpi=150)
-    ax.scatter(emb2d[idx_train, 0], emb2d[idx_train, 1], c="#B0B0B0", s=20, label="train")
+    ax.scatter(
+        emb2d[idx_train, 0], emb2d[idx_train, 1], c="#B0B0B0", s=20, label="train"
+    )
     ax.scatter(emb2d[idx_val, 0], emb2d[idx_val, 1], c="#1f77b4", s=30, label="val")
     ax.scatter(emb2d[idx_test, 0], emb2d[idx_test, 1], c="#ff7f0e", s=40, label="test")
     ax.set_xticks([])
@@ -229,7 +249,9 @@ def _save_umap_plot(names: list[str], X: npt.NDArray[np.float32], train: list[st
     plt.close(fig)
 
 
-def _assign_clusters_to_folds(cluster_labels: list[int], names: list[str], n_folds: int) -> dict[int, list[str]]:
+def _assign_clusters_to_folds(
+    cluster_labels: list[int], names: list[str], n_folds: int
+) -> dict[int, list[str]]:
     clusters: dict[int, list[str]] = {}
     for name, lab in zip(names, cluster_labels):
         clusters.setdefault(int(lab), []).append(name)
@@ -246,7 +268,6 @@ def _assign_clusters_to_folds(cluster_labels: list[int], names: list[str], n_fol
 
 
 def write_umap_cluster_folds(n_folds: int = 5, fp_size: int = 1024) -> None:
-
     os.makedirs("data/crossval_folds_umap", exist_ok=True)
 
     names = molecules.copy()
@@ -254,7 +275,13 @@ def write_umap_cluster_folds(n_folds: int = 5, fp_size: int = 1024) -> None:
     smiles = _names_to_smiles(names, tg_80_smiles)
     X = _compute_ecfp4_dense(smiles, fp_size=fp_size)
 
-    reducer = umap.UMAP(n_components=24, random_state=BASE_SEED, n_neighbors=15, min_dist=0.1, metric="jaccard")
+    reducer = umap.UMAP(
+        n_components=24,
+        random_state=BASE_SEED,
+        n_neighbors=15,
+        min_dist=0.1,
+        metric="jaccard",
+    )
     emb = reducer.fit_transform(X)
 
     ward = AgglomerativeClustering(n_clusters=n_folds * 2, linkage="ward")
@@ -266,21 +293,34 @@ def write_umap_cluster_folds(n_folds: int = 5, fp_size: int = 1024) -> None:
         cluster_to_names.setdefault(int(lab), []).append(name)
 
     # Sort clusters by size to keep splits roughly balanced
-    cluster_ids: list[int] = sorted(cluster_to_names.keys(), key=lambda cid: len(cluster_to_names[cid]), reverse=True)
+    cluster_ids: list[int] = sorted(
+        cluster_to_names.keys(),
+        key=lambda cid: len(cluster_to_names[cid]),
+        reverse=True,
+    )
 
     # Pair clusters: first half used as test, second half used as validation
     half: int = n_folds  # since total clusters = n_folds * 2
     for split_idx in range(n_folds):
         test: list[str] = sorted(cluster_to_names[cluster_ids[split_idx]])
         val: list[str] = sorted(cluster_to_names[cluster_ids[split_idx + half]])
-        train: list[str] = sorted([n for j, cid in enumerate(cluster_ids) if j not in [split_idx, split_idx + half] for n in cluster_to_names[cid]])
+        train: list[str] = sorted(
+            [
+                n
+                for j, cid in enumerate(cluster_ids)
+                if j not in [split_idx, split_idx + half]
+                for n in cluster_to_names[cid]
+            ]
+        )
         filename = f"data/crossval_folds_umap/fold{split_idx + 1}.toml"
         write_toml_split(filename, train, val, test)
         print(f"Wrote {filename}: train={len(train)}, val={len(val)}, test={len(test)}")
 
         # Save UMAP plot for this split (2D projection for visualization)
         plot_path = f"data/crossval_folds_umap/plots/fold{split_idx + 1}.png"
-        _save_umap_plot(names=names, X=X, train=train, val=val, test=test, out_path=plot_path)
+        _save_umap_plot(
+            names=names, X=X, train=train, val=val, test=test, out_path=plot_path
+        )
 
 
 # Shuffle molecules once with a fixed seed (random baseline)
@@ -298,7 +338,13 @@ group_idxs = np.array_split(idxs, n_groups)
 for split_idx in range(n_splits):
     test_idx = group_idxs[split_idx]
     val_idx = group_idxs[split_idx + n_splits]
-    train_idx = np.concatenate([group_idxs[g] for g in range(n_groups) if g not in [split_idx, split_idx + n_splits]])
+    train_idx = np.concatenate(
+        [
+            group_idxs[g]
+            for g in range(n_groups)
+            if g not in [split_idx, split_idx + n_splits]
+        ]
+    )
 
     test = [shuffled[i] for i in test_idx]
     val = [shuffled[i] for i in val_idx]

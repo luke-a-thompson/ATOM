@@ -12,7 +12,12 @@ from .training_utils import (
 )
 from .create_config import Config
 from .save_results import SingleRunResults, MultiRunResults
-from .config_options import MD17MoleculeType, RMD17MoleculeType, TG80MoleculeType, Datasets
+from .config_options import (
+    MD17MoleculeType,
+    RMD17MoleculeType,
+    TG80MoleculeType,
+    Datasets,
+)
 from .train_pipeline import train_model, eval_epoch, train_epoch
 from .benchmark import singletask_benchmark, multitask_benchmark
 

@@ -92,7 +92,13 @@ def get_mol_supplier(filename: str) -> Chem.ForwardSDMolSupplier:
         # Otherwise uncompress the file
         with tempfile.NamedTemporaryFile(delete=False) as tmp:
             with gzip.open(filename, "rb") as f_in:
-                with tqdm(total=total_size, unit="B", unit_scale=True, desc="Unzipping", position=1) as pbar:
+                with tqdm(
+                    total=total_size,
+                    unit="B",
+                    unit_scale=True,
+                    desc="Unzipping",
+                    position=1,
+                ) as pbar:
                     while True:
                         buf = f_in.read(1024 * 1024)  # 1MB chunks
                         if not buf:
@@ -150,7 +156,9 @@ def process_candidate_file(
 
     # Store fingerprints of ALL molecules across ALL sets
     all_existing_fps: list[ExplicitBitVect] = []
-    all_existing_mols_info: list[tuple[MD17Smiles, int]] = []  # Store (enum, index) for each fingerprint
+    all_existing_mols_info: list[
+        tuple[MD17Smiles, int]
+    ] = []  # Store (enum, index) for each fingerprint
 
     # Store fingerprints of molecules we've already added to each set
     existing_fps_dict: dict[MD17Smiles, list[ExplicitBitVect]] = {}
@@ -170,7 +178,11 @@ def process_candidate_file(
         return similar_molecules_dict, candidate_results
 
     # Keep track of which basis molecules still need more candidates
-    active_basis_molecules = [bm for bm in basis_molecules if len(similar_molecules_dict[bm[0]]) < candidates_per_molecule]
+    active_basis_molecules = [
+        bm
+        for bm in basis_molecules
+        if len(similar_molecules_dict[bm[0]]) < candidates_per_molecule
+    ]
 
     if not active_basis_molecules:
         return similar_molecules_dict, candidate_results
@@ -185,9 +197,14 @@ def process_candidate_file(
             candidate_results["mol_generation_failed"] += 1
             continue
 
-        basis_num_atoms = active_basis_molecules[0][1].GetNumHeavyAtoms()  # Use first molecule as reference
+        basis_num_atoms = active_basis_molecules[0][
+            1
+        ].GetNumHeavyAtoms()  # Use first molecule as reference
 
-        if mol.GetNumHeavyAtoms() > basis_num_atoms * 1 or mol.GetNumHeavyAtoms() < basis_num_atoms * 0.2:
+        if (
+            mol.GetNumHeavyAtoms() > basis_num_atoms * 1
+            or mol.GetNumHeavyAtoms() < basis_num_atoms * 0.2
+        ):
             candidate_results["too_large"] += 1
         elif mol.GetNumAtoms() == 0:
             candidate_results["no_atoms"] += 1
@@ -195,7 +212,11 @@ def process_candidate_file(
             candidate_results["invalid_atoms"] += 1
 
         # Check if any element exceeds its maximum allowed count
-        elif any(sum(1 for atom in mol.GetAtoms() if atom.GetSymbol() == element) > count for element, count in max_atoms_of_type.items() if element in allowed_atoms):
+        elif any(
+            sum(1 for atom in mol.GetAtoms() if atom.GetSymbol() == element) > count
+            for element, count in max_atoms_of_type.items()
+            if element in allowed_atoms
+        ):
             candidate_results["too_many_atoms_of_type"] += 1
         elif len(Chem.GetMolFrags(mol)) > 1:
             candidate_results["multiple_fragments"] += 1
@@ -212,8 +233,14 @@ def process_candidate_file(
             # --- General stats calculation (for mean similarity) ---
             for i in range(len(candidate_batch)):
                 candidate_fp = batch_fps[i]
-                similarities_to_all_basis = BulkTanimotoSimilarity(candidate_fp, all_basis_fps)
-                in_range_similarities = [s for s in similarities_to_all_basis if similarity_lower_bound <= s <= similarity_upper_bound]
+                similarities_to_all_basis = BulkTanimotoSimilarity(
+                    candidate_fp, all_basis_fps
+                )
+                in_range_similarities = [
+                    s
+                    for s in similarities_to_all_basis
+                    if similarity_lower_bound <= s <= similarity_upper_bound
+                ]
                 if in_range_similarities:
                     relevant_similarity = max(in_range_similarities)
                 elif similarities_to_all_basis:
@@ -225,11 +252,15 @@ def process_candidate_file(
 
             # --- Flawed selection logic simulation ---
             for basis_enum, basis_mol, basis_fp in active_basis_molecules:
-                remaining = candidates_per_molecule - len(similar_molecules_dict[basis_enum])
+                remaining = candidates_per_molecule - len(
+                    similar_molecules_dict[basis_enum]
+                )
                 if remaining <= 0:
                     continue
 
-                similarities = BulkTanimotoSimilarity(basis_fp, batch_fps, returnDistance=True)
+                similarities = BulkTanimotoSimilarity(
+                    basis_fp, batch_fps, returnDistance=True
+                )
                 sim_with_idx = [(sim, idx) for idx, sim in enumerate(similarities)]
                 sim_with_idx.sort(reverse=False)
 
@@ -243,28 +274,41 @@ def process_candidate_file(
                             candidate_fp = batch_fps[idx]
 
                             if existing_fps_dict[basis_enum]:
-                                internal_sims = BulkTanimotoSimilarity(candidate_fp, existing_fps_dict[basis_enum])
+                                internal_sims = BulkTanimotoSimilarity(
+                                    candidate_fp, existing_fps_dict[basis_enum]
+                                )
                                 if max(internal_sims) > max_internal_similarity:
                                     continue
 
                             # The OLD, FLAWED check is performed here for selection
                             old_check_passed = True
                             if all_existing_fps:
-                                external_sims = BulkTanimotoSimilarity(candidate_fp, all_existing_fps)
+                                external_sims = BulkTanimotoSimilarity(
+                                    candidate_fp, all_existing_fps
+                                )
                                 if max(external_sims) > max_inter_set_similarity:
                                     old_check_passed = False
 
                             if old_check_passed:
                                 # The NEW, CORRECT check is performed here just to count errors
-                                correct_check_fps = all_existing_fps + new_fps_in_this_batch
+                                correct_check_fps = (
+                                    all_existing_fps + new_fps_in_this_batch
+                                )
                                 if correct_check_fps:
-                                    correct_external_sims = BulkTanimotoSimilarity(candidate_fp, correct_check_fps)
-                                    if max(correct_external_sims) > max_inter_set_similarity:
+                                    correct_external_sims = BulkTanimotoSimilarity(
+                                        candidate_fp, correct_check_fps
+                                    )
+                                    if (
+                                        max(correct_external_sims)
+                                        > max_inter_set_similarity
+                                    ):
                                         stats["incorrectly_added_molecules"] += 1
 
                                 # Add molecule based on old logic to simulate dataset generation
                                 stats["total_satisfying_criteria"] += 1
-                                similar_molecules_dict[basis_enum].append(candidate_batch[idx])
+                                similar_molecules_dict[basis_enum].append(
+                                    candidate_batch[idx]
+                                )
                                 seen_smiles_dict[basis_enum].add(mol_smiles)
                                 existing_fps_dict[basis_enum].append(candidate_fp)
                                 new_fps_in_this_batch.append(candidate_fp)
@@ -272,15 +316,30 @@ def process_candidate_file(
 
             all_existing_fps.extend(new_fps_in_this_batch)
             candidate_batch = []
-            active_basis_molecules = [bm for bm in basis_molecules if len(similar_molecules_dict[bm[0]]) < candidates_per_molecule]
+            active_basis_molecules = [
+                bm
+                for bm in basis_molecules
+                if len(similar_molecules_dict[bm[0]]) < candidates_per_molecule
+            ]
 
         # Check if we've crossed a 100k boundary of TOTAL compounds read
         current_boundary = stats["total_compounds_read"] // 100_000
         if int(current_boundary) > int(stats["last_boundary"]):
-            mean_similarity = (stats["total_similarity"] / stats["total_molecules_processed_for_similarity"]) if stats["total_molecules_processed_for_similarity"] > 0 else 0.0
+            mean_similarity = (
+                (
+                    stats["total_similarity"]
+                    / stats["total_molecules_processed_for_similarity"]
+                )
+                if stats["total_molecules_processed_for_similarity"] > 0
+                else 0.0
+            )
             tqdm.write("\n---")
-            tqdm.write(f"Total satisfying criteria (old logic): {int(stats['total_satisfying_criteria'])}")
-            tqdm.write(f"Incorrectly added molecules (due to flaw): {int(stats['incorrectly_added_molecules'])}")
+            tqdm.write(
+                f"Total satisfying criteria (old logic): {int(stats['total_satisfying_criteria'])}"
+            )
+            tqdm.write(
+                f"Incorrectly added molecules (due to flaw): {int(stats['incorrectly_added_molecules'])}"
+            )
             tqdm.write(f"Mean similarity of all compounds seen: {mean_similarity:.4f}")
             tqdm.write(f"Total compounds seen: {int(stats['total_compounds_read'])}")
             tqdm.write("---\n")
@@ -345,7 +404,9 @@ def generate_similar_dataset(
     for basis_enum in basis_molecule_set:
         basis_mol = Chem.MolFromSmiles(basis_enum)
         if basis_mol is None:
-            raise ValueError(f"Failed to generate basis molecule from SMILES: {basis_enum}")
+            raise ValueError(
+                f"Failed to generate basis molecule from SMILES: {basis_enum}"
+            )
 
         basis_fp = fp_gen.GetFingerprint(basis_mol)
         basis_molecules.append((basis_enum, basis_mol, basis_fp))
@@ -359,12 +420,15 @@ def generate_similar_dataset(
 
     while True:
         # Check if we're done for all molecules
-        all_complete = all(len(mols) >= candidates_per_molecule for mols in similar_molecules_dict.values())
+        all_complete = all(
+            len(mols) >= candidates_per_molecule
+            for mols in similar_molecules_dict.values()
+        )
         if all_complete:
             tqdm.write("Found all required similar molecules for all basis molecules")
             break
 
-        candidate_file = f"/mnt/d/PubChem/Compound_{(file_counter-1)*500000+1:09d}_{file_counter*500000:09d}.sdf.gz"
+        candidate_file = f"/mnt/d/PubChem/Compound_{(file_counter - 1) * 500000 + 1:09d}_{file_counter * 500000:09d}.sdf.gz"
         file_counter += 1
 
         similar_molecules_dict, candidate_results = process_candidate_file(
@@ -385,23 +449,29 @@ def generate_similar_dataset(
 
         # Use enum.name to display molecule names
         molecules_found = [(k.name, len(v)) for k, v in similar_molecules_dict.items()]
-        tqdm.write(f"Processed file {file_counter-1}, {candidate_file}")
+        tqdm.write(f"Processed file {file_counter - 1}, {candidate_file}")
         tqdm.write(f"Molecules found so far: {molecules_found}")
 
         if file_counter > 100:  # Safety limit
-            tqdm.write("Reached file limit. Some molecules may not have enough similar candidates.")
+            tqdm.write(
+                "Reached file limit. Some molecules may not have enough similar candidates."
+            )
             break
 
     # Ensure we have exactly candidates_per_molecule results
     for basis_enum in similar_molecules_dict:
         if len(similar_molecules_dict[basis_enum]) > candidates_per_molecule:
             tqdm.write(f"Trimming excess molecules for {basis_enum.name}")
-            similar_molecules_dict[basis_enum] = similar_molecules_dict[basis_enum][:candidates_per_molecule]
+            similar_molecules_dict[basis_enum] = similar_molecules_dict[basis_enum][
+                :candidates_per_molecule
+            ]
 
     return similar_molecules_dict
 
 
-def pretty_print_similar_molecules_dict(similar_molecules_dict: dict[MD17Smiles, list[Chem.Mol]]) -> None:
+def pretty_print_similar_molecules_dict(
+    similar_molecules_dict: dict[MD17Smiles, list[Chem.Mol]],
+) -> None:
     for basis_enum, similar_molecules in similar_molecules_dict.items():
         tqdm.write(f"{basis_enum.name}:")
         for mol in similar_molecules:
@@ -439,7 +509,7 @@ if __name__ == "__main__":
         for basis_enum, similar_molecules in similar_molecules_dict.items():
             f.write(f"{basis_enum.name}: {len(similar_molecules)} molecules\n")
 
-    print(f"Results written to similar_molecules_results.txt")
+    print("Results written to similar_molecules_results.txt")
 
     # Create directory for images if it doesn't exist
     os.makedirs("data/molecule_images", exist_ok=True)
@@ -455,10 +525,12 @@ if __name__ == "__main__":
 
         for i, mol in enumerate(similar_molecules):
             all_mols.append(mol)
-            all_legends.append(f"{basis_enum.name} Similar {i+1}")
+            all_legends.append(f"{basis_enum.name} Similar {i + 1}")
 
     # Draw all molecules in one big grid
-    big_img = Draw.MolsToGridImage(all_mols, molsPerRow=8, subImgSize=(200, 200), legends=all_legends, useSVG=False)
+    big_img = Draw.MolsToGridImage(
+        all_mols, molsPerRow=8, subImgSize=(200, 200), legends=all_legends, useSVG=False
+    )
 
     # Save the big image
     big_img_path = "data/molecule_images/all_molecules.png"

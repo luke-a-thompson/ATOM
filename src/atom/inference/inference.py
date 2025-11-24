@@ -1,5 +1,16 @@
-from atom.inference.inference_utils import parse_inference_args, clean_state_dict_prefixes, parse_model_config_pairs, InferenceRunResult, MultiInferenceResults
-from atom.training import Config, eval_epoch, create_dataloaders_single, create_dataloaders_multitask
+from atom.inference.inference_utils import (
+    parse_inference_args,
+    clean_state_dict_prefixes,
+    parse_model_config_pairs,
+    InferenceRunResult,
+    MultiInferenceResults,
+)
+from atom.training import (
+    Config,
+    eval_epoch,
+    create_dataloaders_single,
+    create_dataloaders_multitask,
+)
 import torch
 from atom.training import initialize_model
 from collections import OrderedDict
@@ -17,7 +28,9 @@ def run_single_inference(model_path: str, config_path: str) -> InferenceRunResul
         raise FileNotFoundError(f"Config file {config_path} not found")
 
     try:
-        model_state_dict: OrderedDict[str, torch.Tensor] = torch.load(str(model_path), weights_only=True)
+        model_state_dict: OrderedDict[str, torch.Tensor] = torch.load(
+            str(model_path), weights_only=True
+        )
     except FileNotFoundError:
         raise FileNotFoundError(f"Model file {model_path} not found")
 
@@ -34,9 +47,6 @@ def run_single_inference(model_path: str, config_path: str) -> InferenceRunResul
     clean_model_state_dict = clean_state_dict_prefixes(model_state_dict)
     _ = model.load_state_dict(clean_model_state_dict)
     _ = model.eval()
-
-    param_count = sum(p.numel() for p in model.parameters())
-    print(f"Model parameter count: {param_count:,}")
 
     test_s2t_loss, test_s2s_loss = eval_epoch(config, model, test_loader)
 
@@ -75,22 +85,32 @@ def main() -> None:
         print("SUMMARY STATISTICS:")
         print("=" * 80)
         print(f"Number of runs: {len(results)}")
-        print(f"Molecule type: {results[0].molecule_type} ({results[0].inference_type})")
-        print(f"S2S Test Loss: {multi_results.s2s_mean*100:.2f}x10^-2 ± {multi_results.s2s_std*100:.2f}x10^-2")
-        print(f"S2T Test Loss: {multi_results.s2t_mean*100:.2f}x10^-2 ± {multi_results.s2t_std*100:.2f}x10^-2")
-        print(f"Latency: {multi_results.latency_mean:.2f}s ± {multi_results.latency_std:.2f}s")
+        print(
+            f"Molecule type: {results[0].molecule_type} ({results[0].inference_type})"
+        )
+        print(
+            f"S2S Test Loss: {multi_results.s2s_mean * 100:.2f}x10^-2 ± {multi_results.s2s_std * 100:.2f}x10^-2"
+        )
+        print(
+            f"S2T Test Loss: {multi_results.s2t_mean * 100:.2f}x10^-2 ± {multi_results.s2t_std * 100:.2f}x10^-2"
+        )
+        print(
+            f"Latency: {multi_results.latency_mean:.2f}s ± {multi_results.latency_std:.2f}s"
+        )
 
-        print(f"\nIndividual results:")
+        print("\nIndividual results:")
         for i, result in enumerate(results, 1):
-            print(f"  Run {i} ({result.model_path.name}): S2T={result.s2t_test_loss*100:.2f}x10^-2, S2S={result.s2s_test_loss*100:.2f}x10^-2, Latency={result.latency:.2f}s")
+            print(
+                f"  Run {i} ({result.model_path.name}): S2T={result.s2t_test_loss * 100:.2f}x10^-2, S2S={result.s2s_test_loss * 100:.2f}x10^-2, Latency={result.latency:.2f}s"
+            )
     else:
         result = results[0]
         print("RESULTS:")
         print("=" * 80)
         print(f"Model: {result.model_path.name}")
         print(f"Molecule type: {result.molecule_type} ({result.inference_type})")
-        print(f"S2S Test Loss: {result.s2s_test_loss*100:.2f}x10^-2")
-        print(f"S2T Test Loss: {result.s2t_test_loss*100:.2f}x10^-2")
+        print(f"S2S Test Loss: {result.s2s_test_loss * 100:.2f}x10^-2")
+        print(f"S2T Test Loss: {result.s2t_test_loss * 100:.2f}x10^-2")
         print(f"Latency: {result.latency:.2f}s")
 
 

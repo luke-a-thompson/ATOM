@@ -35,12 +35,16 @@ class MultiRunResults(BaseModel):
     @computed_field
     @property
     def s2s_test_loss_mean(self) -> float:
-        return sum(result.s2s_test_loss for result in self.single_run_results) / len(self.single_run_results)
+        return sum(result.s2s_test_loss for result in self.single_run_results) / len(
+            self.single_run_results
+        )
 
     @computed_field
     @property
     def s2s_test_loss_std(self) -> float:
-        return torch.std(torch.tensor([result.s2s_test_loss for result in self.single_run_results])).item()
+        return torch.std(
+            torch.tensor([result.s2s_test_loss for result in self.single_run_results])
+        ).item()
 
     @computed_field
     @property
@@ -55,17 +59,21 @@ class MultiRunResults(BaseModel):
     @computed_field
     @property
     def latex_s2s(self) -> str:
-        return f"\\({self.s2s_test_loss_mean*100:.2f}{{\\scriptstyle \\pm{self.s2s_test_loss_std*100:.2f}}}\\)"
+        return f"\\({self.s2s_test_loss_mean * 100:.2f}{{\\scriptstyle \\pm{self.s2s_test_loss_std * 100:.2f}}}\\)"
 
     @computed_field
     @property
     def s2t_test_loss_mean(self) -> float:
-        return sum(result.s2t_test_loss for result in self.single_run_results) / len(self.single_run_results)
+        return sum(result.s2t_test_loss for result in self.single_run_results) / len(
+            self.single_run_results
+        )
 
     @computed_field
     @property
     def s2t_test_loss_std(self) -> float:
-        return torch.std(torch.tensor([result.s2t_test_loss for result in self.single_run_results])).item()
+        return torch.std(
+            torch.tensor([result.s2t_test_loss for result in self.single_run_results])
+        ).item()
 
     @computed_field
     @property
@@ -80,19 +88,27 @@ class MultiRunResults(BaseModel):
     @computed_field
     @property
     def latex_s2t(self) -> str:
-        return f"\\({self.s2t_test_loss_mean*100:.2f}{{\\scriptstyle \\pm{self.s2t_test_loss_std*100:.2f}}}\\)"
+        return f"\\({self.s2t_test_loss_mean * 100:.2f}{{\\scriptstyle \\pm{self.s2t_test_loss_std * 100:.2f}}}\\)"
 
     @computed_field
     @property
     def mean_secs_per_run(self) -> float:
-        return sum(result.run_time for result in self.single_run_results) / len(self.single_run_results)
+        return sum(result.run_time for result in self.single_run_results) / len(
+            self.single_run_results
+        )
 
     @computed_field
     @property
     def mean_secs_per_epoch(self) -> float:
-        return sum(result.seconds_per_epoch for result in self.single_run_results if result.seconds_per_epoch is not None) / len(self.single_run_results)
+        return sum(
+            result.seconds_per_epoch
+            for result in self.single_run_results
+            if result.seconds_per_epoch is not None
+        ) / len(self.single_run_results)
 
     @computed_field
     @property
     def mean_best_val_loss_epoch(self) -> float:
-        return sum(result.best_val_loss_epoch for result in self.single_run_results) / len(self.single_run_results)
+        return sum(
+            result.best_val_loss_epoch for result in self.single_run_results
+        ) / len(self.single_run_results)
