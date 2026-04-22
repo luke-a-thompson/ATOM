@@ -1,6 +1,7 @@
 import torch.nn as nn
 
 from atom.egno.egno_model import EGNO
+from atom.egno.egno_sequential_and_rollout import EGNNSequential, EGNNRollout
 from atom.atom.atom_model import ATOM
 from atom.training.config_options import Datasets, ModelType
 from atom.training.create_config import Config
@@ -36,7 +37,7 @@ def initialize_model(config: Config) -> nn.Module:
                 projection_type=config.atom_config.projection_type,
                 rrwp_length=config.dataloader.rrwp_length,
                 value_residual_type=config.atom_config.value_residual_type,
-                learnable_attention_denom=config.atom_config.learnable_attention_denom,
+                output_mode=config.atom_config.output_mode,
             )
         case ModelType.EGNO:
             return EGNO(
@@ -49,6 +50,24 @@ def initialize_model(config: Config) -> nn.Module:
                 num_fourier_modes=config.egno_config.num_fourier_modes,
                 time_embed_dim=config.egno_config.time_embed_dim,
                 num_timesteps=config.dataloader.num_timesteps,
+            )
+        case ModelType.EGNN_S:
+            return EGNNSequential(
+                num_node_features=2 if config.dataloader.dataset in [Datasets.md17, Datasets.rmd17, Datasets.tg80, Datasets.md22] else 1,
+                num_edge_features=5 if config.dataloader.dataset in [Datasets.md17, Datasets.rmd17, Datasets.tg80, Datasets.md22] else 2,
+                num_layers=config.egnn_config.num_layers,
+                lifting_dim=config.egnn_config.lifting_dim,
+                activation=config.egnn_config.activation,
+                time_embed_dim=config.egnn_config.time_embed_dim,
+            )
+        case ModelType.EGNN_R:
+            return EGNNRollout(
+                num_node_features=2 if config.dataloader.dataset in [Datasets.md17, Datasets.rmd17, Datasets.tg80, Datasets.md22] else 1,
+                num_edge_features=5 if config.dataloader.dataset in [Datasets.md17, Datasets.rmd17, Datasets.tg80, Datasets.md22] else 2,
+                num_layers=config.egnn_config.num_layers,
+                lifting_dim=config.egnn_config.lifting_dim,
+                activation=config.egnn_config.activation,
+                time_embed_dim=config.egnn_config.time_embed_dim,
             )
         case _:
             raise ValueError(f"Invalid model type: {config.atom_config.model_type}")

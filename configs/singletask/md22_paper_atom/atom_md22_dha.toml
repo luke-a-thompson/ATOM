@@ -29,7 +29,7 @@ explicit_hydrogen_gradients = false
 radius_graph_threshold = 1.6
 rrwp_length = 0  # 0 for no RRWPs
 time_lag_mode = "uniform"
-time_encoding_enabled = false
+
 normalize_z = false
 persistent_workers = true
 num_workers = 4
@@ -42,7 +42,7 @@ device = "cuda"
 seed = 42
 batch_size = 100
 epochs = 1000
-use_amp = false
+use_amp = true
 amp_dtype = "bfloat16"
 max_grad_norm = 1.0
 label_noise_std = 0.1
@@ -59,9 +59,9 @@ type = "none"
 
 [atom_config]
 # Architecture parameters
-num_layers = 5
+num_layers = 6
 num_heads = 8
-lifting_dim = 128
+lifting_dim = 256
 # Output parameters
 output_heads = 1
 delta_update = false
@@ -72,7 +72,7 @@ rope_base = 1000
 rope_tau = 10000
 learnable_attention_denom = false
 # Feature parameters
-lifting_type = "equivariant"
+lifting_type = "quasi_equivariant"
 projection_type = "equivariant"
 # Layer parameters
 norm = "rms"

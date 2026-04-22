@@ -33,6 +33,7 @@ dependencies = [
     "scikit-learn>=1.5.0,<2",
     "optuna>=3.6.1,<4",
     "optuna-dashboard>=0.19.0",
+    "dscribe>=2.1.1",
 ]
 
 [project.scripts]
@@ -41,6 +42,8 @@ inference = "atom.inference:main"
 equivariance = "atom.cli.equivariance:main"
 optimize = "atom.optimize:main"
 tables = "Z_paper_content.run_tables:main"
+p_invariance = "Z_paper_content.invariances:main_p"
+t_invariance = "Z_paper_content.invariances:main_t"
 
 [dependency-groups]
 dev = [

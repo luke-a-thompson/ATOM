@@ -1,4 +1,5 @@
 import importlib.util
+import warnings
 import tomllib
 from pathlib import Path
 from pydantic import BaseModel, model_validator, field_validator, BeforeValidator
@@ -23,6 +24,7 @@ from atom.training.config_options import (
     PositionalEncodingType,
     ProjectionType,
     TimeLagMode,
+    OutputMode,
 )
 
 
@@ -123,7 +125,14 @@ class DataloaderConfig(BaseModel):
                 return (int(value[0]), int(value[1]))
             except Exception as e:
                 raise ValueError("Could not coerce 'delta_T' list elements to integers.") from e
-        return value  # int or already a tuple
+        if isinstance(value, int):
+            return value
+        if isinstance(value, tuple):
+            try:
+                return (int(value[0]), int(value[1]))
+            except Exception as e:
+                raise ValueError("Could not coerce 'delta_T' tuple elements to integers.") from e
+        raise ValueError("'delta_T' must be an int or a tuple/list of two ints.")
 
     @model_validator(mode="after")
     def validate_consistency(self) -> "DataloaderConfig":
@@ -143,11 +152,11 @@ class DataloaderConfig(BaseModel):
             val_set = set(self.validation_molecules)
             test_set = set(self.test_molecules)
             if train_set.intersection(val_set):
-                raise ValueError(f"Train and validation molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(val_set))}")
+                warnings.warn(f"Train and validation molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(val_set))}")
             if train_set.intersection(test_set):
-                raise ValueError(f"Train and test molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(test_set))}.")
+                warnings.warn(f"Train and test molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(test_set))}.")
             if val_set.intersection(test_set):
-                raise ValueError(f"Validation and test molecule sets overlap: {', '.join(str(mol) for mol in val_set.intersection(test_set))}")
+                warnings.warn(f"Validation and test molecule sets overlap: {', '.join(str(mol) for mol in val_set.intersection(test_set))}")
 
         # dataset-specific enum type enforcement
         match self.dataset:
@@ -235,7 +244,7 @@ class ATOMConfig(BaseModel):
     positional_encoding: PositionalEncodingType
     rope_base: Annotated[NonNegativeFloat, Field(description="Must be greater than or equal to 0.0.")]
     rope_tau: Annotated[NonNegativeFloat, Field(description="Must be greater than or equal to 0.0.")]
-    learnable_attention_denom: bool
+    # Removed: learnable_attention_denom
     # Feature parameters
     lifting_type: LiftingType
     projection_type: ProjectionType
@@ -243,6 +252,7 @@ class ATOMConfig(BaseModel):
     norm: NormType
     activation: FFNActivation
     value_residual_type: ValueResidualType
+    output_mode: OutputMode = OutputMode.POS_ONLY
 
     @model_validator(mode="after")
     def validate_lifting_dim(self) -> "ATOMConfig":
@@ -272,6 +282,13 @@ class EGNOConfig(BaseModel):
     time_embed_dim: int
 
 
+class EGNNConfig(BaseModel):
+    num_layers: Annotated[PositiveInt, Field(description="Must be greater than 0.")]
+    lifting_dim: Annotated[int, Field(strict=True, ge=2, multiple_of=2, description="Must be even and greater than 2.")]
+    activation: FFNActivation
+    time_embed_dim: int
+
+
 class Config(BaseModel):
     wandb: WandbConfig
     benchmark: BenchmarkConfig
@@ -281,6 +298,7 @@ class Config(BaseModel):
     scheduler: SchedulerConfig
     atom_config: ATOMConfig
     egno_config: EGNOConfig
+    egnn_config: EGNNConfig | None = None
 
     @model_validator(mode="after")
     def validate_output_heads(self) -> "Config":

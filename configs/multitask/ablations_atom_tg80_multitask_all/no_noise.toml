@@ -87,7 +87,7 @@ explicit_hydrogen_gradients = false
 radius_graph_threshold = 1.6
 rrwp_length = 0  # 0 for no RRWPs
 time_lag_mode = "uniform"
-time_encoding_enabled = false
+
 normalize_z = false
 persistent_workers = true
 num_workers = 4
@@ -128,7 +128,7 @@ heterogenous_attention_type = "ghca"
 positional_encoding = "trope"
 learnable_attention_denom = false
 # Feature parameters
-lifting_type = "equivariant"
+lifting_type = "quasi_equivariant_tp"
 projection_type = "equivariant"
 rope_base = 1000
 rope_tau = 10000

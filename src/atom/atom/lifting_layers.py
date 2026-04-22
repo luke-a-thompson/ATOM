@@ -28,7 +28,7 @@ class StandardLift(nn.Module):
 
 
 @final
-class EquivariantLift(nn.Module):
+class QuasiEquivariantLift(nn.Module):
     def __init__(self, x_0_in_irreps: str, v_0_in_irreps: str, concat_feats_in_irreps: str, lifting_dim_irreps: str) -> None:
         super().__init__()
         self.x_0_linear = o3.Linear(x_0_in_irreps, lifting_dim_irreps)
@@ -44,7 +44,7 @@ class EquivariantLift(nn.Module):
 
 
 @final
-class EquivariantLiftTensorProduct(nn.Module):
+class QuasiEquivariantTPLift(nn.Module):
     def __init__(self, x_0_in_irreps: str, v_0_in_irreps: str, concat_feats_in_irreps: str, lifting_dim_irreps: str) -> None:
         super().__init__()
         self.x_0_linear = o3.Linear(x_0_in_irreps, lifting_dim_irreps)

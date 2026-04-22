@@ -1,13 +1,13 @@
 from torch.utils.data import DataLoader
 import numpy as np
-from atom.dataloaders.atom_dataloader import MD17Dataset, MD17DynamicsDataset, MD17MoleculeType, Datasets, DataPartition
+from atom.dataloaders.atom_dataloader import MDDataset, MDDynamicsDataset, MD17MoleculeType, Datasets, DataPartition
 
 if __name__ == "__main__":
     import time
     from tqdm import tqdm
 
     # Test MD17Dataset
-    dataset_static = MD17Dataset(
+    dataset_static = MDDataset(
         partition=DataPartition.train,
         max_samples=5000,
         delta_frame=3000,
@@ -33,7 +33,7 @@ if __name__ == "__main__":
     #     break
 
     # Test MD17DynamicsDataset
-    dataset_dynamic = MD17DynamicsDataset(
+    dataset_dynamic = MDDynamicsDataset(
         partition=DataPartition.train,
         max_samples=500,
         delta_frame=3000,

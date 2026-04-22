@@ -114,7 +114,7 @@ explicit_hydrogen_gradients = false
 radius_graph_threshold = 1.6
 rrwp_length = 8  # 0 for no RRWPs
 time_lag_mode = "uniform"
-time_encoding_enabled = false
+
 normalize_z = false
 persistent_workers = true
 num_workers = 6

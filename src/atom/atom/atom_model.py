@@ -3,12 +3,17 @@ from typing import final, override
 import torch
 import torch.nn as nn
 from atom.atom.activations import ReLU2, SwiGLU
-from atom.training.config_options import FFNActivation, NormType, ValueResidualType, AttentionType, LiftingType, PositionalEncodingType, ProjectionType
+from atom.training.config_options import FFNActivation, NormType, ValueResidualType, AttentionType, LiftingType, PositionalEncodingType, ProjectionType, OutputMode
 from tensordict import TensorDict
 from atom.atom.attentions import QuadraticHeterogenousCrossAttention, QuadraticSelfAttention, LinearHeterogenousCrossAttention
 from atom.atom.mlps import MLP
-from atom.atom.lifting_layers import StandardLift, EquivariantLift, EquivariantLiftTensorProduct, CanonicalizationLift
-from atom.atom.projection_layers import EquivariantProject, EquivariantMoEProject, DecanonicalizationProject
+from atom.atom.lifting_layers import StandardLift, QuasiEquivariantLift, QuasiEquivariantTPLift, CanonicalizationLift
+from atom.atom.projection_layers import (
+    EquivariantProjectFull,
+    EquivariantProjectPosOnly,
+    DecanonicalizationProject,
+    DecanonicalizationProjectPosOnly,
+)
 import math
 
 
@@ -25,7 +30,6 @@ class ATOMBlock(nn.Module):
         positional_encoding: PositionalEncodingType,
         rope_base: float,
         value_residual_type: ValueResidualType,
-        learnable_attention_denom: bool,
         rope_tau: float,
     ) -> None:
         super().__init__()
@@ -36,9 +40,9 @@ class ATOMBlock(nn.Module):
         self.pre_norm: nn.Module
         match norm:
             case NormType.LAYER:
-                self.pre_norm = nn.LayerNorm(normalized_shape=lifting_dim)
+                self.norms = nn.ModuleList([nn.LayerNorm(normalized_shape=lifting_dim) for _ in range(3)])
             case NormType.RMS:
-                self.pre_norm = nn.RMSNorm(normalized_shape=lifting_dim)
+                self.norms = nn.ModuleList([nn.RMSNorm(normalized_shape=lifting_dim) for _ in range(3)])
             case _:
                 raise ValueError(f"Invalid norm type: {norm}, select from one of {NormType.__members__.keys()}")  # type: ignore
 
@@ -49,6 +53,8 @@ class ATOMBlock(nn.Module):
         match activation:
             case FFNActivation.RELU:
                 activation_fn = nn.ReLU()
+            case FFNActivation.LEAKY_RELU:
+                activation_fn = nn.LeakyReLU()
             case FFNActivation.RELU2:
                 activation_fn = ReLU2()
             case FFNActivation.GELU:
@@ -87,7 +93,8 @@ class ATOMBlock(nn.Module):
                     num_heads=num_heads,
                     num_timesteps=self.num_timesteps,
                     positional_encoding=positional_encoding,
-                    learnable_attention_denom=learnable_attention_denom,
+                    rope_base=rope_base,
+                    rope_tau=rope_tau,
                 )
             case AttentionType.GHCA:
                 self.attention = QuadraticHeterogenousCrossAttention(
@@ -96,7 +103,7 @@ class ATOMBlock(nn.Module):
                     num_timesteps=self.num_timesteps,
                     positional_encoding=positional_encoding,
                     rope_base=rope_base,
-                    learnable_attention_denom=learnable_attention_denom,
+                    rope_tau=rope_tau,
                 )
             case AttentionType.LINEAR_GHCA:
                 self.attention = LinearHeterogenousCrossAttention(
@@ -106,7 +113,6 @@ class ATOMBlock(nn.Module):
                     positional_encoding=positional_encoding,
                     rope_base=rope_base,
                     rope_tau=rope_tau,
-                    learnable_attention_denom=learnable_attention_denom,
                 )
             case _:
                 raise ValueError(f"Invalid heterogenous attention type: {attention_type}, select from one of {AttentionType.__members__.keys()}")  # type: ignore
@@ -157,9 +163,9 @@ class ATOMBlock(nn.Module):
         tuple[torch.Tensor, torch.Tensor | None]
             The updated positions and the initial value for the next residual connection.
         """
-        x_0 = self.pre_norm(x_0)
-        v_0 = self.pre_norm(v_0)
-        concatenated_features = self.pre_norm(concatenated_features)
+        x_0 = self.norms[0](x_0)
+        v_0 = self.norms[1](v_0)
+        concatenated_features = self.norms[2](concatenated_features)
 
         # q_data = self.pre_norm(q_data)
 
@@ -169,12 +175,15 @@ class ATOMBlock(nn.Module):
             attended_nodes = x_0 + self.attention(x_0, v_0, concatenated_features, q_data=q_data, mask=mask, time_increments=time_increments)
         x_0 = attended_nodes + self.ffn(attended_nodes, mask)
 
-        if self.value_residual_type == ValueResidualType.LEARNABLE:
+        if self.value_residual_type in (ValueResidualType.LEARNABLE, ValueResidualType.FIXED):
             # Set initial_v if not provided (first layer); otherwise apply value residual
             if initial_v is None:
                 initial_v = x_0.clone()
             else:
-                lambda_val = torch.sigmoid(self.lambda_v_residual)
+                if self.value_residual_type == ValueResidualType.LEARNABLE:
+                    lambda_val = torch.sigmoid(self.lambda_v_residual)
+                else:
+                    lambda_val = self.lambda_v_residual.to(dtype=x_0.dtype, device=x_0.device)
                 x_0 = lambda_val * x_0 + (1 - lambda_val) * initial_v
 
         return x_0, initial_v
@@ -200,7 +209,7 @@ class ATOM(nn.Module):
         projection_type: ProjectionType,
         rrwp_length: int,
         value_residual_type: ValueResidualType,
-        learnable_attention_denom: bool,
+        output_mode: OutputMode = OutputMode.POS_ONLY,
     ) -> None:
         """
         An ATOM model that always does T>1 predictions.
@@ -238,8 +247,7 @@ class ATOM(nn.Module):
             Length of relative random walk positional encoding.
         value_residual_type : ValueResidualType
             Type of value residual connection.
-        learnable_attention_denom : bool
-            Whether the attention denominator is learnable.
+
         """
         super().__init__()
 
@@ -253,21 +261,22 @@ class ATOM(nn.Module):
         self.output_heads = output_heads
         self.delta_update = delta_update
         self.positional_encoding_type = positional_encoding
+        self.output_mode = output_mode
         # Removed FiLM modulation
 
         x_0_in_irreps, v_0_in_irreps, concat_feats_in_irreps = get_in_irreps(rrwp_length)
         lifting_dim_irreps: str = get_lifting_dim_irreps(lifting_dim)
 
         match lifting_type:
-            case LiftingType.EQUIVARIANT:
-                self.lifting_layer = EquivariantLiftTensorProduct(
+            case LiftingType.QUASI_EQUIVARIANT_TP:
+                self.lifting_layer = QuasiEquivariantTPLift(
                     x_0_in_irreps=x_0_in_irreps,
                     v_0_in_irreps=v_0_in_irreps,
                     concat_feats_in_irreps=concat_feats_in_irreps,
                     lifting_dim_irreps=lifting_dim_irreps,
                 )
-            case LiftingType.NO_TP:
-                self.lifting_layer = EquivariantLift(
+            case LiftingType.QUASI_EQUIVARIANT:
+                self.lifting_layer = QuasiEquivariantLift(
                     x_0_in_irreps=x_0_in_irreps,
                     v_0_in_irreps=v_0_in_irreps,
                     concat_feats_in_irreps=concat_feats_in_irreps,
@@ -302,7 +311,6 @@ class ATOM(nn.Module):
                     positional_encoding,
                     rope_base,
                     value_residual_type,
-                    learnable_attention_denom,
                     rope_tau,
                 )
                 for _ in range(num_layers)
@@ -312,13 +320,13 @@ class ATOM(nn.Module):
         # Final projection to (x, y, z)
         match projection_type:
             case ProjectionType.EQUIVARIANT:
-                if self.output_heads > 1:
-                    self.projection_layer = EquivariantMoEProject(lifting_dim_irreps, "1x1o", self.output_heads)
+                if self.output_mode == OutputMode.POS_ONLY:
+                    self.projection_layer = EquivariantProjectPosOnly(lifting_dim_irreps, "1x1o")
                 else:
-                    self.projection_layer = EquivariantProject(lifting_dim_irreps, "1x1o")
+                    self.projection_layer = EquivariantProjectFull(lifting_dim_irreps, "1x1o")
             case ProjectionType.DECANONICALIZATION:
-                if self.output_heads > 1:
-                    raise ValueError("Decanonicalization projection does not support multiple output heads")
+                if self.output_mode == OutputMode.POS_ONLY:
+                    self.projection_layer = DecanonicalizationProjectPosOnly(lifting_dim_irreps, "1x1o")
                 else:
                     self.projection_layer = DecanonicalizationProject(lifting_dim_irreps, "1x1o")
             case _:
@@ -327,7 +335,7 @@ class ATOM(nn.Module):
         self._initialise_weights(self)
 
     @override
-    def forward(self, batch: TensorDict) -> torch.Tensor:
+    def forward(self, batch: TensorDict) -> dict[str, torch.Tensor]:
         """Forward pass for the ATOM model.
 
         Parameters
@@ -367,9 +375,9 @@ class ATOM(nn.Module):
         # Add sinusoidal PE with local positions within the batch window
         if self.positional_encoding_type == PositionalEncodingType.SINUSOIDAL:
             B, T, N, D = lifted_concat_features.shape
-            pos = torch.arange(T, device=lifted_concat_features.device, dtype=torch.float32).unsqueeze(0).unsqueeze(-1).expand(B, -1, -1)
-            div_term = torch.exp(torch.arange(0, D, 2, device=lifted_concat_features.device).float() * (-math.log(10000.0) / D))
-            pe = torch.zeros(B, T, D, device=lifted_concat_features.device)
+            pos = torch.arange(T, device=lifted_concat_features.device, dtype=lifted_concat_features.dtype).unsqueeze(0).unsqueeze(-1).expand(B, -1, -1)
+            div_term = torch.exp(torch.arange(0, D, 2, device=lifted_concat_features.device, dtype=lifted_concat_features.dtype) * (-math.log(10000.0) / D))
+            pe = torch.zeros(B, T, D, device=lifted_concat_features.device, dtype=lifted_concat_features.dtype)
             pe[..., 0::2] = torch.sin(pos * div_term)
             pe[..., 1::2] = torch.cos(pos * div_term)
             lifted_concat_features = lifted_concat_features + pe.unsqueeze(2)
@@ -389,16 +397,41 @@ class ATOM(nn.Module):
 
         ## Project
         final_pred_pos: torch.Tensor
+        final_pred_vel: torch.Tensor
+        energy_per_node: torch.Tensor
+        energy_pred: torch.Tensor | None = None
         if self.projection_type == ProjectionType.DECANONICALIZATION:
             assert so3_matrix is not None and x_0_mean is not None, "Decanonicalization requires canonicalization outputs (Q and x_0_mean)."
-            final_pred_pos = self.projection_layer(lifted_x_0, lifted_concat_features, so3_matrix, x_0_mean)
+            if self.output_mode == OutputMode.POS_ONLY:
+                final_pred_pos = self.projection_layer(lifted_x_0, lifted_concat_features, so3_matrix, x_0_mean)
+                final_pred_vel = torch.empty(0, device=lifted_x_0.device)
+                energy_per_node = torch.empty(0, device=lifted_x_0.device)
+            else:
+                final_pred_pos, final_pred_vel, energy_per_node = self.projection_layer(lifted_x_0, lifted_concat_features, so3_matrix, x_0_mean)
         else:
-            final_pred_pos = self.projection_layer(lifted_x_0, lifted_concat_features)
+            if self.output_mode == OutputMode.POS_ONLY:
+                final_pred_pos = self.projection_layer(lifted_x_0, lifted_concat_features)
+                final_pred_vel = torch.empty(0, device=lifted_x_0.device)
+                energy_per_node = torch.empty(0, device=lifted_x_0.device)
+            else:
+                final_pred_pos, final_pred_vel, energy_per_node = self.projection_layer(lifted_x_0, lifted_concat_features)
 
         if self.delta_update:
             final_pred_pos = batch["x_0"][..., :3] + final_pred_pos
+        # Velocities are predicted as absolute vectors (no delta update)
 
-        return final_pred_pos  # Outputting the positions (x, y, z) for N nodes over T timesteps. Batched.
+        # Aggregate per-node energy to per-molecule energy per timestep only when needed
+        if self.output_mode != OutputMode.POS_ONLY:
+            if mask is not None:
+                energy_per_node_masked = energy_per_node * mask
+                energy_pred = energy_per_node_masked.squeeze(-1).sum(dim=2)
+            else:
+                energy_pred = energy_per_node.squeeze(-1).sum(dim=2)
+
+        if self.output_mode == OutputMode.POS_ONLY:
+            return {"pos": final_pred_pos}
+        assert energy_pred is not None
+        return {"pos": final_pred_pos, "vel": final_pred_vel, "energy": energy_pred}
 
     @staticmethod
     def _initialise_weights(model: nn.Module) -> None:

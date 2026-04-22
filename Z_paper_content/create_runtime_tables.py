@@ -30,16 +30,27 @@ def get_run_times(directory: Path) -> dict[str, dict[str, list[float]]]:
             data = json.load(f)
 
         # Extract dataset name and molecule type from path and config
-        path_parts = Path(json_file).parent.name.split("_")
-
-        if "rmd17" in path_parts:
-            dataset_name = "rmd17"
-        elif "md17" in path_parts:
-            dataset_name = "md17"
-        elif "tg80" in path_parts:
-            dataset_name = "tg80"
-        else:
-            dataset_name = path_parts[1]
+        # Detect dataset from ancestor directory names as well (handles multitask layouts)
+        parent_names: list[str] = [p.name.lower() for p in Path(json_file).parents]
+        tokens: list[str] = ["rmd17", "md17", "tg80", "md22"]
+        dataset_name: str | None = None
+        for t in tokens:
+            if any(t in name for name in parent_names):
+                dataset_name = t
+                break
+        if dataset_name is None:
+            # fallback to immediate parent name heuristics
+            path_parts = Path(json_file).parent.name.lower().split("_")
+            if "rmd17" in path_parts:
+                dataset_name = "rmd17"
+            elif "md17" in path_parts:
+                dataset_name = "md17"
+            elif "tg80" in path_parts:
+                dataset_name = "tg80"
+            elif "md22" in path_parts:
+                dataset_name = "md22"
+            else:
+                dataset_name = path_parts[0] if len(path_parts) > 0 else "unknown"
 
         # Try to get molecule type from config, fallback to filename if key doesn't exist
         try:
