@@ -1,0 +1,40 @@
+cff-version: 1.2.0
+message: "If you use this repository, please cite the paper below."
+title: "ATOM"
+type: software
+authors:
+  - family-names: Thompson
+    given-names: Luke
+  - family-names: Guan
+    given-names: Davy
+  - family-names: Matthews
+    given-names: Slade
+  - family-names: Shi
+    given-names: Dai
+  - family-names: Gao
+    given-names: Junbin
+  - family-names: Han
+    given-names: Andi
+repository-code: "https://github.com/luke-a-thompson/ATOM"
+url: "https://github.com/luke-a-thompson/ATOM"
+
+preferred-citation:
+  type: conference-paper
+  title: "ATOM: A Pretrained Neural Operator for Multitask Molecular Dynamics"
+  authors:
+    - family-names: Thompson
+      given-names: Luke
+    - family-names: Guan
+      given-names: Davy
+    - family-names: Matthews
+      given-names: Slade
+    - family-names: Shi
+      given-names: Dai
+    - family-names: Gao
+      given-names: Junbin
+    - family-names: Han
+      given-names: Andi
+  collection-title: "The Fourteenth International Conference on Learning Representations"
+  collection-type: "proceedings"
+  year: 2026
+  url: "https://openreview.net/forum?id=e9cV4xSjbR"
