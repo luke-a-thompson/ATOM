@@ -13,6 +13,16 @@ This repository includes:
 - scripts for reproducing paper tables and figures,
 - evaluation utilities for equivariance analysis.
 
+## Pretrained models
+
+Pretrained checkpoints are available in [`benchmark_runs/`](https://github.com/luke-a-thompson/ATOM/tree/main/benchmark_runs).
+
+## TG80 Dataset
+
+Our multitask molecular dynamics benchmark dataset of 80 compounds, **TG80**, is available at:
+
+https://ses.library.usyd.edu.au/handle/2123/35120
+
 ## Installation
 
 We recommend using `uv` for environment management.
@@ -40,18 +50,6 @@ uv run train --configs path/to/folder_with_configs
 ```bash
 uv run inference --model path/to/model.pth --config path/to/config.toml
 ```
-
-## Pretrained models
-
-Pretrained checkpoints are available in [`benchmark_runs/`](https://github.com/luke-a-thompson/ATOM/tree/main/benchmark_runs).
-
-## Datasets
-
-### TG80
-
-Our multitask molecular dynamics benchmark dataset of 80 compounds, **TG80**, is available at:
-
-https://ses.library.usyd.edu.au/handle/2123/35120
 
 ## Results
 
