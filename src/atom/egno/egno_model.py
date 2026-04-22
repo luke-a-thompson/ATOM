@@ -146,7 +146,6 @@ class EGNO(nn.Module):
 
         for i in range(self.num_layers):
             if self.use_time_conv:
-
                 # To the shape for FFT and back
                 h = h.view(T, B * N, self.lifting_dim)
                 h = self.time_conv_modules[i](h)

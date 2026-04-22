@@ -1,5 +1,6 @@
 from datetime import datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from tensordict import TensorDict
 import torch
@@ -8,11 +9,12 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from tqdm.std import tqdm
-import wandb
 from torch import autocast
 from torch.amp.grad_scaler import GradScaler
 
-from atom.dataloaders.atom_dataloader import MDDynamicsDataset
+if TYPE_CHECKING:
+    from atom.dataloaders.atom_dataloader import MDDynamicsDataset
+
 from atom.training import (
     Config,
     SingleRunResults,
@@ -23,7 +25,6 @@ from atom.training import (
     initialize_scheduler,
     log_weights,
 )
-from atom.training.config_options import TimeLagMode
 
 
 def train_model(config: Config, model: nn.Module, benchmark_dir: Path, run_number: int) -> SingleRunResults:
@@ -39,7 +40,7 @@ def train_model(config: Config, model: nn.Module, benchmark_dir: Path, run_numbe
     torch.set_float32_matmul_precision("high")
 
     # Create a temporary directory for this run
-    run_dir = benchmark_dir / f"run_{run_number+1}"
+    run_dir = benchmark_dir / f"run_{run_number + 1}"
     run_dir.mkdir(parents=True, exist_ok=True)
     best_val_model = run_dir / "best_val_model.pth"
     last_model = run_dir / "last_model.pth"
@@ -50,7 +51,13 @@ def train_model(config: Config, model: nn.Module, benchmark_dir: Path, run_numbe
     scaler = GradScaler(enabled=config.training.use_amp)
 
     start_training_time = datetime.now()
-    progress_bar = tqdm(range(config.training.epochs), desc="Training", leave=False, unit="epoch", position=2)
+    progress_bar = tqdm(
+        range(config.training.epochs),
+        desc="Training",
+        leave=False,
+        unit="epoch",
+        position=2,
+    )
     for epoch in progress_bar:
         train_s2t_loss = train_epoch(config, model, optimizer, train_loader, scheduler, scaler)
         val_s2t_loss, val_s2s_loss = eval_epoch(config, model, val_loader)
@@ -58,8 +65,6 @@ def train_model(config: Config, model: nn.Module, benchmark_dir: Path, run_numbe
         # Log gate parameters and save to weights_dir if provided
         if config.benchmark.log_weights:
             log_weights(list(model.named_parameters()), epoch, save_dir=run_dir)
-
-        wandb.log({"train_s2t_loss": train_s2t_loss, "val_s2t_loss": val_s2t_loss, "lr": optimizer.param_groups[0]["lr"]})
 
         # if val_loss < best_val_loss and epoch > 0.5 * num_epochs:
         if val_s2t_loss < best_val_loss:
@@ -76,9 +81,9 @@ def train_model(config: Config, model: nn.Module, benchmark_dir: Path, run_numbe
         # Update progress bar with losses
         progress_bar.set_postfix(
             {
-                "Train s2t loss": f"{train_s2t_loss*100:.2f}x10^-2",
-                "Val s2t loss": f"{val_s2t_loss*100:.2f}x10^-2",
-                "Best val s2t loss": f"{best_val_loss*100:.2f}x10^-2",
+                "Train s2t loss": f"{train_s2t_loss * 100:.2f}x10^-2",
+                "Val s2t loss": f"{val_s2t_loss * 100:.2f}x10^-2",
+                "Best val s2t loss": f"{best_val_loss * 100:.2f}x10^-2",
                 f"Current {config.optimizer.type} LR": f"{optimizer.param_groups[0]['lr']:.4f}",
             }
         )
@@ -104,8 +109,8 @@ def train_epoch(
     config: Config,
     model: nn.Module,
     optimizer: optim.Optimizer,
-    dataloader: DataLoader[dict[str, torch.Tensor]] | DataLoader[MDDynamicsDataset],
-    scheduler: optim.lr_scheduler._LRScheduler | None,
+    dataloader: DataLoader[dict[str, torch.Tensor]] | DataLoader["MDDynamicsDataset"],
+    scheduler: optim.lr_scheduler.LRScheduler | None,
     scaler: GradScaler,
 ) -> float:
     """Single training epoch.
@@ -115,7 +120,7 @@ def train_epoch(
         model (nn.Module): The model to train.
         optimizer (optim.Optimizer): The optimizer to use.
         dataloader (DataLoader[dict[str, torch.Tensor]]): The dataloader to use.
-        scheduler (optim.lr_scheduler._LRScheduler | None): The scheduler to use.
+        scheduler (optim.lr_scheduler.LRScheduler | None): The scheduler to use.
 
     Returns:
         float: The loss of the epoch.
@@ -144,7 +149,11 @@ def train_epoch(
                 config.training.label_noise_std,
             )
 
-        with autocast(device_type=str(config.training.device), dtype=config.training.amp_dtype, enabled=config.training.use_amp):
+        with autocast(
+            device_type=str(config.training.device),
+            dtype=config.training.amp_dtype,
+            enabled=config.training.use_amp,
+        ):
             outputs = model(batch)
             # Expect dict: {"pos": [B,T,N,3], "vel": [B,T,N,3], "energy": [B,T]}
             if isinstance(outputs, dict):
@@ -241,7 +250,7 @@ def train_epoch(
 def eval_epoch(
     config: Config,
     model: nn.Module,
-    loader: DataLoader[dict[str, torch.Tensor]] | DataLoader[MDDynamicsDataset],
+    loader: DataLoader[dict[str, torch.Tensor]] | DataLoader["MDDynamicsDataset"],
 ) -> tuple[float, float]:
     """Evaluation loop.
 
@@ -327,7 +336,11 @@ def eval_epoch(
                         s2t_denominator += float(loss_raw_s2t.numel())
 
                 # For the last slice loss (shape: [batch, N, 3])
-                loss_raw_s2s = F.mse_loss(pred_coords[:, -1, :, :], target_coords[:, -1, :, :], reduction="none")
+                loss_raw_s2s = F.mse_loss(
+                    pred_coords[:, -1, :, :],
+                    target_coords[:, -1, :, :],
+                    reduction="none",
+                )
                 if mol_ids is not None:
                     unique_ids2, inv2 = torch.unique(mol_ids, return_inverse=True)
                     per_mol_losses2 = []

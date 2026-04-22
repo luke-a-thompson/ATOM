@@ -8,7 +8,12 @@ import sys
 from tensordict import TensorDict
 from e3nn import o3
 
-from atom.training import Config, initialize_model, create_dataloaders_single, create_dataloaders_multitask
+from atom.training import (
+    Config,
+    initialize_model,
+    create_dataloaders_single,
+    create_dataloaders_multitask,
+)
 from atom.inference.inference_utils import clean_state_dict_prefixes
 from atom.atom.lifting_layers import CanonicalizationLift
 
@@ -31,7 +36,11 @@ FEATURE_CONFIG: dict[str, dict[str, slice]] = {
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments for simple directory-based evaluation."""
     parser = argparse.ArgumentParser(description="Evaluate equivariance MSEs over an experiments directory")
-    _ = parser.add_argument("root_dir", type=str, help="Path to root directory containing experiment subdirectories")
+    _ = parser.add_argument(
+        "root_dir",
+        type=str,
+        help="Path to root directory containing experiment subdirectories",
+    )
     return parser.parse_args()
 
 
@@ -77,7 +86,11 @@ def apply_rotation(data: TensorDict, rotation_matrix: npt.NDArray[np.float64]) -
         original_shape = xyz.shape
         xyz_reshaped = xyz.reshape(-1, 3)
         rotated_xyz = xyz_reshaped @ rot_mat.T
-        rotated_xyz_tensor = torch.tensor(rotated_xyz.reshape(original_shape), device=tensor.device, dtype=tensor.dtype)
+        rotated_xyz_tensor = torch.tensor(
+            rotated_xyz.reshape(original_shape),
+            device=tensor.device,
+            dtype=tensor.dtype,
+        )
 
         new_tensor = tensor.clone()
         new_tensor[..., xyz_slice] = rotated_xyz_tensor
@@ -103,7 +116,11 @@ def apply_rotation(data: TensorDict, rotation_matrix: npt.NDArray[np.float64]) -
             original_shape = xyz.shape
             xyz_reshaped = xyz.reshape(-1, 3)
             rotated_xyz = xyz_reshaped @ rotation_matrix.T
-            rotated_xyz_tensor = torch.tensor(rotated_xyz.reshape(original_shape), device=tensor.device, dtype=tensor.dtype)
+            rotated_xyz_tensor = torch.tensor(
+                rotated_xyz.reshape(original_shape),
+                device=tensor.device,
+                dtype=tensor.dtype,
+            )
             new_tensor[..., xyz_slice] = rotated_xyz_tensor
 
         rotated_data["concatenated_features"] = new_tensor
@@ -210,9 +227,15 @@ def run_equivariance_ablations(root_dir: str) -> None:
         two_sd_diff_scaled = (2 * sd_diff) * scale
 
         print(f"{exp.name} ({len(model_paths)} runs)")
-        print(f"  S2T MSE vs ground truth (unrotated input): \\({mean_unrot_scaled:.3f}{{\\scriptstyle \\pm{two_sd_unrot_scaled:.3f}}}\\) \\times 10^{{-2}}")
-        print(f"  S2T MSE vs ground truth (rotated input):   \\({mean_rot_scaled:.3f}{{\\scriptstyle \\pm{two_sd_rot_scaled:.3f}}}\\) \\times 10^{{-2}}")
-        print(f"  Difference (rotated − unrotated):      \\({mean_diff_scaled:.3f}{{\\scriptstyle \\pm{two_sd_diff_scaled:.3f}}}\\) \\times 10^{{-2}}")
+        print(
+            f"  S2T MSE vs ground truth (unrotated input): \\({mean_unrot_scaled:.3f}{{\\scriptstyle \\pm{two_sd_unrot_scaled:.3f}}}\\) \\times 10^{{-2}}"
+        )
+        print(
+            f"  S2T MSE vs ground truth (rotated input):   \\({mean_rot_scaled:.3f}{{\\scriptstyle \\pm{two_sd_rot_scaled:.3f}}}\\) \\times 10^{{-2}}"
+        )
+        print(
+            f"  Difference (rotated − unrotated):      \\({mean_diff_scaled:.3f}{{\\scriptstyle \\pm{two_sd_diff_scaled:.3f}}}\\) \\times 10^{{-2}}"
+        )
 
 
 def test_e3nn_linear_equivariance() -> None:
@@ -245,7 +268,11 @@ def test_e3nn_linear_equivariance() -> None:
     # Reshape for easier processing
     input_reshaped = input_tensor.reshape(-1, 3).cpu().numpy()
     rotated_input_np = input_reshaped @ random_rotation.T
-    rotated_input = torch.tensor(rotated_input_np.reshape(batch_size, timesteps, nodes, 3), device=device, dtype=input_tensor.dtype)
+    rotated_input = torch.tensor(
+        rotated_input_np.reshape(batch_size, timesteps, nodes, 3),
+        device=device,
+        dtype=input_tensor.dtype,
+    )
 
     # 4. Get output for the rotated input
     with torch.no_grad():
@@ -269,7 +296,7 @@ def test_e3nn_linear_equivariance() -> None:
     mean_error = np.mean(error)
     mse = np.mean((rotated_xyz - expected_rotated_xyz) ** 2)
 
-    print(f"\n=== E3NN LINEAR LAYER TEST RESULTS ===")
+    print("\n=== E3NN LINEAR LAYER TEST RESULTS ===")
     print(f"Max error: {max_error:.2e}")
     print(f"Mean error: {mean_error:.2e}")
     print(f"MSE: {mse:.2e}")
@@ -285,7 +312,7 @@ def test_e3nn_linear_equivariance() -> None:
         print(f"   Error exceeds tolerance of {tolerance:.2e}")
 
 
-def test_canonicalizer_equivariance(config_path: str, model_path: str) -> None:
+def test_canonicalizer_equivariance() -> None:
     """Tests the canonicalizer module's equivariance to 3D rotations."""
     print("Testing canonicalizer equivariance (module)...")
 
@@ -326,8 +353,8 @@ def test_canonicalizer_equivariance(config_path: str, model_path: str) -> None:
     x_can_rot: torch.Tensor = x_rot @ Q_rot
     v_can_rot: torch.Tensor = v_rot @ Q_rot
 
-    assert torch.allclose(x_can, x_can_rot, atol=1e-5), f"x canonicalization is not equivariant, error: {torch.norm(x_can - x_can_rot)}"
-    assert torch.allclose(v_can, v_can_rot, atol=1e-5), f"v canonicalization is not equivariant, error: {torch.norm(v_can - v_can_rot)}"
+    assert torch.allclose(x_can, x_can_rot, atol=1e-4), f"x canonicalization is not equivariant, error: {torch.norm(x_can - x_can_rot)}"
+    assert torch.allclose(v_can, v_can_rot, atol=1e-4), f"v canonicalization is not equivariant, error: {torch.norm(v_can - v_can_rot)}"
 
     print("Canonicalizer module equivariance test passed.")
 

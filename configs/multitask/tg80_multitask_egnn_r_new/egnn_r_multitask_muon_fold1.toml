@@ -2,8 +2,13 @@
 use_wandb = false
 
 [benchmark]
+<<<<<<<< HEAD:configs/singletask/tg80_st_atom_new/atom_multitask_muon_fold1.toml
+model_type = "atom"
+benchmark_name = "atom_tg80_multitask_muon_fold1"
+========
 model_type = "EGNN_R"
 benchmark_name = "egnn_r_tg80_multitask_muon_fold1"
+>>>>>>>> c300add769b980ce2b97382b7d97248011f688a1:configs/multitask/tg80_multitask_egnn_r_new/egnn_r_multitask_muon_fold1.toml
 compile = true
 compile_trace = false
 runs = 3
@@ -20,6 +25,37 @@ num_timesteps = 8
 
 # Multitask dataloader parameters
 train_molecules = [
+<<<<<<<< HEAD:configs/singletask/tg80_st_atom_new/atom_multitask_muon_fold1.toml
+    "1.3-cyclohexadiene",
+    "1.4-dioxane",
+    "cyclobutane",
+    "cyclohexane",
+    "cyclohexanol",
+    "cyclohexanone",
+    "cyclopentadiene",
+    "cyclopentanone",
+    "cyclopropane",
+    "tetrahydrofuran",
+    "tropane1",
+    "tropane3",
+    "uracil1",
+]
+
+validation_molecules = [
+    "1.3-cyclohexadiene",
+    "1.4-dioxane",
+    "cyclobutane",
+    "cyclohexane",
+    "cyclohexanol",
+    "cyclohexanone",
+    "cyclopentadiene",
+    "cyclopentanone",
+    "cyclopropane",
+    "tetrahydrofuran",
+    "tropane1",
+    "tropane3",
+    "uracil1",
+========
     "1.2-dichloroethane",
     "1.3-butadiene",
     "2-butanone",
@@ -90,6 +126,7 @@ validation_molecules = [
     "furan",
     "nitrobenzene",
     "toluene",
+>>>>>>>> c300add769b980ce2b97382b7d97248011f688a1:configs/multitask/tg80_multitask_egnn_r_new/egnn_r_multitask_muon_fold1.toml
 ]
 
 test_molecules = [
@@ -108,7 +145,10 @@ test_molecules = [
     "uracil1",
 ]
 
+<<<<<<<< HEAD:configs/singletask/tg80_st_atom_new/atom_multitask_muon_fold1.toml
+========
 
+>>>>>>>> c300add769b980ce2b97382b7d97248011f688a1:configs/multitask/tg80_multitask_egnn_r_new/egnn_r_multitask_muon_fold1.toml
 # Other dataloader parameters
 explicit_hydrogen = false
 explicit_hydrogen_gradients = false
@@ -127,7 +167,11 @@ device = "cuda"
 seed = 42
 batch_size = 192
 epochs = 50
+<<<<<<<< HEAD:configs/singletask/tg80_st_atom_new/atom_multitask_muon_fold1.toml
+use_amp = true
+========
 use_amp = false
+>>>>>>>> c300add769b980ce2b97382b7d97248011f688a1:configs/multitask/tg80_multitask_egnn_r_new/egnn_r_multitask_muon_fold1.toml
 amp_dtype = "bfloat16"
 max_grad_norm = 1.0
 label_noise_std = 0.0
@@ -142,6 +186,7 @@ adam_eps = 1e-10
 [scheduler]
 type = "none"
 
+<<<<<<<< HEAD:configs/singletask/tg80_st_atom_new/atom_multitask_muon_fold1.toml
 [atom_config]
 # Architecture parameters
 num_layers = 6
@@ -165,15 +210,9 @@ activation = "swiglu"
 value_residual_type = "learnable"
 
 [egno_config]
-num_layers = 5
-lifting_dim = 64
-activation = "silu"
-normalise_scalars = true
-use_time_conv = true
-num_fourier_modes = 2
-time_embed_dim = 32
-
+========
 [egnn_config]
+>>>>>>>> c300add769b980ce2b97382b7d97248011f688a1:configs/multitask/tg80_multitask_egnn_r_new/egnn_r_multitask_muon_fold1.toml
 num_layers = 5
 lifting_dim = 64
 activation = "silu"

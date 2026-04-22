@@ -48,7 +48,11 @@ class DecanonicalizationProject(nn.Module):
 
     @override
     def forward(
-        self, lifted_x_0: torch.Tensor, lifted_concat_features: torch.Tensor, so3_matrix: torch.Tensor, x_0_mean: torch.Tensor
+        self,
+        lifted_x_0: torch.Tensor,
+        lifted_concat_features: torch.Tensor,
+        so3_matrix: torch.Tensor,
+        x_0_mean: torch.Tensor,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         _ = lifted_concat_features
         pos_canonical = self.linear_pos(lifted_x_0)
@@ -66,7 +70,13 @@ class DecanonicalizationProjectPosOnly(nn.Module):
         self.linear_pos = o3.Linear(lifting_dim_irreps, out_irreps)
 
     @override
-    def forward(self, lifted_x_0: torch.Tensor, lifted_concat_features: torch.Tensor, so3_matrix: torch.Tensor, x_0_mean: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self,
+        lifted_x_0: torch.Tensor,
+        lifted_concat_features: torch.Tensor,
+        so3_matrix: torch.Tensor,
+        x_0_mean: torch.Tensor,
+    ) -> torch.Tensor:
         _ = lifted_concat_features
         pos_canonical = self.linear_pos(lifted_x_0)
         pos_world = pos_canonical @ so3_matrix.transpose(-2, -1) + x_0_mean

@@ -51,10 +51,6 @@ def _to_torch_device(value: object) -> torch.device:
     raise ValueError(f"Invalid device value: {value}")
 
 
-class WandbConfig(BaseModel):
-    use_wandb: bool
-
-
 class BenchmarkConfig(BaseModel):
     benchmark_name: str
     model_type: ModelType
@@ -171,7 +167,12 @@ class DataloaderConfig(BaseModel):
             case _:
                 raise ValueError(f"Invalid dataset: {self.dataset}")
 
-        if self.dataset in [Datasets.md17, Datasets.rmd17, Datasets.tg80, Datasets.md22]:
+        if self.dataset in [
+            Datasets.md17,
+            Datasets.rmd17,
+            Datasets.tg80,
+            Datasets.md22,
+        ]:
             if self.multitask:
                 if self.train_molecules:
                     self.train_molecules = [enum_type(mol) for mol in self.train_molecules]
@@ -207,7 +208,10 @@ class TrainingConfig(BaseModel):
     batch_size: Annotated[PositiveInt, Field(description="Must be greater than 0.")]
     epochs: Annotated[PositiveInt, Field(description="Must be greater than 0.")]
     max_grad_norm: Annotated[NonNegativeFloat, Field(description="Must be greater than or equal to 0.0.")]
-    label_noise_std: Annotated[NonNegativeFloat, Field(description="Label noise standard deviation must be greater than or equal to 0.0.")]
+    label_noise_std: Annotated[
+        NonNegativeFloat,
+        Field(description="Label noise standard deviation must be greater than or equal to 0.0."),
+    ]
 
     class Config:
         arbitrary_types_allowed: bool = True
@@ -235,7 +239,15 @@ class ATOMConfig(BaseModel):
     # Architecture parameters
     num_layers: Annotated[PositiveInt, Field(description="Must be greater than 0.")]
     num_heads: Annotated[PositiveInt, Field(description="Must be greater than 0.")]
-    lifting_dim: Annotated[int, Field(strict=True, ge=2, multiple_of=2, description="Must be even and greater than 2.")]
+    lifting_dim: Annotated[
+        int,
+        Field(
+            strict=True,
+            ge=2,
+            multiple_of=2,
+            description="Must be even and greater than 2.",
+        ),
+    ]
     # Output parameters
     output_heads: Annotated[PositiveInt, Field(description="Must be greater than 0.")]
     delta_update: bool
@@ -244,7 +256,6 @@ class ATOMConfig(BaseModel):
     positional_encoding: PositionalEncodingType
     rope_base: Annotated[NonNegativeFloat, Field(description="Must be greater than or equal to 0.0.")]
     rope_tau: Annotated[NonNegativeFloat, Field(description="Must be greater than or equal to 0.0.")]
-    # Removed: learnable_attention_denom
     # Feature parameters
     lifting_type: LiftingType
     projection_type: ProjectionType
@@ -274,7 +285,15 @@ class ATOMConfig(BaseModel):
 
 class EGNOConfig(BaseModel):
     num_layers: Annotated[PositiveInt, Field(description="Must be greater than 0.")]
-    lifting_dim: Annotated[int, Field(strict=True, ge=2, multiple_of=2, description="Must be even and greater than 2.")]
+    lifting_dim: Annotated[
+        int,
+        Field(
+            strict=True,
+            ge=2,
+            multiple_of=2,
+            description="Must be even and greater than 2.",
+        ),
+    ]
     activation: FFNActivation
     normalise_scalars: bool
     use_time_conv: bool
@@ -284,26 +303,58 @@ class EGNOConfig(BaseModel):
 
 class EGNNConfig(BaseModel):
     num_layers: Annotated[PositiveInt, Field(description="Must be greater than 0.")]
-    lifting_dim: Annotated[int, Field(strict=True, ge=2, multiple_of=2, description="Must be even and greater than 2.")]
+    lifting_dim: Annotated[
+        int,
+        Field(
+            strict=True,
+            ge=2,
+            multiple_of=2,
+            description="Must be even and greater than 2.",
+        ),
+    ]
     activation: FFNActivation
     time_embed_dim: int
 
 
 class Config(BaseModel):
-    wandb: WandbConfig
     benchmark: BenchmarkConfig
     dataloader: DataloaderConfig
     training: TrainingConfig
     optimizer: OptimizerConfig
     scheduler: SchedulerConfig
-    atom_config: ATOMConfig
-    egno_config: EGNOConfig
+    atom_config: ATOMConfig | None = None
+    egno_config: EGNOConfig | None = None
     egnn_config: EGNNConfig | None = None
 
     @model_validator(mode="after")
     def validate_output_heads(self) -> "Config":
-        if self.benchmark.model_type == ModelType.ATOM and self.atom_config.output_heads > 1 and self.dataloader.multitask is False:
+        if (
+            self.benchmark.model_type == ModelType.ATOM
+            and self.atom_config is not None
+            and self.atom_config.output_heads > 1
+            and self.dataloader.multitask is False
+        ):
             print("Are you sure you want to use multiple output heads for a single-task model? This is unusual, but maybe you're onto something.")
+        return self
+
+    @model_validator(mode="after")
+    def validate_model_specific_configs(self) -> "Config":
+        match self.benchmark.model_type:
+            case ModelType.ATOM:
+                if self.atom_config is None:
+                    raise ValueError("ATOM model requires 'atom_config' to be set.")
+                if self.egno_config is not None or self.egnn_config is not None:
+                    raise ValueError("ATOM model should not define 'egno_config' or 'egnn_config'.")
+            case ModelType.EGNO:
+                if self.egno_config is None:
+                    raise ValueError("EGNO model requires 'egno_config' to be set.")
+                if self.atom_config is not None or self.egnn_config is not None:
+                    raise ValueError("EGNO model should not define 'atom_config' or 'egnn_config'.")
+            case ModelType.EGNN_S | ModelType.EGNN_R:
+                if self.egnn_config is None:
+                    raise ValueError("EGNN model requires 'egnn_config' to be set.")
+                if self.atom_config is not None or self.egno_config is not None:
+                    raise ValueError("EGNN model should not define 'atom_config' or 'egno_config'.")
         return self
 
     @classmethod

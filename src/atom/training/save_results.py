@@ -55,7 +55,7 @@ class MultiRunResults(BaseModel):
     @computed_field
     @property
     def latex_s2s(self) -> str:
-        return f"\\({self.s2s_test_loss_mean*100:.2f}{{\\scriptstyle \\pm{self.s2s_test_loss_std*100:.2f}}}\\)"
+        return f"\\({self.s2s_test_loss_mean * 100:.2f}{{\\scriptstyle \\pm{self.s2s_test_loss_std * 100:.2f}}}\\)"
 
     @computed_field
     @property
@@ -80,7 +80,7 @@ class MultiRunResults(BaseModel):
     @computed_field
     @property
     def latex_s2t(self) -> str:
-        return f"\\({self.s2t_test_loss_mean*100:.2f}{{\\scriptstyle \\pm{self.s2t_test_loss_std*100:.2f}}}\\)"
+        return f"\\({self.s2t_test_loss_mean * 100:.2f}{{\\scriptstyle \\pm{self.s2t_test_loss_std * 100:.2f}}}\\)"
 
     @computed_field
     @property
@@ -90,7 +90,9 @@ class MultiRunResults(BaseModel):
     @computed_field
     @property
     def mean_secs_per_epoch(self) -> float:
-        return sum(result.seconds_per_epoch for result in self.single_run_results if result.seconds_per_epoch is not None) / len(self.single_run_results)
+        return sum(result.seconds_per_epoch for result in self.single_run_results if result.seconds_per_epoch is not None) / len(
+            self.single_run_results
+        )
 
     @computed_field
     @property

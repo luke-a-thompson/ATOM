@@ -128,7 +128,9 @@ def plot_invariance_results(invariance_to_plot: Literal["t", "p"]) -> None:
             s2t_no_trope_stds.append(s2t_data["s2t_test_loss_std"])
 
     # Function to process EGNO results
-    def process_egno_files(results_files: list[Path]) -> tuple[list[int], list[float], list[float]]:
+    def process_egno_files(
+        results_files: list[Path],
+    ) -> tuple[list[int], list[float], list[float]]:
         param_values: list[int] = []
         means: list[float] = []
         stds: list[float] = []
@@ -174,7 +176,11 @@ def plot_invariance_results(invariance_to_plot: Literal["t", "p"]) -> None:
     # Sort all results by parameter values
     def sort_results(param_values: list[int], means: list[float], stds: list[float]) -> tuple[list[int], list[float], list[float]]:
         sorted_indices = np.argsort(param_values)
-        return ([param_values[i] for i in sorted_indices], [means[i] for i in sorted_indices], [stds[i] for i in sorted_indices])
+        return (
+            [param_values[i] for i in sorted_indices],
+            [means[i] for i in sorted_indices],
+            [stds[i] for i in sorted_indices],
+        )
 
     s2t_param_values, s2t_means, s2t_stds = sort_results(s2t_param_values, s2t_means, s2t_stds)
     egno_param_values, egno_means, egno_stds = sort_results(egno_param_values, egno_means, egno_stds)
@@ -182,7 +188,9 @@ def plot_invariance_results(invariance_to_plot: Literal["t", "p"]) -> None:
 
     # Sort ATOM no trope results if available
     if s2t_no_trope_param_values:
-        s2t_no_trope_param_values, s2t_no_trope_means, s2t_no_trope_stds = sort_results(s2t_no_trope_param_values, s2t_no_trope_means, s2t_no_trope_stds)
+        s2t_no_trope_param_values, s2t_no_trope_means, s2t_no_trope_stds = sort_results(
+            s2t_no_trope_param_values, s2t_no_trope_means, s2t_no_trope_stds
+        )
 
     print(f"S2T param values: {s2t_param_values}")
     print(f"EGNO param values: {egno_param_values}")
@@ -208,7 +216,15 @@ def plot_invariance_results(invariance_to_plot: Literal["t", "p"]) -> None:
     fig, ax = plt.subplots(figsize=(6, 4))
 
     # Plot the S2T mean line with circle markers (with trope)
-    ax.plot(s2t_param_values, s2t_means_scaled, "-o", color=blue, linewidth=2, label="ATOM", markersize=6)
+    ax.plot(
+        s2t_param_values,
+        s2t_means_scaled,
+        "-o",
+        color=blue,
+        linewidth=2,
+        label="ATOM",
+        markersize=6,
+    )
 
     # Calculate and plot 2SD range for S2T (with trope)
     s2t_upper_bound = [mean + 2 * std for mean, std in zip(s2t_means_scaled, s2t_stds_scaled)]
@@ -217,26 +233,63 @@ def plot_invariance_results(invariance_to_plot: Literal["t", "p"]) -> None:
 
     # Plot the S2T mean line with triangle markers (without trope) if available
     if s2t_no_trope_param_values:
-        ax.plot(s2t_no_trope_param_values, s2t_no_trope_means_scaled, "-^", color=blue, linewidth=2, label="ATOM (No T-RoPE)", markersize=6, alpha=0.7)
+        ax.plot(
+            s2t_no_trope_param_values,
+            s2t_no_trope_means_scaled,
+            "-^",
+            color=blue,
+            linewidth=2,
+            label="ATOM (No T-RoPE)",
+            markersize=6,
+            alpha=0.7,
+        )
 
         # Calculate and plot 2SD range for S2T (without trope)
         s2t_no_trope_upper_bound = [mean + 2 * std for mean, std in zip(s2t_no_trope_means_scaled, s2t_no_trope_stds_scaled)]
         s2t_no_trope_lower_bound = [mean - 2 * std for mean, std in zip(s2t_no_trope_means_scaled, s2t_no_trope_stds_scaled)]
-        ax.fill_between(s2t_no_trope_param_values, s2t_no_trope_lower_bound, s2t_no_trope_upper_bound, color=blue, alpha=0.1)
+        ax.fill_between(
+            s2t_no_trope_param_values,
+            s2t_no_trope_lower_bound,
+            s2t_no_trope_upper_bound,
+            color=blue,
+            alpha=0.1,
+        )
 
     # Plot EGNO results if available
     if egno_param_values:
-        ax.plot(egno_param_values, egno_means_scaled, "-s", color=red, linewidth=2, label="EGNO", markersize=6)
+        ax.plot(
+            egno_param_values,
+            egno_means_scaled,
+            "-s",
+            color=red,
+            linewidth=2,
+            label="EGNO",
+            markersize=6,
+        )
         egno_upper_bound = [mean + 2 * std for mean, std in zip(egno_means_scaled, egno_stds_scaled)]
         egno_lower_bound = [mean - 2 * std for mean, std in zip(egno_means_scaled, egno_stds_scaled)]
         ax.fill_between(egno_param_values, egno_lower_bound, egno_upper_bound, color=red, alpha=0.2)
 
     # Plot EGNN results if available
     if egnn_param_values:
-        ax.plot(egnn_param_values, egnn_means_scaled, "-d", color=yellow, linewidth=2, label="EGNN", markersize=6)
+        ax.plot(
+            egnn_param_values,
+            egnn_means_scaled,
+            "-d",
+            color=yellow,
+            linewidth=2,
+            label="EGNN",
+            markersize=6,
+        )
         egnn_upper_bound = [mean + 2 * std for mean, std in zip(egnn_means_scaled, egnn_stds_scaled)]
         egnn_lower_bound = [mean - 2 * std for mean, std in zip(egnn_means_scaled, egnn_stds_scaled)]
-        ax.fill_between(egnn_param_values, egnn_lower_bound, egnn_upper_bound, color=yellow, alpha=0.2)
+        ax.fill_between(
+            egnn_param_values,
+            egnn_lower_bound,
+            egnn_upper_bound,
+            color=yellow,
+            alpha=0.2,
+        )
 
     # Set x-axis to log scale for t-invariance
     if invariance_to_plot == "t":
@@ -258,8 +311,3 @@ def plot_invariance_results(invariance_to_plot: Literal["t", "p"]) -> None:
     save_path = figure_dir / figure_file_name
     plt.savefig(save_path, format="pdf", dpi=300, bbox_inches="tight")
     print(f"Figure saved as PDF to {save_path}")
-
-
-if __name__ == "__main__":
-    set_matplotlib_style(font_size=18)
-    plot_invariance_results("p")  # or "p" for P-invariance (num_timesteps)

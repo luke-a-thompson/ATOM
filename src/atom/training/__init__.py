@@ -1,10 +1,23 @@
 from .create_model import initialize_model
 from .create_optimisers import initialize_optimizer, initialize_scheduler
 from .create_dataloaders import create_dataloaders_single, create_dataloaders_multitask
-from .training_utils import set_seeds, add_brownian_noise, log_weights, parse_train_args, set_environment_variables, get_config_files
+from .training_utils import (
+    set_seeds,
+    add_brownian_noise,
+    log_weights,
+    parse_train_args,
+    set_environment_variables,
+    get_config_files,
+    show_connectivity,
+)
 from .create_config import Config
 from .save_results import SingleRunResults, MultiRunResults
-from .config_options import MD17MoleculeType, RMD17MoleculeType, TG80MoleculeType, Datasets
+from .config_options import (
+    MD17MoleculeType,
+    RMD17MoleculeType,
+    TG80MoleculeType,
+    Datasets,
+)
 from .train_pipeline import train_model, eval_epoch, train_epoch
 from .benchmark import singletask_benchmark, multitask_benchmark
 
@@ -28,6 +41,7 @@ __all__ = [
     "parse_train_args",
     "set_environment_variables",
     "get_config_files",
+    "show_connectivity",
     "singletask_benchmark",
     "multitask_benchmark",
     "eval_epoch",

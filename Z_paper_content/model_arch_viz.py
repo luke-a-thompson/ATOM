@@ -4,7 +4,9 @@ from typing import Any
 from pathlib import Path
 
 
-def clean_state_dict_prefixes(state_dict: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
+def clean_state_dict_prefixes(
+    state_dict: dict[str, torch.Tensor],
+) -> dict[str, torch.Tensor]:
     """
     Remove the '_orig_mod.' prefix from the state_dict keys that is added by torch.compile.
     """
@@ -50,14 +52,23 @@ def analyze_model_architecture(model_path: str, max_depth: int | None = None) ->
     # Clean the state_dict prefixes
     state_dict = clean_state_dict_prefixes(state_dict)
 
-    architecture: dict[str, Any] = {"model_path": model_path, "total_parameters": 0, "modules": {}, "parameter_groups": {}}
+    architecture: dict[str, Any] = {
+        "model_path": model_path,
+        "total_parameters": 0,
+        "modules": {},
+        "parameter_groups": {},
+    }
 
     def analyze_module(name: str, module: nn.Module, depth: int = 0) -> dict[str, Any]:
         """Recursively analyze a module and its children."""
         if max_depth is not None and depth > max_depth:
             return {"type": str(type(module).__name__), "truncated": True}
 
-        module_info: dict[str, Any] = {"type": type(module).__name__, "parameters": {}, "children": {}}
+        module_info: dict[str, Any] = {
+            "type": type(module).__name__,
+            "parameters": {},
+            "children": {},
+        }
 
         # Count parameters for this module
         param_count = sum(p.numel() for p in module.parameters())
@@ -85,7 +96,12 @@ def analyze_model_architecture(model_path: str, max_depth: int | None = None) ->
     return architecture
 
 
-def print_model_architecture(model_path: str, max_depth: int | None = None, show_parameters: bool = True, show_shapes: bool = True) -> None:
+def print_model_architecture(
+    model_path: str,
+    max_depth: int | None = None,
+    show_parameters: bool = True,
+    show_shapes: bool = True,
+) -> None:
     """
     Load a PyTorch model file and print its architecture in a pretty format.
 
@@ -114,11 +130,11 @@ def print_model_architecture(model_path: str, max_depth: int | None = None, show
             state_dict = checkpoint
             model = None
 
-        print(f"\n{'='*60}")
-        print(f"MODEL ARCHITECTURE ANALYSIS")
-        print(f"{'='*60}")
+        print(f"\n{'=' * 60}")
+        print("MODEL ARCHITECTURE ANALYSIS")
+        print(f"{'=' * 60}")
         print(f"Model file: {model_path}")
-        print(f"{'='*60}\n")
+        print(f"{'=' * 60}\n")
 
         # If we have the actual model object, print it hierarchically
         if model is not None:
@@ -142,13 +158,13 @@ def print_model_architecture(model_path: str, max_depth: int | None = None, show
                         info_str = f" ({', '.join(filter(None, info_parts))})" if info_parts else ""
                         print(f"  {param_name}{info_str}")
 
-            print(f"\n{'='*60}")
+            print(f"\n{'=' * 60}")
             print("MODULE HIERARCHY (from parameters):")
             print("-" * 40)
             for module_name in arch["parameter_groups"].keys():
                 print(f"├── {module_name}")
 
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
 
     except Exception as e:
         print(f"Error analyzing model: {e}")
@@ -197,12 +213,12 @@ def compare_model_architectures(model_path1: str, model_path2: str, max_depth: i
         arch1 = analyze_model_architecture(model_path1, max_depth)
         arch2 = analyze_model_architecture(model_path2, max_depth)
 
-        print(f"\n{'='*80}")
-        print(f"MODEL COMPARISON")
-        print(f"{'='*80}")
+        print(f"\n{'=' * 80}")
+        print("MODEL COMPARISON")
+        print(f"{'=' * 80}")
         print(f"Model 1: {arch1['model_path']}")
         print(f"Model 2: {arch2['model_path']}")
-        print(f"{'='*80}\n")
+        print(f"{'=' * 80}\n")
 
         # Compare parameter counts
         print("PARAMETER COUNT COMPARISON:")
@@ -213,7 +229,7 @@ def compare_model_architectures(model_path1: str, model_path2: str, max_depth: i
         print(f"Difference: {diff:+,}")
 
         # Compare parameter groups
-        print(f"\nPARAMETER GROUP COMPARISON:")
+        print("\nPARAMETER GROUP COMPARISON:")
         print("-" * 40)
 
         all_modules = set(arch1["parameter_groups"].keys()) | set(arch2["parameter_groups"].keys())
@@ -231,7 +247,7 @@ def compare_model_architectures(model_path1: str, model_path2: str, max_depth: i
                 print(f"✓ {module}: {count1} parameters (same)")
 
         # Show detailed differences in parameter shapes
-        print(f"\nDETAILED PARAMETER DIFFERENCES:")
+        print("\nDETAILED PARAMETER DIFFERENCES:")
         print("-" * 40)
 
         for module in sorted(all_modules):
@@ -251,7 +267,7 @@ def compare_model_architectures(model_path1: str, model_path2: str, max_depth: i
                     if shape1 != shape2:
                         print(f"🔄 {module}.{param}: {shape1} → {shape2}")
 
-        print(f"\n{'='*80}")
+        print(f"\n{'=' * 80}")
 
     except Exception as e:
         print(f"Error comparing models: {e}")

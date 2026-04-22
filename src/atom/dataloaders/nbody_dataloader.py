@@ -75,7 +75,9 @@ class NBodyDynamicsDataset(Dataset[dict[str, torch.Tensor]]):
         self.replicated_vel: torch.Tensor = self._replicate_tensor(self.vel_0)
         self.replicated_charges: torch.Tensor = self._replicate_tensor(self.charges)
 
-    def _load_data(self) -> tuple[torch.Tensor, torch.Tensor, list[list[int]], torch.Tensor, torch.Tensor]:
+    def _load_data(
+        self,
+    ) -> tuple[torch.Tensor, torch.Tensor, list[list[int]], torch.Tensor, torch.Tensor]:
         # Loads the full trajectories for loc and vel and charges
         # loc and vel will be [S, T, N, D]
         # charges will be [S, N, 1]

@@ -36,7 +36,9 @@ def _compute_even_frames(start_t: int, delta_t: int, P: int) -> list[int]:
     return unique
 
 
-def _compute_principal_axes(positions: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
+def _compute_principal_axes(
+    positions: npt.NDArray[np.float64],
+) -> npt.NDArray[np.float64]:
     """Return principal axes (3x3, columns are eigenvectors) from centered positions [N,3]."""
     pos64: npt.NDArray[np.float64] = positions.astype(np.float64, copy=False)
     cov: npt.NDArray[np.float64] = ((pos64.T @ pos64) / max(len(pos64), 1)).astype(np.float64, copy=False)
@@ -46,7 +48,11 @@ def _compute_principal_axes(positions: npt.NDArray[np.float64]) -> npt.NDArray[n
     return evecs_sorted
 
 
-def _resolve_axis_signs(evecs: npt.NDArray[np.float64], positions: npt.NDArray[np.float64], atomic_numbers: npt.NDArray[np.int_]) -> npt.NDArray[np.float64]:
+def _resolve_axis_signs(
+    evecs: npt.NDArray[np.float64],
+    positions: npt.NDArray[np.float64],
+    atomic_numbers: npt.NDArray[np.int_],
+) -> npt.NDArray[np.float64]:
     """Resolve eigenvector sign ambiguity deterministically using geometry and atom identity.
 
     - e1 sign: align with net direction of the structure (sum of coordinates).
@@ -164,11 +170,27 @@ def plot_trajectory(ax: Axes3D, filename: Path, md_17_version: Literal["md17", "
         ax.plot(x, y, z, color=atom_color, alpha=0.4, linewidth=1)
 
         # Mark the starting position with a solid marker
-        ax.scatter(x[0], y[0], z[0], color=atom_color, s=80, edgecolor="black", alpha=STARTING_NODE_ALPHA)
+        ax.scatter(
+            x[0],
+            y[0],
+            z[0],
+            color=atom_color,
+            s=80,
+            edgecolor="black",
+            alpha=STARTING_NODE_ALPHA,
+        )
 
         # Mark the ending position with a ghosted (transparent) marker
         if ADD_GHOST:
-            ax.scatter(x[-1], y[-1], z[-1], color=atom_color, s=80, edgecolor="black", alpha=ENDING_NODE_ALPHA)
+            ax.scatter(
+                x[-1],
+                y[-1],
+                z[-1],
+                color=atom_color,
+                s=80,
+                edgecolor="black",
+                alpha=ENDING_NODE_ALPHA,
+            )
 
     # Define bond distance threshold (adjust as needed for your molecule)
     bond_threshold = 1.8  # Angstroms
@@ -231,7 +253,12 @@ def plot_trajectory(ax: Axes3D, filename: Path, md_17_version: Literal["md17", "
     return unique_atom_types
 
 
-def create_tiled_figure(data_dir: Path, md_17_version: Literal["md17", "rmd17", "tg80"], n_cols: int | None = None, n_rows: int | None = None) -> None:
+def create_tiled_figure(
+    data_dir: Path,
+    md_17_version: Literal["md17", "rmd17", "tg80"],
+    n_cols: int | None = None,
+    n_rows: int | None = None,
+) -> None:
     # Get all NPZ files
     files: list[Path] = sorted(list(data_dir.glob("*.npz")))
     n_files: int = len(files)
@@ -323,7 +350,10 @@ def create_tiled_figure(data_dir: Path, md_17_version: Literal["md17", "rmd17", 
 
         # Save each figure with a unique name
         suffix = f"_{fig_idx + 1}" if n_figures > 1 else ""
-        plt.savefig(f"Z_paper_content/trajectories/{md_17_version}_combined_trajectories{suffix}.pdf", bbox_inches="tight")
+        plt.savefig(
+            f"Z_paper_content/trajectories/{md_17_version}_combined_trajectories{suffix}.pdf",
+            bbox_inches="tight",
+        )
         plt.close()
 
 
@@ -368,7 +398,13 @@ def save_single_trajectory_png(
     frame_positions: npt.NDArray[np.float64] = filtered_R[frame_index]
 
     # Color map
-    color_map: dict[int, str] = {6: "gray", 7: "blue", 8: "red", 9: "green", 16: "yellow"}
+    color_map: dict[int, str] = {
+        6: "gray",
+        7: "blue",
+        8: "red",
+        9: "green",
+        16: "yellow",
+    }
 
     # Create figure
     fig = plt.figure(figsize=(6, 6))
@@ -516,7 +552,11 @@ def create_uracil_comparison() -> None:
     fig = plt.figure(figsize=(15, 5))
 
     # Define the directories and versions
-    dirs_and_versions: list[tuple[Path, Literal["md17", "rmd17", "tg80"]]] = [(Path("data/md17_npz"), "md17"), (Path("data/rmd17_npz"), "rmd17"), (Path("data/tg80_npz"), "tg80")]
+    dirs_and_versions: list[tuple[Path, Literal["md17", "rmd17", "tg80"]]] = [
+        (Path("data/md17_npz"), "md17"),
+        (Path("data/rmd17_npz"), "rmd17"),
+        (Path("data/tg80_npz"), "tg80"),
+    ]
 
     # Plot uracil from each dataset
     unique_atoms: set[tuple[int, str]] = set()
@@ -571,35 +611,3 @@ def create_uracil_comparison() -> None:
     # Save the figure
     plt.savefig("Z_paper_content/trajectories/uracil_comparison.pdf", bbox_inches="tight")
     plt.close()
-
-
-if __name__ == "__main__":
-    set_matplotlib_style()
-    md17_dir: Path = Path("data/md17_npz")
-    rmd17_dir: Path = Path("data/rmd17_npz")
-    tg80_dir: Path = Path("data/tg80_npz")
-
-    create_tiled_figure(md17_dir, "md17", 2, 4)
-    create_tiled_figure(tg80_dir, "tg80", 2, 4)
-    create_tiled_figure(rmd17_dir, "rmd17", 2, 4)
-
-    # Create uracil comparison
-    create_uracil_comparison()
-
-    # Save high-res PNGs for selected TG80 molecules
-    png_out_dir: Path = Path("Z_paper_content/trajectories/pngs")
-    molecules_to_save: list[str] = ["Aspirin_lowest", "Isoquinoline_lowest", "Succinicacid_lowest", "Pyrimidine_lowest", "Propylene_lowest"]
-    # Evenly spaced aspirin frames from t0 over delta_t using P segments
-    aspirin_start_t: int = 6000
-    delta_t: int = 10000
-    P: int = 8
-    aspirin_frames: list[int] = _compute_even_frames(aspirin_start_t, delta_t, P)
-    aspirin_extras: dict[str, list[int]] = {"aspirin": aspirin_frames}
-    save_tg80_molecule_pngs(
-        tg80_dir,
-        molecules_to_save,
-        png_out_dir,
-        dpi=600,
-        default_frame_index=3000,
-        extra_frames=aspirin_extras,
-    )

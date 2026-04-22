@@ -3,11 +3,30 @@ from typing import final, override
 import torch
 import torch.nn as nn
 from atom.atom.activations import ReLU2, SwiGLU
-from atom.training.config_options import FFNActivation, NormType, ValueResidualType, AttentionType, LiftingType, PositionalEncodingType, ProjectionType, OutputMode
+from atom.training.config_options import (
+    FFNActivation,
+    NormType,
+    ValueResidualType,
+    AttentionType,
+    LiftingType,
+    PositionalEncodingType,
+    ProjectionType,
+    OutputMode,
+)
 from tensordict import TensorDict
-from atom.atom.attentions import QuadraticHeterogenousCrossAttention, QuadraticSelfAttention, LinearHeterogenousCrossAttention
+from atom.atom.attentions import (
+    QuadraticHeterogenousCrossAttention,
+    QuadraticSelfAttention,
+    LinearHeterogenousCrossAttention,
+    GATv2GraphAttention,
+)
 from atom.atom.mlps import MLP
-from atom.atom.lifting_layers import StandardLift, QuasiEquivariantLift, QuasiEquivariantTPLift, CanonicalizationLift
+from atom.atom.lifting_layers import (
+    StandardLift,
+    QuasiEquivariantLift,
+    QuasiEquivariantTPLift,
+    CanonicalizationLift,
+)
 from atom.atom.projection_layers import (
     EquivariantProjectFull,
     EquivariantProjectPosOnly,
@@ -114,6 +133,14 @@ class ATOMBlock(nn.Module):
                     rope_base=rope_base,
                     rope_tau=rope_tau,
                 )
+            case AttentionType.GATV2:
+                self.attention = GATv2GraphAttention(
+                    lifting_dim=lifting_dim,
+                    num_heads=num_heads,
+                    num_timesteps=self.num_timesteps,
+                    positional_encoding=positional_encoding,
+                    rope_base=rope_base,
+                )
             case _:
                 raise ValueError(f"Invalid heterogenous attention type: {attention_type}, select from one of {AttentionType.__members__.keys()}")  # type: ignore
 
@@ -128,7 +155,9 @@ class ATOMBlock(nn.Module):
             case ValueResidualType.NONE:
                 self.lambda_v_residual = torch.empty(0)
             case _:
-                raise ValueError(f"Invalid value residual type: {self.value_residual_type}, select from one of {ValueResidualType.__members__.keys()}")
+                raise ValueError(
+                    f"Invalid value residual type: {self.value_residual_type}, select from one of {ValueResidualType.__members__.keys()}"
+                )
 
     @override
     def forward(
@@ -140,7 +169,9 @@ class ATOMBlock(nn.Module):
         mask: torch.Tensor | None,
         time_increments: torch.Tensor | None = None,
         initial_v: torch.Tensor | None = None,
-    ) -> tuple[torch.Tensor, torch.Tensor | None]:  # None when value residual not yet set
+        edge_index: tuple[torch.Tensor, torch.Tensor] | None = None,
+        edge_mask: torch.Tensor | None = None,
+    ) -> tuple[torch.Tensor, torch.Tensor | None]:
         """Forward pass for the ATOM block.
 
         Parameters
@@ -171,11 +202,32 @@ class ATOMBlock(nn.Module):
 
         if self.attention_type == AttentionType.SELF:
             attended_nodes = x_0 + self.attention(tensor=x_0, mask=mask, time_increments=time_increments)
+        elif self.attention_type == AttentionType.GATV2:
+            if edge_index is None:
+                msg = "GATV2 attention requires 'edge_index' to be provided to ATOMBlock.forward."
+                raise ValueError(msg)
+            attended_nodes = x_0 + self.attention(
+                tensor=x_0,
+                mask=mask,
+                edge_index=edge_index,
+                edge_mask=edge_mask,
+                time_increments=time_increments,
+            )
         else:
-            attended_nodes = x_0 + self.attention(x_0, v_0, concatenated_features, q_data=q_data, mask=mask, time_increments=time_increments)
+            attended_nodes = x_0 + self.attention(
+                x_0,
+                v_0,
+                concatenated_features,
+                q_data=q_data,
+                mask=mask,
+                time_increments=time_increments,
+            )
         x_0 = attended_nodes + self.ffn(attended_nodes, mask)
 
-        if self.value_residual_type in (ValueResidualType.LEARNABLE, ValueResidualType.FIXED):
+        if self.value_residual_type in (
+            ValueResidualType.LEARNABLE,
+            ValueResidualType.FIXED,
+        ):
             # Set initial_v if not provided (first layer); otherwise apply value residual
             if initial_v is None:
                 initial_v = x_0.clone()
@@ -262,6 +314,7 @@ class ATOM(nn.Module):
         self.delta_update = delta_update
         self.positional_encoding_type = positional_encoding
         self.output_mode = output_mode
+        self.attention_type: AttentionType = attention_type
         # Removed FiLM modulation
 
         x_0_in_irreps, v_0_in_irreps, concat_feats_in_irreps = get_in_irreps(rrwp_length)
@@ -375,15 +428,49 @@ class ATOM(nn.Module):
         # Add sinusoidal PE with local positions within the batch window
         if self.positional_encoding_type == PositionalEncodingType.SINUSOIDAL:
             B, T, N, D = lifted_concat_features.shape
-            pos = torch.arange(T, device=lifted_concat_features.device, dtype=lifted_concat_features.dtype).unsqueeze(0).unsqueeze(-1).expand(B, -1, -1)
-            div_term = torch.exp(torch.arange(0, D, 2, device=lifted_concat_features.device, dtype=lifted_concat_features.dtype) * (-math.log(10000.0) / D))
-            pe = torch.zeros(B, T, D, device=lifted_concat_features.device, dtype=lifted_concat_features.dtype)
+            pos = (
+                torch.arange(
+                    T,
+                    device=lifted_concat_features.device,
+                    dtype=lifted_concat_features.dtype,
+                )
+                .unsqueeze(0)
+                .unsqueeze(-1)
+                .expand(B, -1, -1)
+            )
+            div_term = torch.exp(
+                torch.arange(
+                    0,
+                    D,
+                    2,
+                    device=lifted_concat_features.device,
+                    dtype=lifted_concat_features.dtype,
+                )
+                * (-math.log(10000.0) / D)
+            )
+            pe = torch.zeros(
+                B,
+                T,
+                D,
+                device=lifted_concat_features.device,
+                dtype=lifted_concat_features.dtype,
+            )
             pe[..., 0::2] = torch.sin(pos * div_term)
             pe[..., 1::2] = torch.cos(pos * div_term)
             lifted_concat_features = lifted_concat_features + pe.unsqueeze(2)
 
-        ## Kernel integral
-        initial_v: torch.Tensor | None = None  # Value residual: Starts as none, becomes x_0 the first layer
+        # Prepare optional edge data for graph-based attention types
+        edge_index: tuple[torch.Tensor, torch.Tensor] | None = None
+        edge_mask: torch.Tensor | None = None
+        if self.attention_type == AttentionType.GATV2:
+            if "source_node_indices" not in batch or "target_node_indices" not in batch:
+                msg = "GATV2 attention requires 'source_node_indices' and 'target_node_indices' in the batch."
+                raise ValueError(msg)
+            edge_index = (batch["source_node_indices"], batch["target_node_indices"])
+            edge_mask = batch.get("edge_mask", None)
+
+        # Kernel integral
+        initial_v: torch.Tensor | None = None
         for layer in self.transformer_blocks:
             lifted_x_0, initial_v = layer(
                 lifted_x_0,
@@ -393,6 +480,8 @@ class ATOM(nn.Module):
                 mask=mask,
                 time_increments=batch.get("time_increments", None),
                 initial_v=initial_v,
+                edge_index=edge_index,
+                edge_mask=edge_mask,
             )
 
         ## Project

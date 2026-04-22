@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import ScalarFormatter
 from scipy import stats
 from usyd_colors import get_palette
-from figures import set_matplotlib_style
+from Z_paper_content.figures import set_matplotlib_style
 
 
 class ErrorBarType(Enum):
@@ -49,7 +49,9 @@ def calculate_std_dev_bounds(values: list[float]) -> tuple[float, float]:
     return (2.0 * std_dev, 2.0 * std_dev)  # Symmetric bounds
 
 
-def perform_welch_tests(data_dict: dict[str, list[float]]) -> dict[str, tuple[float, float, float, float, float]]:
+def perform_welch_tests(
+    data_dict: dict[str, list[float]],
+) -> dict[str, tuple[float, float, float, float, float]]:
     """
     Perform Welch's t-test between the default model and all other models with Holm-Bonferroni corrections.
 
@@ -79,7 +81,12 @@ def perform_welch_tests(data_dict: dict[str, list[float]]) -> dict[str, tuple[fl
         t_stat, p_val = stats.ttest_ind(model_data, default_data, equal_var=False)
         p_val = float(p_val)
         p_values.append((model_name, p_val))
-        results[model_name] = (mean_diff, model_std, p_val, p_val)  # Will update adjusted p-value later
+        results[model_name] = (
+            mean_diff,
+            model_std,
+            p_val,
+            p_val,
+        )  # Will update adjusted p-value later
 
     # Apply Holm-Bonferroni correction
     p_values.sort(key=lambda x: x[1])  # Sort by p-value
@@ -118,7 +125,12 @@ def print_results_table(data_dict: dict[str, list[float]]) -> None:
         print(f"{display_name:<20} {mean_loss:>10.4f}\t\t{std_dev:>8.4f}")
 
 
-def plot_ablations(ablation_dir: Path, save_path: Path | None = None, error_bar_type: ErrorBarType = ErrorBarType.PERCENTILE, add_text: bool = True) -> None:
+def plot_ablations(
+    ablation_dir: Path,
+    save_path: Path | None = None,
+    error_bar_type: ErrorBarType = ErrorBarType.PERCENTILE,
+    add_text: bool = True,
+) -> None:
     """
     Create horizontal bars using real benchmark data from benchmark_runs/Ablations.
     Calculates mean test loss and error bars from individual run results.
@@ -196,7 +208,15 @@ def plot_ablations(ablation_dir: Path, save_path: Path | None = None, error_bar_
     bars = ax.barh(categories, values, color=red, alpha=0.8, edgecolor=grey, linewidth=0)
 
     # Add error bars
-    _ = ax.errorbar(values, categories, xerr=[lower_bounds, upper_bounds], fmt="none", color=grey, capsize=3, capthick=1)
+    _ = ax.errorbar(
+        values,
+        categories,
+        xerr=[lower_bounds, upper_bounds],
+        fmt="none",
+        color=grey,
+        capsize=3,
+        capthick=1,
+    )
     if add_text:
         # Add value label for the highest bar (last item since sorted in ascending order)
         highest_bar_index = len(categories) - 1
@@ -211,7 +231,15 @@ def plot_ablations(ablation_dir: Path, save_path: Path | None = None, error_bar_
 
         # Add the text annotation using a fontdict for font properties
         fontdict = {"fontsize": 10, "fontweight": "bold"}
-        _ = ax.text(x=text_x_position, y=highest_category, s=value_text, verticalalignment="center", ha="left", color=grey, fontdict=fontdict)
+        _ = ax.text(
+            x=text_x_position,
+            y=highest_category,
+            s=value_text,
+            verticalalignment="center",
+            ha="left",
+            color=grey,
+            fontdict=fontdict,
+        )
 
     # Remove top and right spines
     ax.spines["top"].set_visible(False)
@@ -237,17 +265,3 @@ def plot_ablations(ablation_dir: Path, save_path: Path | None = None, error_bar_
         plt.savefig(save_path.with_suffix(".pdf"), format="pdf", dpi=300, bbox_inches="tight")
         plt.savefig(save_path.with_suffix(".svg"), format="svg", dpi=300, bbox_inches="tight")
         print(f"Figure saved as PDF to {save_path}")
-
-
-if __name__ == "__main__":
-    ablation_dir = Path("benchmark_runs/ablations_atom_17-Sep-2025_00-38-16")
-    # Use percentile error bars by default
-    set_matplotlib_style()
-    plot_ablations(ablation_dir=ablation_dir, save_path=Path("Z_paper_content/ablations/ablation_MD17_ST.pdf"), error_bar_type=ErrorBarType.PERCENTILE, add_text=True)
-
-    # Uncomment to use standard deviation error bars instead
-    # plot_ablations(
-    #     ablation_dir=ablation_dir,
-    #     save_path=Path("Z_paper_content/ablations/ablation_MD17_std_dev.pdf"),
-    #     error_bar_type=ErrorBarType.STANDARD_DEVIATION
-    # )

@@ -103,7 +103,10 @@ class EGNNSequential(nn.Module):
         cos = torch.cos(val * freq)
         out = torch.cat((sin, cos), dim=-1)
         if out.shape[0] < lifting_dim:
-            out = torch.cat((out, torch.zeros(lifting_dim - out.shape[0], dtype=torch.float32)), dim=0)
+            out = torch.cat(
+                (out, torch.zeros(lifting_dim - out.shape[0], dtype=torch.float32)),
+                dim=0,
+            )
         return out
 
 

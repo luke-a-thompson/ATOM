@@ -11,7 +11,13 @@ from collections import OrderedDict
 from matplotlib.ticker import MultipleLocator
 
 from atom.inference.inference_utils import clean_state_dict_prefixes
-from atom.training import Config, create_dataloaders_multitask, create_dataloaders_single, eval_epoch, initialize_model
+from atom.training import (
+    Config,
+    create_dataloaders_multitask,
+    create_dataloaders_single,
+    eval_epoch,
+    initialize_model,
+)
 
 
 def _parse_numeric_list(arg: str | list[int] | None) -> list[int]:
@@ -275,7 +281,13 @@ def run_t_invariance(
 
 def main_p() -> None:
     parser = argparse.ArgumentParser(description="Evaluate P-invariance (num_timesteps) and plot MSE vs P.")
-    parser.add_argument("--p", dest="p", type=str, required=True, help="List of P values. Accepts '[4,8,12]' or space-separated values.")
+    parser.add_argument(
+        "--p",
+        dest="p",
+        type=str,
+        required=True,
+        help="List of P values. Accepts '[4,8,12]' or space-separated values.",
+    )
     parser.add_argument(
         "--config",
         dest="config",
@@ -299,12 +311,23 @@ def main_p() -> None:
     if not p_values:
         raise ValueError("No P values provided.")
 
-    _ = run_p_invariance(p_values=p_values, config_paths=args.config, model_paths=args.model, save_dir=args.save_dir)
+    _ = run_p_invariance(
+        p_values=p_values,
+        config_paths=args.config,
+        model_paths=args.model,
+        save_dir=args.save_dir,
+    )
 
 
 def main_t() -> None:
     parser = argparse.ArgumentParser(description="Evaluate T-invariance (delta_T) and plot MSE vs Δt.")
-    parser.add_argument("--t", dest="t", type=str, required=True, help="List of Δt values. Accepts '[1,2,4]' or space-separated values.")
+    parser.add_argument(
+        "--t",
+        dest="t",
+        type=str,
+        required=True,
+        help="List of Δt values. Accepts '[1,2,4]' or space-separated values.",
+    )
     parser.add_argument(
         "--config",
         dest="config",
@@ -328,9 +351,9 @@ def main_t() -> None:
     if not t_values:
         raise ValueError("No Δt values provided.")
 
-    _ = run_t_invariance(t_values=t_values, config_paths=args.config, model_paths=args.model, save_dir=args.save_dir)
-
-
-if __name__ == "__main__":
-    # Default to P-invariance CLI if called directly
-    main_p()
+    _ = run_t_invariance(
+        t_values=t_values,
+        config_paths=args.config,
+        model_paths=args.model,
+        save_dir=args.save_dir,
+    )

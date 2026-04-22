@@ -54,7 +54,14 @@ class TimeConvMode(StrEnum):
 
 @final
 class SpectralConv1d(nn.Module):
-    def __init__(self, in_channels: int, out_channels: int, fourier_modes: int, num_timesteps: int, conv_mode: TimeConvMode) -> None:
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        fourier_modes: int,
+        num_timesteps: int,
+        conv_mode: TimeConvMode,
+    ) -> None:
         """
         A spectral convolution layer that applies a spectral convolution to the time dimension.
 
@@ -87,13 +94,26 @@ class SpectralConv1d(nn.Module):
             # x_ft: [F, M, 3, in_channels] -> out_ft: [modes, M, 3, out_channels]
             out_ft_modes = torch.einsum("mndi,iom->mndo", x_ft[:modes], weights_c[:, :, :modes])
             # Zero-pad to full spectrum length F
-            full_out_ft = torch.zeros(max_freq, x_ft.shape[1], x_ft.shape[2], weights_c.shape[1], dtype=out_ft_modes.dtype, device=x_ft.device)
+            full_out_ft = torch.zeros(
+                max_freq,
+                x_ft.shape[1],
+                x_ft.shape[2],
+                weights_c.shape[1],
+                dtype=out_ft_modes.dtype,
+                device=x_ft.device,
+            )
             full_out_ft[:modes] = out_ft_modes
         else:
             # x_ft: [F, M, in_channels] -> out_ft: [modes, M, out_channels]
             out_ft_modes = torch.einsum("mni,iom->mno", x_ft[:modes], weights_c[:, :, :modes])
             # Zero-pad to full spectrum length F
-            full_out_ft = torch.zeros(max_freq, x_ft.shape[1], weights_c.shape[1], dtype=out_ft_modes.dtype, device=x_ft.device)
+            full_out_ft = torch.zeros(
+                max_freq,
+                x_ft.shape[1],
+                weights_c.shape[1],
+                dtype=out_ft_modes.dtype,
+                device=x_ft.device,
+            )
             full_out_ft[:modes] = out_ft_modes
 
         # Inverse FFT back to time domain with explicit target length
@@ -103,7 +123,14 @@ class SpectralConv1d(nn.Module):
 
 @final
 class TimeConv(nn.Module):
-    def __init__(self, in_channels: int, out_channels: int, modes: int, mode: TimeConvMode, num_timesteps: int) -> None:
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        modes: int,
+        mode: TimeConvMode,
+        num_timesteps: int,
+    ) -> None:
         """
         A temporal convolution layer that applies a spectral convolution to the time dimension.
 
@@ -300,7 +327,15 @@ class EGNN(nn.Module):
 
         self.layers = nn.ModuleList()
         for _ in range(num_layers):
-            layer = EGNN_Layer(num_edge_features, lifting_dim, activation, with_v=with_v, flat=flat, norm=norm, h_update=True)
+            layer = EGNN_Layer(
+                num_edge_features,
+                lifting_dim,
+                activation,
+                with_v=with_v,
+                flat=flat,
+                norm=norm,
+                h_update=True,
+            )
             _ = self.layers.append(layer)
 
     @override

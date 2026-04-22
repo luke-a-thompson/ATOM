@@ -70,7 +70,6 @@ heterogenous_attention_type = "ghca"
 positional_encoding = "trope"
 rope_base = 1000
 rope_tau = 10000
-learnable_attention_denom = false
 # Feature parameters
 lifting_type = "quasi_equivariant_tp"
 projection_type = "equivariant"
@@ -79,11 +78,3 @@ norm = "rms"
 activation = "swiglu"
 value_residual_type = "learnable"
 
-[egno_config]
-num_layers = 5
-lifting_dim = 64
-activation = "silu"
-normalise_scalars = true
-use_time_conv = true
-num_fourier_modes = 2
-time_embed_dim = 32

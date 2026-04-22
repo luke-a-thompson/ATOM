@@ -15,7 +15,7 @@ def print_file_info(filepath: Path) -> None:
     # Only process the 'R' array (atomic positions)
     if "R" in data.files:
         arr: npt.NDArray[np.number] = data["R"]
-        print(f"\nR (atomic positions):")
+        print("\nR (atomic positions):")
         print(f"Shape: {arr.shape}")
         print(f"Data type: {arr.dtype}")
 
@@ -38,12 +38,12 @@ def print_file_info(filepath: Path) -> None:
 
             # Average displacement per atom (measure of mobility)
             avg_displacement_per_atom: npt.NDArray[np.float64] = np.mean(displacement_norms, axis=0)
-            print(f"Most mobile atom: {np.argmax(avg_displacement_per_atom)}, " f"displacement: {np.max(avg_displacement_per_atom):.6f}")
-            print(f"Least mobile atom: {np.argmin(avg_displacement_per_atom)}, " f"displacement: {np.min(avg_displacement_per_atom):.6f}")
+            print(f"Most mobile atom: {np.argmax(avg_displacement_per_atom)}, displacement: {np.max(avg_displacement_per_atom):.6f}")
+            print(f"Least mobile atom: {np.argmin(avg_displacement_per_atom)}, displacement: {np.min(avg_displacement_per_atom):.6f}")
 
             # Variance of displacement per atom (measure of chaotic movement)
             var_displacement_per_atom: npt.NDArray[np.float64] = np.var(displacement_norms, axis=0)
-            print(f"Most chaotic atom: {np.argmax(var_displacement_per_atom)}, " f"variance: {np.max(var_displacement_per_atom):.6f}")
+            print(f"Most chaotic atom: {np.argmax(var_displacement_per_atom)}, variance: {np.max(var_displacement_per_atom):.6f}")
 
             # Overall trajectory statistics
             total_path_length: npt.NDArray[np.float64] = np.sum(displacement_norms, axis=0)
@@ -165,43 +165,53 @@ def create_corrected_volatility_visualization(data_dir: Path, dataset_name: str,
     plt.axhline(y=median_volatility, color="gray", linestyle="--", alpha=0.5)
     plt.axvline(x=median_variance, color="gray", linestyle="--", alpha=0.5)
 
-    plt.text(0.9, 0.9, "High Drift & Internal Motion", transform=plt.gca().transAxes, ha="right", va="top", bbox=dict(facecolor="white", alpha=0.7), fontsize=12)
+    plt.text(
+        0.9,
+        0.9,
+        "High Drift & Internal Motion",
+        transform=plt.gca().transAxes,
+        ha="right",
+        va="top",
+        bbox=dict(facecolor="white", alpha=0.7),
+        fontsize=12,
+    )
 
-    plt.text(0.1, 0.9, "High Internal Motion", transform=plt.gca().transAxes, ha="left", va="top", bbox=dict(facecolor="white", alpha=0.7), fontsize=12)
+    plt.text(
+        0.1,
+        0.9,
+        "High Internal Motion",
+        transform=plt.gca().transAxes,
+        ha="left",
+        va="top",
+        bbox=dict(facecolor="white", alpha=0.7),
+        fontsize=12,
+    )
 
-    plt.text(0.1, 0.1, "Static", transform=plt.gca().transAxes, ha="left", va="bottom", bbox=dict(facecolor="white", alpha=0.7), fontsize=12)
+    plt.text(
+        0.1,
+        0.1,
+        "Static",
+        transform=plt.gca().transAxes,
+        ha="left",
+        va="bottom",
+        bbox=dict(facecolor="white", alpha=0.7),
+        fontsize=12,
+    )
 
-    plt.text(0.9, 0.1, "Drifting from Origin", transform=plt.gca().transAxes, ha="right", va="bottom", bbox=dict(facecolor="white", alpha=0.7), fontsize=12)
+    plt.text(
+        0.9,
+        0.1,
+        "Drifting from Origin",
+        transform=plt.gca().transAxes,
+        ha="right",
+        va="bottom",
+        bbox=dict(facecolor="white", alpha=0.7),
+        fontsize=12,
+    )
 
     plt.tight_layout()
-    plt.savefig(f"/Z_paper_content/dataset/{dataset_name}_molecule_behavior_comparison.pdf", format="pdf")
+    plt.savefig(
+        f"/Z_paper_content/dataset/{dataset_name}_molecule_behavior_comparison.pdf",
+        format="pdf",
+    )
     print(f"Figure saved as PDF to /Z_paper_content/dataset/{dataset_name}_molecule_behavior_comparison.pdf")
-
-
-if __name__ == "__main__":
-    from figures import set_matplotlib_style
-
-    set_matplotlib_style()
-    orig_data_dir: Path = Path("data/md17_npz")
-    refresh_data_dir: Path = Path("data/rmd17_npz")
-    tg_80_data_dir: Path = Path("data/tg80_npz")
-
-    # First pass: collect all data to find global maximum
-    all_position_variances: list[float] = []
-    for data_dir in [orig_data_dir, refresh_data_dir, tg_80_data_dir]:
-        npz_files: list[Path] = list(data_dir.glob("*.npz"))
-        for filepath in npz_files:
-            data = np.load(filepath)
-            if "rmd17" in data_dir.stem or "tg80" in data_dir.stem:
-                arr: npt.NDArray[np.number] = data["coords"]
-            else:
-                arr: npt.NDArray[np.number] = data["R"]
-            if arr.ndim == 3 and arr.shape[2] == 3:
-                all_position_variances.append(float(np.var(arr)))
-
-    global_max_x = max(all_position_variances) * 1.15  # Add 15% padding
-
-    # Second pass: create plots with consistent x-axis
-    create_corrected_volatility_visualization(orig_data_dir, "md17", global_max_x)
-    create_corrected_volatility_visualization(refresh_data_dir, "rmd17", global_max_x)
-    create_corrected_volatility_visualization(tg_80_data_dir, "tg80", global_max_x)

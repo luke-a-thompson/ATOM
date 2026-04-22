@@ -3,7 +3,6 @@ from collections import OrderedDict
 import torch
 from dataclasses import dataclass
 from pathlib import Path
-import time
 
 
 @dataclass
@@ -96,7 +95,9 @@ def parse_model_config_pairs(args: argparse.Namespace) -> list[tuple[str, str]]:
     return pairs
 
 
-def clean_state_dict_prefixes(state_dict: OrderedDict[str, torch.Tensor]) -> OrderedDict[str, torch.Tensor]:
+def clean_state_dict_prefixes(
+    state_dict: OrderedDict[str, torch.Tensor],
+) -> OrderedDict[str, torch.Tensor]:
     """
     Remove the '_orig_mod.' prefix from the state_dict keys that is added by torch.compile.
     """

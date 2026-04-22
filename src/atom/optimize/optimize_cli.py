@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 from pathlib import Path
 from typing import Callable, cast
 import gc
@@ -65,9 +64,6 @@ def _trial_to_config(base_config: Config, trial: optuna.trial.Trial) -> Config:
 
 def _objective_factory(base_config: Config) -> Callable[[optuna.trial.Trial], float]:
     def objective(trial: optuna.trial.Trial) -> float:
-        # Disable wandb for HPO runs to avoid clutter
-        os.environ["WANDB_DISABLED"] = "true"
-
         # Vary seed per trial for robustness
         set_seeds(base_config.training.seed + int(trial.number))
 
@@ -154,10 +150,26 @@ def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Hyperparameter optimization for ATOM using Optuna")
     _ = parser.add_argument("--config", type=str, required=True, help="Path to base config TOML")
     _ = parser.add_argument("--trials", type=int, default=25, help="Number of Optuna trials")
-    _ = parser.add_argument("--storage", type=str, default="sqlite:///optuna.db", help="Optuna storage URL (e.g. sqlite:///optuna.db)")
+    _ = parser.add_argument(
+        "--storage",
+        type=str,
+        default="sqlite:///optuna.db",
+        help="Optuna storage URL (e.g. sqlite:///optuna.db)",
+    )
     _ = parser.add_argument("--study", type=str, default="atom-optimize", help="Study name")
-    _ = parser.add_argument("--direction", type=str, choices=["minimize", "maximize"], default="minimize", help="Optimization direction")
-    _ = parser.add_argument("--save", type=str, default="optuna_results.json", help="Where to save study summary JSON")
+    _ = parser.add_argument(
+        "--direction",
+        type=str,
+        choices=["minimize", "maximize"],
+        default="minimize",
+        help="Optimization direction",
+    )
+    _ = parser.add_argument(
+        "--save",
+        type=str,
+        default="optuna_results.json",
+        help="Where to save study summary JSON",
+    )
     return parser.parse_args()
 
 
@@ -181,7 +193,13 @@ def main() -> None:
     )
 
     if storage_url:
-        study = optuna.create_study(storage=storage_url, load_if_exists=True, study_name=study_name, direction=direction, pruner=pruner)
+        study = optuna.create_study(
+            storage=storage_url,
+            load_if_exists=True,
+            study_name=study_name,
+            direction=direction,
+            pruner=pruner,
+        )
     else:
         study = optuna.create_study(direction=direction, study_name=study_name, pruner=pruner)
 

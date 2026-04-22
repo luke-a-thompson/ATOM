@@ -4,7 +4,9 @@ import re
 from numpy.typing import NDArray
 
 
-def read_xyz_file(file_path: str) -> tuple[NDArray[np.float64], list[str], NDArray[np.float64]]:
+def read_xyz_file(
+    file_path: str,
+) -> tuple[NDArray[np.float64], list[str], NDArray[np.float64]]:
     """
     Read a multi-frame XYZ file and return coordinates, atomic symbols, and energies.
 

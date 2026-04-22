@@ -203,10 +203,24 @@ def _compute_ecfp4_dense(smiles: list[str], fp_size: int = 1024) -> npt.NDArray[
     return X
 
 
-def _save_umap_plot(names: list[str], X: npt.NDArray[np.float32], train: list[str], val: list[str], test: list[str], out_path: str) -> None:
+def _save_umap_plot(
+    names: list[str],
+    X: npt.NDArray[np.float32],
+    train: list[str],
+    val: list[str],
+    test: list[str],
+    out_path: str,
+) -> None:
     import matplotlib.pyplot as plt
 
-    reducer2d = umap.UMAP(n_components=2, random_state=BASE_SEED, n_neighbors=15, min_dist=0.1, metric="jaccard", n_jobs=-1)
+    reducer2d = umap.UMAP(
+        n_components=2,
+        random_state=BASE_SEED,
+        n_neighbors=15,
+        min_dist=0.1,
+        metric="jaccard",
+        n_jobs=-1,
+    )
     emb2d = reducer2d.fit_transform(X)
 
     name_to_idx: dict[str, int] = {n: i for i, n in enumerate(names)}
@@ -246,7 +260,6 @@ def _assign_clusters_to_folds(cluster_labels: list[int], names: list[str], n_fol
 
 
 def write_umap_cluster_folds(n_folds: int = 5, fp_size: int = 1024) -> None:
-
     os.makedirs("data/crossval_folds_umap", exist_ok=True)
 
     names = molecules.copy()
@@ -254,7 +267,13 @@ def write_umap_cluster_folds(n_folds: int = 5, fp_size: int = 1024) -> None:
     smiles = _names_to_smiles(names, tg_80_smiles)
     X = _compute_ecfp4_dense(smiles, fp_size=fp_size)
 
-    reducer = umap.UMAP(n_components=24, random_state=BASE_SEED, n_neighbors=15, min_dist=0.1, metric="jaccard")
+    reducer = umap.UMAP(
+        n_components=24,
+        random_state=BASE_SEED,
+        n_neighbors=15,
+        min_dist=0.1,
+        metric="jaccard",
+    )
     emb = reducer.fit_transform(X)
 
     ward = AgglomerativeClustering(n_clusters=n_folds * 2, linkage="ward")
@@ -266,7 +285,11 @@ def write_umap_cluster_folds(n_folds: int = 5, fp_size: int = 1024) -> None:
         cluster_to_names.setdefault(int(lab), []).append(name)
 
     # Sort clusters by size to keep splits roughly balanced
-    cluster_ids: list[int] = sorted(cluster_to_names.keys(), key=lambda cid: len(cluster_to_names[cid]), reverse=True)
+    cluster_ids: list[int] = sorted(
+        cluster_to_names.keys(),
+        key=lambda cid: len(cluster_to_names[cid]),
+        reverse=True,
+    )
 
     # Pair clusters: first half used as test, second half used as validation
     half: int = n_folds  # since total clusters = n_folds * 2

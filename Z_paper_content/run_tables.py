@@ -2,15 +2,24 @@ import argparse
 from pathlib import Path
 
 from Z_paper_content.create_mse_tables import build_tables as build_mse_tables
-from Z_paper_content.create_mse_tables import build_tables_from_dirs as build_mse_tables_from_dirs
+from Z_paper_content.create_mse_tables import (
+    build_tables_from_dirs as build_mse_tables_from_dirs,
+)
 from Z_paper_content.create_mse_tables import _collect_results as _collect_mse_results
-from Z_paper_content.create_mse_tables import _infer_dataset_token_from_results as _infer_dataset_token
+from Z_paper_content.create_mse_tables import (
+    _infer_dataset_token_from_results as _infer_dataset_token,
+)
 from Z_paper_content.create_runtime_tables import build_runtime_table, get_run_times
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Generate MSE and runtime tables into Z_paper_content/tables/.")
-    _ = parser.add_argument("dirs", nargs="+", type=str, help="One or more directories with runs (contain results.json files)")
+    _ = parser.add_argument(
+        "dirs",
+        nargs="+",
+        type=str,
+        help="One or more directories with runs (contain results.json files)",
+    )
     _ = parser.add_argument("--no-bold", action="store_true", help="Do not bold best values in tables")
     args: argparse.Namespace = parser.parse_args()
     return run_tables_variadic([str(d) for d in args.dirs], bold_best=(not bool(args.no_bold)))
@@ -70,7 +79,12 @@ def run_tables_variadic(dirs: list[str], bold_best: bool = True) -> int:
             chosen_dataset = next(iter(detected_keys))
 
     if chosen_dataset is not None and len(dir_paths) == 2:
-        runtime_tex: str = build_runtime_table(egno_dir=dir_paths[0], atom_dir=dir_paths[1], dataset=chosen_dataset, f_peak_tflops=15.0)
+        runtime_tex: str = build_runtime_table(
+            egno_dir=dir_paths[0],
+            atom_dir=dir_paths[1],
+            dataset=chosen_dataset,
+            f_peak_tflops=15.0,
+        )
         _ = (tables_dir / f"runtime_{chosen_dataset}.tex").write_text(runtime_tex, encoding="utf-8")
 
     # Build MSE table(s) and write with dataset name appended, split per time_lag_mode

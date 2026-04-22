@@ -58,7 +58,13 @@ class ExperimentResult:
     time_lag_mode: str
 
 
-def _format_mean_std_latex(mean_value: float, std_value: float, decimals: int = 2, scale_multiplier: float = 1.0, suffix: str = "") -> str:
+def _format_mean_std_latex(
+    mean_value: float,
+    std_value: float,
+    decimals: int = 2,
+    scale_multiplier: float = 1.0,
+    suffix: str = "",
+) -> str:
     """Format a LaTeX cell as mean±std.
 
     - decimals: number of decimal places for both mean and std (default 2)
@@ -99,7 +105,11 @@ def _aggregate_folds(results: list[ExperimentResult]) -> list[ExperimentResult]:
     grouped: dict[tuple[str, str, str], list[ExperimentResult]] = defaultdict(list)
     all_molecules: list[str] = []
     for r in results:
-        key: tuple[str, str, str] = (r.time_lag_mode, _canonicalize_model_type(r.model_type), r.molecule)
+        key: tuple[str, str, str] = (
+            r.time_lag_mode,
+            _canonicalize_model_type(r.model_type),
+            r.molecule,
+        )
         grouped[key].append(r)
         all_molecules.append(r.molecule)
 
@@ -242,7 +252,9 @@ def load_experiment_result(results_path: Path) -> ExperimentResult | None:
         return None
 
 
-def group_results_by_model(results: list[ExperimentResult]) -> dict[str, dict[str, ExperimentResult]]:
+def group_results_by_model(
+    results: list[ExperimentResult],
+) -> dict[str, dict[str, ExperimentResult]]:
     """Group results by model -> molecule -> {s2s, s2t}.
 
     Returns a nested dict: {model_type: {molecule: ExperimentResult}}
@@ -274,7 +286,9 @@ def _bold_latex_value(latex_value: str) -> str:
     return f"\\(\\mathbf{{{latex_value}}}\\)"
 
 
-def _compute_molecule_order(grouped: dict[str, dict[str, ExperimentResult]]) -> list[str]:
+def _compute_molecule_order(
+    grouped: dict[str, dict[str, ExperimentResult]],
+) -> list[str]:
     molecules: set[str] = set()
     for model_map in grouped.values():
         molecules.update(model_map.keys())
@@ -300,7 +314,11 @@ def _display_molecule_name(molecule: str) -> str:
     return molecule.replace("_", " ").title()
 
 
-def _best_model_for_each_molecule(grouped: dict[str, dict[str, ExperimentResult]], molecule_order: list[str], metric: str) -> dict[str, str]:
+def _best_model_for_each_molecule(
+    grouped: dict[str, dict[str, ExperimentResult]],
+    molecule_order: list[str],
+    metric: str,
+) -> dict[str, str]:
     best_model_for_molecule: dict[str, str] = {}
     for molecule in molecule_order:
         best_model: str | None = None
@@ -415,7 +433,12 @@ def _format_percent_value(value: float) -> str:
     return f"\\({value:+.2f}\\%\\)"
 
 
-def _build_rows_for_metric(grouped: dict[str, dict[str, ExperimentResult]], molecule_order: list[str], metric: str, bold_best: bool) -> list[str]:
+def _build_rows_for_metric(
+    grouped: dict[str, dict[str, ExperimentResult]],
+    molecule_order: list[str],
+    metric: str,
+    bold_best: bool,
+) -> list[str]:
     lines: list[str] = []
     # Preferred row order (top to bottom): EGNN-R, EGNN-S, EGNO, ATOM (GTNO)
     preferred_order: list[str] = ["EGNN_R", "EGNN_S", "EGNO", "GTNO"]
@@ -440,7 +463,11 @@ def _build_rows_for_metric(grouped: dict[str, dict[str, ExperimentResult]], mole
     return lines
 
 
-def _build_improvement_row(grouped: dict[str, dict[str, ExperimentResult]], molecule_order: list[str], metric: str) -> str:
+def _build_improvement_row(
+    grouped: dict[str, dict[str, ExperimentResult]],
+    molecule_order: list[str],
+    metric: str,
+) -> str:
     # Gap is ATOM (GTNO) vs best non-ATOM model: (best_other - atom) / best_other * 100
     if "GTNO" not in grouped:
         return ""
@@ -563,7 +590,3 @@ def main() -> int:
         # Do not print LaTeX table to stdout; means are printed during construction
 
     return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

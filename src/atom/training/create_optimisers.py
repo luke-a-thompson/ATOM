@@ -19,9 +19,17 @@ def initialize_optimizer(config: Config, model: nn.Module) -> torch.optim.Optimi
     """
     match config.optimizer.type:
         case OptimizerType.SGD:
-            return optim.SGD(model.parameters(), lr=config.optimizer.learning_rate, weight_decay=config.optimizer.weight_decay)
+            return optim.SGD(
+                model.parameters(),
+                lr=config.optimizer.learning_rate,
+                weight_decay=config.optimizer.weight_decay,
+            )
         case OptimizerType.ADAM:
-            return optim.Adam(model.parameters(), lr=config.optimizer.learning_rate, weight_decay=config.optimizer.weight_decay)
+            return optim.Adam(
+                model.parameters(),
+                lr=config.optimizer.learning_rate,
+                weight_decay=config.optimizer.weight_decay,
+            )
         case OptimizerType.ADAMW:
             return optim.AdamW(
                 model.parameters(),
@@ -32,8 +40,6 @@ def initialize_optimizer(config: Config, model: nn.Module) -> torch.optim.Optimi
                 amsgrad=True,
                 fused=True,
             )
-        case OptimizerType.ADAM_MINI:
-            return pt_optim.AdamMini(model.parameters(), lr=config.optimizer.learning_rate, weight_decay=config.optimizer.weight_decay)
         case OptimizerType.MUON:
             # Muon requires explicit param groups with 'use_muon' set.
             muon_params = [p for p in model.parameters() if getattr(p, "ndim", 0) >= 2]
@@ -70,7 +76,7 @@ def initialize_optimizer(config: Config, model: nn.Module) -> torch.optim.Optimi
             raise ValueError(f"Invalid optimizer type: {config.optimizer.type}")
 
 
-def initialize_scheduler(config: Config, optimizer: torch.optim.Optimizer) -> torch.optim.lr_scheduler._LRScheduler | None:
+def initialize_scheduler(config: Config, optimizer: torch.optim.Optimizer) -> torch.optim.lr_scheduler.LRScheduler | None:
     """Initialize a scheduler based on the configuration file.
 
     Args:
@@ -78,7 +84,7 @@ def initialize_scheduler(config: Config, optimizer: torch.optim.Optimizer) -> to
         optimizer (torch.optim.Optimizer): The optimizer to schedule.
 
     Returns:
-        torch.optim.lr_scheduler._LRScheduler | None: The initialized scheduler.
+        torch.optim.lr_scheduler.LRScheduler | None: The initialized scheduler.
     """
     match config.scheduler.type:
         case SchedulerType.NONE:

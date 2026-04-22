@@ -52,7 +52,14 @@ def get_mol_supplier(filename: str) -> Chem.ForwardSDMolSupplier | None:
         try:
             with tempfile.NamedTemporaryFile(delete=False) as tmp:
                 with gzip.open(filename, "rb") as f_in:
-                    with tqdm(total=total_size, unit="B", unit_scale=True, desc="Unzipping", position=1, leave=False) as pbar:
+                    with tqdm(
+                        total=total_size,
+                        unit="B",
+                        unit_scale=True,
+                        desc="Unzipping",
+                        position=1,
+                        leave=False,
+                    ) as pbar:
                         while True:
                             buf = f_in.read(1024 * 1024)  # 1MB chunks
                             if not buf:
@@ -125,7 +132,7 @@ def analyze_dataset():
 
     # --- Processing Loop ---
     while file_counter <= 100:  # Safety break
-        candidate_file = f"/mnt/d/PubChem/Compound_{(file_counter-1)*500000+1:09d}_{file_counter*500000:09d}.sdf.gz"
+        candidate_file = f"/mnt/d/PubChem/Compound_{(file_counter - 1) * 500000 + 1:09d}_{file_counter * 500000:09d}.sdf.gz"
 
         sup = get_mol_supplier(candidate_file)
         if sup is None:
@@ -134,8 +141,8 @@ def analyze_dataset():
 
             # Try alternative naming patterns
             alt_files = [
-                f"/mnt/d/PubChem/Compound_{(file_counter-1)*500000+1:09d}_{file_counter*500000:09d}.sdf",
-                f"/mnt/d/PubChem/compound_{(file_counter-1)*500000+1:09d}_{file_counter*500000:09d}.sdf.gz",
+                f"/mnt/d/PubChem/Compound_{(file_counter - 1) * 500000 + 1:09d}_{file_counter * 500000:09d}.sdf",
+                f"/mnt/d/PubChem/compound_{(file_counter - 1) * 500000 + 1:09d}_{file_counter * 500000:09d}.sdf.gz",
             ]
 
             sup = None

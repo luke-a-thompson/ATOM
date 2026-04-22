@@ -146,7 +146,6 @@ class OptimizerType(StrEnum):
     ADAMW = "adamw"
     ADAM = "adam"
     MUON = "muon"
-    ADAM_MINI = "adam-mini"
 
 
 @final
@@ -190,6 +189,7 @@ class AttentionType(StrEnum):
     SELF = "self"
     GHCA = "ghca"
     LINEAR_GHCA = "linear_ghca"
+    GATV2 = "gatv2"
 
 
 @final

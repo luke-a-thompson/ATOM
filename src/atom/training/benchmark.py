@@ -6,7 +6,6 @@ from tempfile import TemporaryDirectory
 
 import torch
 from tqdm.std import tqdm
-import wandb
 import typing
 
 from atom.training import (
@@ -48,7 +47,7 @@ def singletask_benchmark(
         tmp_root: Path = Path(tmp_root_str)
         for run in runs_progress_bar:
             set_seeds(config.training.seed + run)
-            runs_progress_bar.set_description(f"Run {run+1}/{config.benchmark.runs}")
+            runs_progress_bar.set_description(f"Run {run + 1}/{config.benchmark.runs}")
             model = initialize_model(config).to(config.training.device)
             model_for_training: torch.nn.Module = model
             if config.benchmark.compile:
@@ -82,9 +81,12 @@ def singletask_benchmark(
 
             # Move the completed run directory into the final benchmark dir
             try:
-                _ = shutil.move(str(tmp_root / f"run_{run+1}"), str(benchmark_dir / f"run_{run+1}"))
+                _ = shutil.move(
+                    str(tmp_root / f"run_{run + 1}"),
+                    str(benchmark_dir / f"run_{run + 1}"),
+                )
             except Exception as e:
-                tqdm.write(f"Warning: failed to move run directory for run {run+1}: {e}")
+                tqdm.write(f"Warning: failed to move run directory for run {run + 1}: {e}")
 
     # If no runs completed successfully, avoid creating output
     if not created_final_dir:
@@ -97,7 +99,14 @@ def singletask_benchmark(
         indent=2,
         exclude={
             # We don't care about multitask options when our model is single task
-            "config": {"training": {"device", "use_amp", "amp_dtype"}, "dataloader": {"train_molecules", "validation_molecules", "test_molecules"}},
+            "config": {
+                "training": {"device", "use_amp", "amp_dtype"},
+                "dataloader": {
+                    "train_molecules",
+                    "validation_molecules",
+                    "test_molecules",
+                },
+            },
             "single_run_results": {"__all__": {"device"}},
         },
     )
@@ -105,21 +114,12 @@ def singletask_benchmark(
     with open(results_filename, "w") as f:
         _ = f.write(multi_run_results_json)
 
-    wandb.log(
-        {
-            "mean_test_loss": multi_run_results.s2s_test_loss_mean,
-            "mean_test_loss_final": multi_run_results.s2s_test_loss_mean,
-            "mean_secs_per_run": multi_run_results.mean_secs_per_run,
-            "mean_secs_per_epoch": multi_run_results.mean_secs_per_epoch,
-            "mean_s2t_test_loss": multi_run_results.s2t_test_loss_mean,
-            "std_s2t_test_loss": multi_run_results.s2t_test_loss_std,
-        }
-    )
-
     tqdm.write(f"\nSaved benchmark results to {results_filename}")
     tqdm.write(f"Benchmark Results ({config.benchmark.runs} runs, {config.training.epochs} epochs/run):")
-    tqdm.write(f"  Average S2S Test Loss Final Timestep: {multi_run_results.s2s_test_loss_mean*100:.2f}x10^-2 ± {multi_run_results.s2s_test_loss_std*100:.2f}x10^-2")  # type: ignore
-    tqdm.write(f"  Average S2T Test Loss: {multi_run_results.s2t_test_loss_mean*100:.2f}x10^-2 ± {multi_run_results.s2t_test_loss_std*100:.2f}x10^-2")  # type: ignore
+    tqdm.write(
+        f"  Average S2S Test Loss Final Timestep: {multi_run_results.s2s_test_loss_mean * 100:.2f}x10^-2 ± {multi_run_results.s2s_test_loss_std * 100:.2f}x10^-2"
+    )  # type: ignore
+    tqdm.write(f"  Average S2T Test Loss: {multi_run_results.s2t_test_loss_mean * 100:.2f}x10^-2 ± {multi_run_results.s2t_test_loss_std * 100:.2f}")  # type: ignore
     tqdm.write(f"  Average Time per Run: {multi_run_results.mean_secs_per_run:.1f}s")
     tqdm.write(f"  Average Time per Epoch: {multi_run_results.mean_secs_per_epoch:.1f}s")
     tqdm.write(f"  Average Best Val Loss Epoch: {multi_run_results.mean_best_val_loss_epoch:.1f}")
@@ -143,7 +143,7 @@ def multitask_benchmark(
         tmp_root: Path = Path(tmp_root_str)
         for run in runs_progress_bar:
             set_seeds(config.training.seed + run)
-            runs_progress_bar.set_description(f"Run {run+1}/{config.benchmark.runs}")
+            runs_progress_bar.set_description(f"Run {run + 1}/{config.benchmark.runs}")
             model = initialize_model(config).to(config.training.device)
             model_for_training: torch.nn.Module = model
             if config.benchmark.compile:
@@ -176,9 +176,12 @@ def multitask_benchmark(
 
             # Move the completed run directory into the final benchmark dir
             try:
-                _ = shutil.move(str(tmp_root / f"run_{run+1}"), str(benchmark_dir / f"run_{run+1}"))
+                _ = shutil.move(
+                    str(tmp_root / f"run_{run + 1}"),
+                    str(benchmark_dir / f"run_{run + 1}"),
+                )
             except Exception as e:
-                tqdm.write(f"Warning: failed to move run directory for run {run+1}: {e}")
+                tqdm.write(f"Warning: failed to move run directory for run {run + 1}: {e}")
 
     # If no runs completed successfully, avoid creating output
     if not created_final_dir:
@@ -190,7 +193,10 @@ def multitask_benchmark(
     multi_run_results_json = multi_run_results.model_dump_json(
         indent=2,
         exclude={
-            "config": {"training": {"device", "use_amp", "amp_dtype"}, "dataloader": {"molecule_type"}},
+            "config": {
+                "training": {"device", "use_amp", "amp_dtype"},
+                "dataloader": {"molecule_type"},
+            },
             "single_run_results": {"__all__": {"device"}},
         },
     )
@@ -198,21 +204,14 @@ def multitask_benchmark(
     with open(results_filename, "w") as f:
         _ = f.write(multi_run_results_json)
 
-    wandb.log(
-        {
-            "mean_test_loss": multi_run_results.s2s_test_loss_mean,
-            "mean_test_loss_final": multi_run_results.s2s_test_loss_mean,
-            "mean_secs_per_run": multi_run_results.mean_secs_per_run,
-            "mean_secs_per_epoch": multi_run_results.mean_secs_per_epoch,
-            "mean_s2t_test_loss": multi_run_results.s2t_test_loss_mean,
-            "std_s2t_test_loss": multi_run_results.s2t_test_loss_std,
-        }
-    )
-
     tqdm.write(f"\nSaved benchmark results to {results_filename}")
     tqdm.write(f"Benchmark Results ({config.benchmark.runs} runs, {config.training.epochs} epochs/run):")
-    tqdm.write(f"  Average S2S Test Loss: {multi_run_results.s2s_test_loss_mean*100:.2f}x10^-2 ± {multi_run_results.s2s_test_loss_std*100:.2f}x10^-2")
-    tqdm.write(f"  Average S2T Test Loss: {multi_run_results.s2t_test_loss_mean*100:.2f}x10^-2 ± {multi_run_results.s2t_test_loss_std*100:.2f}x10^-2")
+    tqdm.write(
+        f"  Average S2S Test Loss: {multi_run_results.s2s_test_loss_mean * 100:.2f}x10^-2 ± {multi_run_results.s2s_test_loss_std * 100:.2f}x10^-2"
+    )
+    tqdm.write(
+        f"  Average S2T Test Loss: {multi_run_results.s2t_test_loss_mean * 100:.2f}x10^-2 ± {multi_run_results.s2t_test_loss_std * 100:.2f}x10^-2"
+    )
     tqdm.write(f"  Average Time per Run: {multi_run_results.mean_secs_per_run:.1f}s")
     tqdm.write(f"  Average Time per Epoch: {multi_run_results.mean_secs_per_epoch:.1f}s")
     tqdm.write(f"  Average Best Val Loss Epoch: {multi_run_results.mean_best_val_loss_epoch:.1f}")

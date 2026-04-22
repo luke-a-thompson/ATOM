@@ -29,7 +29,13 @@ class StandardLift(nn.Module):
 
 @final
 class QuasiEquivariantLift(nn.Module):
-    def __init__(self, x_0_in_irreps: str, v_0_in_irreps: str, concat_feats_in_irreps: str, lifting_dim_irreps: str) -> None:
+    def __init__(
+        self,
+        x_0_in_irreps: str,
+        v_0_in_irreps: str,
+        concat_feats_in_irreps: str,
+        lifting_dim_irreps: str,
+    ) -> None:
         super().__init__()
         self.x_0_linear = o3.Linear(x_0_in_irreps, lifting_dim_irreps)
         self.v_0_linear = o3.Linear(v_0_in_irreps, lifting_dim_irreps)
@@ -45,7 +51,13 @@ class QuasiEquivariantLift(nn.Module):
 
 @final
 class QuasiEquivariantTPLift(nn.Module):
-    def __init__(self, x_0_in_irreps: str, v_0_in_irreps: str, concat_feats_in_irreps: str, lifting_dim_irreps: str) -> None:
+    def __init__(
+        self,
+        x_0_in_irreps: str,
+        v_0_in_irreps: str,
+        concat_feats_in_irreps: str,
+        lifting_dim_irreps: str,
+    ) -> None:
         super().__init__()
         self.x_0_linear = o3.Linear(x_0_in_irreps, lifting_dim_irreps)
         self.v_0_linear = o3.Linear(v_0_in_irreps, lifting_dim_irreps)
@@ -69,7 +81,13 @@ class QuasiEquivariantTPLift(nn.Module):
 
 @final
 class CanonicalizationLift(nn.Module):
-    def __init__(self, x_0_in_irreps: str, v_0_in_irreps: str, concat_feats_in_irreps: str, lifting_dim_irreps: str) -> None:
+    def __init__(
+        self,
+        x_0_in_irreps: str,
+        v_0_in_irreps: str,
+        concat_feats_in_irreps: str,
+        lifting_dim_irreps: str,
+    ) -> None:
         super().__init__()
         self.canonical_matrix_maker = o3.Linear("1x1o + 1x1o", "3x1o")
 
@@ -84,7 +102,11 @@ class CanonicalizationLift(nn.Module):
 
     @override
     def forward(
-        self, x_0: torch.Tensor, v_0: torch.Tensor, concatenated_features: torch.Tensor, mask: torch.Tensor | None = None
+        self,
+        x_0: torch.Tensor,
+        v_0: torch.Tensor,
+        concatenated_features: torch.Tensor,
+        mask: torch.Tensor | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         # Use only xyz parts for building the frame
         x_xyz: torch.Tensor = x_0[..., :3]

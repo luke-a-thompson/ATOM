@@ -1,5 +1,9 @@
 import torch
-from atom.dataloaders.atom_dataloader import MD17DynamicsDataset, DataPartition, MD17MoleculeType
+from atom.dataloaders.atom_dataloader import (
+    MDDynamicsDataset,
+    DataPartition,
+    MD17MoleculeType,
+)
 from atom.training.config_options import Datasets
 from torch.utils.data import DataLoader
 
@@ -30,7 +34,7 @@ class TestMD17DynamicsDataset:
         }
 
         # Instantiate the dynamics dataset using the actual dataset
-        train_dataset = MD17DynamicsDataset(
+        train_dataset = MDDynamicsDataset(
             partition=DataPartition.train,
             max_samples=500,
             delta_frame=3000,
@@ -88,7 +92,7 @@ class TestMD17DynamicsDataset:
         }
 
         # Instantiate the dynamics dataset using the actual dataset
-        train_dataset = MD17DynamicsDataset(
+        train_dataset = MDDynamicsDataset(
             partition=DataPartition.train,
             max_samples=500,
             delta_frame=3000,
@@ -96,7 +100,7 @@ class TestMD17DynamicsDataset:
             num_timesteps=config["model"]["num_timesteps"],
             data_dir="data/",
             split_dir="data/",
-            molecule_type=MD17MoleculeType.benzene,
+            molecule_type=MD17MoleculeType.ethanol,
             max_nodes=6,
             return_edge_data=False,
         )
@@ -129,7 +133,7 @@ class TestMD17DynamicsDataset:
         max_samples = 1  # Set to 1 so that the input tensor must have shape (1, 10, 4)
 
         # Instantiate a real dataset (it will load data, but we only use it here to access _replicate_tensor)
-        dataset = MD17DynamicsDataset(
+        dataset = MDDynamicsDataset(
             partition=DataPartition.train,
             max_samples=max_samples,
             delta_frame=3000,
@@ -175,7 +179,9 @@ class TestMD17DynamicsDataset:
         output_tensor = dataset._replicate_tensor(input_tensor)
 
         # Assert that the output tensor has the expected shape and content.
-        assert output_tensor.shape == expected_output_tensor.shape, f"Output shape {output_tensor.shape} != Expected shape {expected_output_tensor.shape}"
+        assert output_tensor.shape == expected_output_tensor.shape, (
+            f"Output shape {output_tensor.shape} != Expected shape {expected_output_tensor.shape}"
+        )
         assert torch.equal(output_tensor, expected_output_tensor), f"Output tensor:\n{output_tensor}\nExpected tensor:\n{expected_output_tensor}"
 
         print("test_replicate_tensor passed!")
@@ -187,14 +193,14 @@ class TestMD17DynamicsDataset:
         max_nodes = 15  # Set max_nodes larger than actual nodes
 
         # Instantiate a real dataset
-        dataset = MD17DynamicsDataset(
+        dataset = MDDynamicsDataset(
             partition=DataPartition.train,
             max_samples=max_samples,
             delta_frame=3000,
             num_timesteps=num_timesteps,
             data_dir="data/",
             split_dir="data/",
-            md17_version=MD17Version.md17,
+            md17_version=Datasets.md17,
             molecule_type=MD17MoleculeType.aspirin,
             force_regenerate=True,
             max_nodes=max_nodes,
@@ -231,15 +237,15 @@ class TestMD17DynamicsDataset:
         max_nodes = 12  # Set max_nodes larger than actual nodes
 
         # Instantiate a dataset with a molecule that has fewer atoms than max_nodes
-        dataset = MD17DynamicsDataset(
+        dataset = MDDynamicsDataset(
             partition=DataPartition.train,
             max_samples=max_samples,
             delta_frame=3000,
             num_timesteps=num_timesteps,
             data_dir="data/",
             split_dir="data/",
-            md17_version=MD17Version.md17,
-            molecule_type=MD17MoleculeType.benzene,  # Benzene has 6 carbon atoms (or 12 with hydrogens)
+            md17_version=Datasets.md17,
+            molecule_type=MD17MoleculeType.ethanol,  # Ethanol has 1 carbon atoms (or 12 with hydrogens)
             force_regenerate=False,
             max_nodes=max_nodes,
             return_edge_data=False,
@@ -250,11 +256,13 @@ class TestMD17DynamicsDataset:
 
         # Check that the mask has the correct shape: (num_timesteps, max_nodes, 1)
         expected_mask_shape = (num_timesteps, max_nodes, 1)
-        assert sample["padded_nodes_mask"].shape == expected_mask_shape, f"Mask shape {sample['padded_nodes_mask'].shape} != Expected shape {expected_mask_shape}"
+        assert sample["padded_nodes_mask"].shape == expected_mask_shape, (
+            f"Mask shape {sample['padded_nodes_mask'].shape} != Expected shape {expected_mask_shape}"
+        )
 
         # Check that the number of True values in the mask equals the actual number of nodes
         actual_nodes = dataset.num_nodes
-        assert actual_nodes == 6, f"Actual number of nodes {actual_nodes} != Expected number of nodes 6"
+        assert actual_nodes == 3, f"Actual number of nodes {actual_nodes} != Expected number of nodes 6"
         true_count = sample["padded_nodes_mask"].sum().item()
         expected_true_count = actual_nodes * num_timesteps  # True for each real node across all timesteps
         assert true_count == expected_true_count, f"True count in mask {true_count} != Expected count {expected_true_count}"

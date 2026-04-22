@@ -1,6 +1,6 @@
 [project]
 name = "ATOM"
-version = "0.1.3"
+version = "0.1.4"
 description = ""
 authors = [{ name = "Anonymized for review" }]
 requires-python = ">=3.11"
@@ -20,16 +20,11 @@ dependencies = [
     "tensordict>=0.7.0,<1.0",
     "pytorch_optimizer>=3.8.0,<4",
     "pydantic>=2.10.6,<3",
-    "wandb==0.18.3",
     "tqdm>=4.67.1,<5",
-    "torchvision>=0.22.1,<0.23",
-    "torchaudio>=2.7.1,<3",
     "matplotlib>=3.8.0,<4",
     "usyd-colors>=0.1.0,<0.2",
     "rdkit>=2024.9.6,<2025",
     "umap-learn>=0.5.6,<1",
-    "numba>=0.60,<1",
-    "llvmlite>=0.43,<1",
     "scikit-learn>=1.5.0,<2",
     "optuna>=3.6.1,<4",
     "optuna-dashboard>=0.19.0",
@@ -39,8 +34,10 @@ dependencies = [
 [project.scripts]
 train = "atom.train:main"
 inference = "atom.inference:main"
-equivariance = "atom.cli.equivariance:main"
+rotation_loss_robustness = "atom.cli.equivariance:main_rotation_loss_robustness"
+equivariance_defect = "atom.cli.equivariance:main_equivariance_defect"
 optimize = "atom.optimize:main"
+paper = "analysis_code.cli:main"
 tables = "Z_paper_content.run_tables:main"
 p_invariance = "Z_paper_content.invariances:main_p"
 t_invariance = "Z_paper_content.invariances:main_t"
@@ -65,25 +62,22 @@ torchvision = { index = "pytorch-gpu" }
 torchaudio = { index = "pytorch-gpu" }
 
 [tool.hatch.build.targets.sdist]
-include = ["src/atom", "Z_paper_content"]
+include = ["src/atom", "Z_paper_content", "analysis_code"]
 
 [tool.hatch.build.targets.wheel]
-include = ["src/atom", "Z_paper_content"]
+include = ["src/atom", "Z_paper_content", "analysis_code"]
 
 [tool.hatch.build.targets.wheel.sources]
 "src/atom" = "atom"
 "Z_paper_content" = "Z_paper_content"
+"analysis_code" = "analysis_code"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[tool.black]
+[tool.ruff]
 line-length = 150
-target-version = ["py312"]
-
-[tool.isort]
-profile = "black"
 
 [tool.pyright]
 include = ["src"]

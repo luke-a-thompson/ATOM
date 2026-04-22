@@ -1,7 +1,6 @@
 import numpy as np
 import numpy.typing as npt
 import matplotlib.pyplot as plt
-import matplotlib.font_manager as fm
 from pathlib import Path
 from usyd_colors import get_palette
 from figures import set_matplotlib_style
@@ -9,7 +8,11 @@ from figures import set_matplotlib_style
 grey, red, blue, yellow, white = get_palette("primary").hex_colors()
 
 
-def plot_lambda_value_residuals(weights_dir: Path, figure_file_name: str, figure_dir: Path = Path("Z_paper_content/lambda_value_residuals")) -> None:
+def plot_lambda_value_residuals(
+    weights_dir: Path,
+    figure_file_name: str,
+    figure_dir: Path = Path("Z_paper_content/lambda_value_residuals"),
+) -> None:
     """
     Plot the lambda values as a line chart showing their evolution over time.
 
@@ -49,7 +52,13 @@ def plot_lambda_value_residuals(weights_dir: Path, figure_file_name: str, figure
 
     # Plot each lambda value as a separate line
     for i in range(n_lambda_values):
-        ax.plot(x, lambda_values[:, i], label=f"λ{i+1}", color=colors[i % len(colors)], linewidth=2)
+        ax.plot(
+            x,
+            lambda_values[:, i],
+            label=f"λ{i + 1}",
+            color=colors[i % len(colors)],
+            linewidth=2,
+        )
 
     # Add vertical lines at selected timesteps
     for idx in selected_indices:

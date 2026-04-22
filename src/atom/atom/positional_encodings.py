@@ -47,7 +47,14 @@ class TemporalRoPE(nn.Module):
     Output tensor shape: `[B, n_heads, seq_len, d_head]`
     """
 
-    def __init__(self, num_timesteps: int, d_head: int, n_heads: int, base: float = 1000.0, tau: float = 1000.0):
+    def __init__(
+        self,
+        num_timesteps: int,
+        d_head: int,
+        n_heads: int,
+        base: float = 1000.0,
+        tau: float = 1000.0,
+    ):
         super().__init__()
         assert d_head % 2 == 0, "d_head must be even for standard RoPE."
 
@@ -62,7 +69,12 @@ class TemporalRoPE(nn.Module):
         self.freqs = (1.0 / (self.base ** (2 * torch.arange(0, self.half_dim).float() / d_head))).unsqueeze(0).unsqueeze(0)  # [1, 1, half_dim]
 
     @override
-    def forward(self, tensor: torch.Tensor, mask: torch.Tensor | None, time_increments: torch.Tensor | None = None) -> torch.Tensor:
+    def forward(
+        self,
+        tensor: torch.Tensor,
+        mask: torch.Tensor | None,
+        time_increments: torch.Tensor | None = None,
+    ) -> torch.Tensor:
         """
         Apply RoPE to the input tensor.
 
@@ -185,7 +197,13 @@ class RoPE(nn.Module):
     Output tensor shape: `[B, n_heads, seq_len, d_head]`
     """
 
-    def __init__(self, d_head: int, n_heads: int, base: float = 1000.0, learnable_offset: bool = False):
+    def __init__(
+        self,
+        d_head: int,
+        n_heads: int,
+        base: float = 1000.0,
+        learnable_offset: bool = False,
+    ):
         super().__init__()
         assert d_head % 2 == 0, "d_head must be even for standard RoPE."
 

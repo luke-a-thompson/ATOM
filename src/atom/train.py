@@ -1,6 +1,5 @@
 from pathlib import Path
 from datetime import datetime
-import wandb
 
 from atom.training import (
     Config,
@@ -9,6 +8,7 @@ from atom.training import (
     singletask_benchmark,
     multitask_benchmark,
     get_config_files,
+    show_connectivity,
 )
 
 
@@ -18,13 +18,16 @@ def main() -> None:
     if args.config:
         single_config_path: Path = Path(args.config).expanduser().resolve()
         config = Config.from_toml(single_config_path)
-        _ = wandb.init(project="ATOM", name=config.benchmark.benchmark_name, config=dict(config), mode="disabled" if not config.wandb.use_wandb else "online")
+
+        if getattr(args, "show_connectivity", False):
+            show_connectivity(config)
+            return
+
         set_environment_variables(config)
 
         # Preserve directory structure under benchmark_runs
         base_dir_name: str = single_config_path.parent.name
         config_stem: str = single_config_path.stem
-        # Base directory for this invocation
         base_benchmark_dir: Path = Path("benchmark_runs") / f"{base_dir_name}_{invocation_timestamp}"
         experiment_dir: Path = base_benchmark_dir / f"{config_stem}_{invocation_timestamp}"
 
@@ -39,17 +42,18 @@ def main() -> None:
                 config = Config.from_toml(config_path)
             except Exception as e:
                 raise ValueError(f"Error loading config from {config_path}: {e}")
-            _ = wandb.init(project="ATOM", name=config.benchmark.benchmark_name, config=dict(config), mode="disabled" if not config.wandb.use_wandb else "online")
+
+            if getattr(args, "show_connectivity", False):
+                show_connectivity(config)
+                continue
+
             set_environment_variables(config)
 
-            # Compute relative path to preserve structure under the provided base directory
             try:
                 relative_path: Path = Path(config_path).resolve().relative_to(base_configs_dir)
             except Exception:
-                # fallback: filename only, but keep Path type
                 relative_path = Path(Path(config_path).name)
 
-            # Build directories and copy config
             base_benchmark_root: Path = Path("benchmark_runs") / f"{base_configs_dir.name}_{invocation_timestamp}"
             if relative_path.suffix:
                 rel_config_stem: str = relative_path.stem
@@ -66,7 +70,6 @@ def main() -> None:
                 else:
                     singletask_benchmark(config, config_path, rel_experiment_dir)
             except Exception as e:
-                # Continue to next config, but record the failure
                 print(f"Error running config {config_path}: {e}")
     else:
         raise ValueError("No config file or directory provided")

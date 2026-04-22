@@ -92,7 +92,13 @@ def get_mol_supplier(filename: str) -> Chem.ForwardSDMolSupplier:
         # Otherwise uncompress the file
         with tempfile.NamedTemporaryFile(delete=False) as tmp:
             with gzip.open(filename, "rb") as f_in:
-                with tqdm(total=total_size, unit="B", unit_scale=True, desc="Unzipping", position=1) as pbar:
+                with tqdm(
+                    total=total_size,
+                    unit="B",
+                    unit_scale=True,
+                    desc="Unzipping",
+                    position=1,
+                ) as pbar:
                     while True:
                         buf = f_in.read(1024 * 1024)  # 1MB chunks
                         if not buf:
@@ -195,7 +201,11 @@ def process_candidate_file(
             candidate_results["invalid_atoms"] += 1
 
         # Check if any element exceeds its maximum allowed count
-        elif any(sum(1 for atom in mol.GetAtoms() if atom.GetSymbol() == element) > count for element, count in max_atoms_of_type.items() if element in allowed_atoms):
+        elif any(
+            sum(1 for atom in mol.GetAtoms() if atom.GetSymbol() == element) > count
+            for element, count in max_atoms_of_type.items()
+            if element in allowed_atoms
+        ):
             candidate_results["too_many_atoms_of_type"] += 1
         elif len(Chem.GetMolFrags(mol)) > 1:
             candidate_results["multiple_fragments"] += 1
@@ -277,7 +287,11 @@ def process_candidate_file(
         # Check if we've crossed a 100k boundary of TOTAL compounds read
         current_boundary = stats["total_compounds_read"] // 100_000
         if int(current_boundary) > int(stats["last_boundary"]):
-            mean_similarity = (stats["total_similarity"] / stats["total_molecules_processed_for_similarity"]) if stats["total_molecules_processed_for_similarity"] > 0 else 0.0
+            mean_similarity = (
+                (stats["total_similarity"] / stats["total_molecules_processed_for_similarity"])
+                if stats["total_molecules_processed_for_similarity"] > 0
+                else 0.0
+            )
             tqdm.write("\n---")
             tqdm.write(f"Total satisfying criteria (old logic): {int(stats['total_satisfying_criteria'])}")
             tqdm.write(f"Incorrectly added molecules (due to flaw): {int(stats['incorrectly_added_molecules'])}")
@@ -364,7 +378,7 @@ def generate_similar_dataset(
             tqdm.write("Found all required similar molecules for all basis molecules")
             break
 
-        candidate_file = f"/mnt/d/PubChem/Compound_{(file_counter-1)*500000+1:09d}_{file_counter*500000:09d}.sdf.gz"
+        candidate_file = f"/mnt/d/PubChem/Compound_{(file_counter - 1) * 500000 + 1:09d}_{file_counter * 500000:09d}.sdf.gz"
         file_counter += 1
 
         similar_molecules_dict, candidate_results = process_candidate_file(
@@ -385,7 +399,7 @@ def generate_similar_dataset(
 
         # Use enum.name to display molecule names
         molecules_found = [(k.name, len(v)) for k, v in similar_molecules_dict.items()]
-        tqdm.write(f"Processed file {file_counter-1}, {candidate_file}")
+        tqdm.write(f"Processed file {file_counter - 1}, {candidate_file}")
         tqdm.write(f"Molecules found so far: {molecules_found}")
 
         if file_counter > 100:  # Safety limit
@@ -401,7 +415,9 @@ def generate_similar_dataset(
     return similar_molecules_dict
 
 
-def pretty_print_similar_molecules_dict(similar_molecules_dict: dict[MD17Smiles, list[Chem.Mol]]) -> None:
+def pretty_print_similar_molecules_dict(
+    similar_molecules_dict: dict[MD17Smiles, list[Chem.Mol]],
+) -> None:
     for basis_enum, similar_molecules in similar_molecules_dict.items():
         tqdm.write(f"{basis_enum.name}:")
         for mol in similar_molecules:
@@ -439,7 +455,7 @@ if __name__ == "__main__":
         for basis_enum, similar_molecules in similar_molecules_dict.items():
             f.write(f"{basis_enum.name}: {len(similar_molecules)} molecules\n")
 
-    print(f"Results written to similar_molecules_results.txt")
+    print("Results written to similar_molecules_results.txt")
 
     # Create directory for images if it doesn't exist
     os.makedirs("data/molecule_images", exist_ok=True)
@@ -455,7 +471,7 @@ if __name__ == "__main__":
 
         for i, mol in enumerate(similar_molecules):
             all_mols.append(mol)
-            all_legends.append(f"{basis_enum.name} Similar {i+1}")
+            all_legends.append(f"{basis_enum.name} Similar {i + 1}")
 
     # Draw all molecules in one big grid
     big_img = Draw.MolsToGridImage(all_mols, molsPerRow=8, subImgSize=(200, 200), legends=all_legends, useSVG=False)

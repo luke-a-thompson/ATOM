@@ -1,6 +1,12 @@
 from torch.utils.data import DataLoader
 import numpy as np
-from atom.dataloaders.atom_dataloader import MDDataset, MDDynamicsDataset, MD17MoleculeType, Datasets, DataPartition
+from atom.dataloaders.atom_dataloader import (
+    MDDataset,
+    MDDynamicsDataset,
+    MD17MoleculeType,
+    Datasets,
+    DataPartition,
+)
 
 if __name__ == "__main__":
     import time
