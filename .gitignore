@@ -29,6 +29,8 @@ __pycache__/
 *.png
 *.svg
 *.tex
+*.db
+*.png
 
 # Multitask pretrained models
 !benchmark_runs\tg80_multitask_atom_new_22-Sep-2025_02-05-30
