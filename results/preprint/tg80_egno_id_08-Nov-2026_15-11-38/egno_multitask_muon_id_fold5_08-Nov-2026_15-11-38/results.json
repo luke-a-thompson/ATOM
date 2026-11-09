@@ -1,0 +1,138 @@
+{
+  "single_run_results": [
+    {
+      "s2t_test_loss": 1.0760789312422276,
+      "s2s_test_loss": 1.0960908561944962,
+      "best_val_loss_epoch": 45,
+      "start_time": "2026-11-08T15:39:55.971409",
+      "end_time": "2026-11-08T15:41:19.140334",
+      "model_path": "/tmp/tmpc_0rzdz5/run_1/best_val_model.pth",
+      "run_time": 83.168925,
+      "seconds_per_epoch": 1.8481983333333334
+    },
+    {
+      "s2t_test_loss": 1.078269713371992,
+      "s2s_test_loss": 1.0932633839547634,
+      "best_val_loss_epoch": 43,
+      "start_time": "2026-11-08T15:41:22.696185",
+      "end_time": "2026-11-08T15:42:40.216974",
+      "model_path": "/tmp/tmpc_0rzdz5/run_2/best_val_model.pth",
+      "run_time": 77.520789,
+      "seconds_per_epoch": 1.8028090465116278
+    },
+    {
+      "s2t_test_loss": 1.072974082827568,
+      "s2s_test_loss": 1.0895581096410751,
+      "best_val_loss_epoch": 48,
+      "start_time": "2026-11-08T15:42:43.524799",
+      "end_time": "2026-11-08T15:44:01.401197",
+      "model_path": "/tmp/tmpc_0rzdz5/run_3/best_val_model.pth",
+      "run_time": 77.876398,
+      "seconds_per_epoch": 1.6224249583333332
+    }
+  ],
+  "config": {
+    "benchmark": {
+      "benchmark_name": "egno_tg80_multitask_muon_fold5_id",
+      "model_type": "EGNO",
+      "compile": true,
+      "compile_trace": false,
+      "runs": 3,
+      "log_weights": false
+    },
+    "dataloader": {
+      "multitask": true,
+      "dataset": "tg80",
+      "train_molecules": [
+        "acetamide",
+        "aceticacid",
+        "citricacid",
+        "malonicacid",
+        "oxalicacid",
+        "salicylicacid1",
+        "salicylicacid2",
+        "succinicacid"
+      ],
+      "validation_molecules": [
+        "acetamide",
+        "aceticacid",
+        "citricacid",
+        "malonicacid",
+        "oxalicacid",
+        "salicylicacid1",
+        "salicylicacid2",
+        "succinicacid"
+      ],
+      "test_molecules": [
+        "acetamide",
+        "aceticacid",
+        "citricacid",
+        "malonicacid",
+        "oxalicacid",
+        "salicylicacid1",
+        "salicylicacid2",
+        "succinicacid"
+      ],
+      "num_timesteps": 8,
+      "delta_T": [
+        3000,
+        24000
+      ],
+      "explicit_hydrogen": false,
+      "explicit_hydrogen_gradients": false,
+      "radius_graph_threshold": 1.6,
+      "rrwp_length": 8,
+      "time_lag_mode": "uniform",
+      "normalize_z": false,
+      "persistent_workers": true,
+      "num_workers": 6,
+      "pin_memory": true,
+      "prefetch_factor": 2,
+      "force_regenerate": true
+    },
+    "training": {
+      "seed": 42,
+      "batch_size": 192,
+      "epochs": 50,
+      "max_grad_norm": 1.0,
+      "label_noise_std": 0.0
+    },
+    "optimizer": {
+      "type": "muon",
+      "learning_rate": 0.002,
+      "weight_decay": 0.00001,
+      "adam_betas": [
+        0.95,
+        0.999
+      ],
+      "adam_eps": 1e-10
+    },
+    "scheduler": {
+      "type": "none"
+    },
+    "atom_config": null,
+    "egno_config": {
+      "num_layers": 5,
+      "lifting_dim": 64,
+      "activation": "silu",
+      "normalise_scalars": true,
+      "use_time_conv": true,
+      "num_fourier_modes": 2,
+      "time_embed_dim": 32
+    },
+    "egnn_config": null
+  },
+  "s2s_test_loss_mean": 1.0929707832634448,
+  "s2s_test_loss_std": 0.0032762070186436176,
+  "s2s_test_loss_max": 1.0960908561944962,
+  "s2s_test_loss_min": 1.0895581096410751,
+  "latex_s2s": "\\(109.30{\\scriptstyle \\pm0.33}\\)",
+  "s2t_test_loss_mean": 1.0757742424805958,
+  "s2t_test_loss_std": 0.00266092992387712,
+  "s2t_test_loss_max": 1.078269713371992,
+  "s2t_test_loss_min": 1.072974082827568,
+  "latex_s2t": "\\(107.58{\\scriptstyle \\pm0.27}\\)",
+  "mean_secs_per_run": 79.52203733333333,
+  "mean_secs_per_epoch": 1.7578107793927646,
+  "mean_best_val_loss_epoch": 45.333333333333336
+}

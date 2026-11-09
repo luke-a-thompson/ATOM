@@ -1,0 +1,161 @@
+{
+  "single_run_results": [
+    {
+      "s2t_test_loss": 0.03808221948834566,
+      "s2s_test_loss": 0.05905400190788966,
+      "best_val_loss_epoch": 48,
+      "start_time": "2026-11-09T04:30:00.886433",
+      "end_time": "2026-11-09T04:33:14.871761",
+      "model_path": "/tmp/tmph4g9qegm/run_1/best_val_model.pth",
+      "run_time": 193.985328,
+      "seconds_per_epoch": 4.041361
+    },
+    {
+      "s2t_test_loss": 0.042280565521035054,
+      "s2s_test_loss": 0.06397296072055514,
+      "best_val_loss_epoch": 47,
+      "start_time": "2026-11-09T04:33:19.982159",
+      "end_time": "2026-11-09T04:35:31.080799",
+      "model_path": "/tmp/tmph4g9qegm/run_2/best_val_model.pth",
+      "run_time": 131.09864,
+      "seconds_per_epoch": 2.7893327659574467
+    },
+    {
+      "s2t_test_loss": 0.04065769856365827,
+      "s2s_test_loss": 0.062306504839887984,
+      "best_val_loss_epoch": 46,
+      "start_time": "2026-11-09T04:35:36.026156",
+      "end_time": "2026-11-09T04:37:47.642937",
+      "model_path": "/tmp/tmph4g9qegm/run_3/best_val_model.pth",
+      "run_time": 131.616781,
+      "seconds_per_epoch": 2.8612343695652176
+    }
+  ],
+  "config": {
+    "benchmark": {
+      "benchmark_name": "atom_tg80_multitask_muon_fold1_id",
+      "model_type": "atom",
+      "compile": true,
+      "compile_trace": false,
+      "runs": 3,
+      "log_weights": false
+    },
+    "dataloader": {
+      "multitask": true,
+      "dataset": "tg80",
+      "train_molecules": [
+        "1.3-cyclohexadiene",
+        "1.4-dioxane",
+        "cyclobutane",
+        "cyclohexane",
+        "cyclohexanol",
+        "cyclohexanone",
+        "cyclopentadiene",
+        "cyclopentanone",
+        "cyclopropane",
+        "tetrahydrofuran",
+        "tropane1",
+        "tropane3",
+        "uracil1"
+      ],
+      "validation_molecules": [
+        "1.3-cyclohexadiene",
+        "1.4-dioxane",
+        "cyclobutane",
+        "cyclohexane",
+        "cyclohexanol",
+        "cyclohexanone",
+        "cyclopentadiene",
+        "cyclopentanone",
+        "cyclopropane",
+        "tetrahydrofuran",
+        "tropane1",
+        "tropane3",
+        "uracil1"
+      ],
+      "test_molecules": [
+        "1.3-cyclohexadiene",
+        "1.4-dioxane",
+        "cyclobutane",
+        "cyclohexane",
+        "cyclohexanol",
+        "cyclohexanone",
+        "cyclopentadiene",
+        "cyclopentanone",
+        "cyclopropane",
+        "tetrahydrofuran",
+        "tropane1",
+        "tropane3",
+        "uracil1"
+      ],
+      "num_timesteps": 8,
+      "delta_T": [
+        8,
+        24000
+      ],
+      "explicit_hydrogen": false,
+      "explicit_hydrogen_gradients": false,
+      "radius_graph_threshold": 1.6,
+      "rrwp_length": 8,
+      "time_lag_mode": "uniform",
+      "normalize_z": false,
+      "persistent_workers": true,
+      "num_workers": 6,
+      "pin_memory": true,
+      "prefetch_factor": 2,
+      "force_regenerate": true
+    },
+    "training": {
+      "seed": 42,
+      "batch_size": 192,
+      "epochs": 50,
+      "max_grad_norm": 1.0,
+      "label_noise_std": 0.0
+    },
+    "optimizer": {
+      "type": "muon",
+      "learning_rate": 0.002,
+      "weight_decay": 0.00001,
+      "adam_betas": [
+        0.95,
+        0.999
+      ],
+      "adam_eps": 1e-10
+    },
+    "scheduler": {
+      "type": "none"
+    },
+    "atom_config": {
+      "num_layers": 6,
+      "num_heads": 8,
+      "lifting_dim": 256,
+      "output_heads": 1,
+      "delta_update": false,
+      "heterogenous_attention_type": "ghca",
+      "positional_encoding": "trope",
+      "rope_base": 1000.0,
+      "rope_tau": 375.0,
+      "lifting_type": "quasi_equivariant",
+      "projection_type": "equivariant",
+      "norm": "rms",
+      "activation": "swiglu",
+      "value_residual_type": "learnable",
+      "output_mode": "pos_vel_energy"
+    },
+    "egno_config": null,
+    "egnn_config": null
+  },
+  "s2s_test_loss_mean": 0.061777822489444266,
+  "s2s_test_loss_std": 0.0025017312727868557,
+  "s2s_test_loss_max": 0.06397296072055514,
+  "s2s_test_loss_min": 0.05905400190788966,
+  "latex_s2s": "\\(6.18{\\scriptstyle \\pm0.25}\\)",
+  "s2t_test_loss_mean": 0.040340161191012996,
+  "s2t_test_loss_std": 0.0021171090193092823,
+  "s2t_test_loss_max": 0.042280565521035054,
+  "s2t_test_loss_min": 0.03808221948834566,
+  "latex_s2t": "\\(4.03{\\scriptstyle \\pm0.21}\\)",
+  "mean_secs_per_run": 152.23358299999998,
+  "mean_secs_per_epoch": 3.230642711840888,
+  "mean_best_val_loss_epoch": 47.0
+}

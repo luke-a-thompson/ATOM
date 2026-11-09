@@ -1,0 +1,114 @@
+{
+  "single_run_results": [
+    {
+      "s2t_test_loss": 0.054365804926915604,
+      "s2s_test_loss": 0.06486253304914995,
+      "best_val_loss_epoch": 782,
+      "start_time": "2026-11-08T20:37:13.886502",
+      "end_time": "2026-11-08T20:41:55.978112",
+      "model_path": "/tmp/tmpm00zu6li/run_1/best_val_model.pth",
+      "run_time": 282.09161,
+      "seconds_per_epoch": 0.3607309590792839
+    },
+    {
+      "s2t_test_loss": 0.05604468556967648,
+      "s2s_test_loss": 0.06723538481376388,
+      "best_val_loss_epoch": 969,
+      "start_time": "2026-11-08T20:41:56.808859",
+      "end_time": "2026-11-08T20:45:47.954475",
+      "model_path": "/tmp/tmpm00zu6li/run_2/best_val_model.pth",
+      "run_time": 231.145616,
+      "seconds_per_epoch": 0.23854036738906087
+    },
+    {
+      "s2t_test_loss": 0.05754352564161474,
+      "s2s_test_loss": 0.06618472595106471,
+      "best_val_loss_epoch": 993,
+      "start_time": "2026-11-08T20:45:48.779247",
+      "end_time": "2026-11-08T20:49:39.477558",
+      "model_path": "/tmp/tmpm00zu6li/run_3/best_val_model.pth",
+      "run_time": 230.698311,
+      "seconds_per_epoch": 0.23232458308157097
+    }
+  ],
+  "config": {
+    "benchmark": {
+      "benchmark_name": "paper_rmd17",
+      "model_type": "atom",
+      "compile": true,
+      "compile_trace": false,
+      "runs": 3,
+      "log_weights": false
+    },
+    "dataloader": {
+      "multitask": false,
+      "dataset": "rmd17",
+      "molecule_type": "azobenzene",
+      "num_timesteps": 8,
+      "delta_T": 3000,
+      "explicit_hydrogen": false,
+      "explicit_hydrogen_gradients": false,
+      "radius_graph_threshold": 1.6,
+      "rrwp_length": 0,
+      "time_lag_mode": "uniform",
+      "normalize_z": false,
+      "persistent_workers": true,
+      "num_workers": 6,
+      "pin_memory": true,
+      "prefetch_factor": 2,
+      "force_regenerate": true
+    },
+    "training": {
+      "seed": 42,
+      "batch_size": 192,
+      "epochs": 1000,
+      "max_grad_norm": 1.0,
+      "label_noise_std": 0.1
+    },
+    "optimizer": {
+      "type": "adamw",
+      "learning_rate": 0.001,
+      "weight_decay": 0.00001,
+      "adam_betas": [
+        0.95,
+        0.999
+      ],
+      "adam_eps": 1e-10
+    },
+    "scheduler": {
+      "type": "none"
+    },
+    "atom_config": {
+      "num_layers": 5,
+      "num_heads": 8,
+      "lifting_dim": 128,
+      "output_heads": 1,
+      "delta_update": false,
+      "heterogenous_attention_type": "ghca",
+      "positional_encoding": "trope",
+      "rope_base": 1000.0,
+      "rope_tau": 375.0,
+      "lifting_type": "quasi_equivariant",
+      "projection_type": "equivariant",
+      "norm": "rms",
+      "activation": "swiglu",
+      "value_residual_type": "learnable",
+      "output_mode": "pos"
+    },
+    "egno_config": null,
+    "egnn_config": null
+  },
+  "s2s_test_loss_mean": 0.06609421460465952,
+  "s2s_test_loss_std": 0.0011890133609995246,
+  "s2s_test_loss_max": 0.06723538481376388,
+  "s2s_test_loss_min": 0.06486253304914995,
+  "latex_s2s": "\\(6.61{\\scriptstyle \\pm0.12}\\)",
+  "s2t_test_loss_mean": 0.05598467204606894,
+  "s2t_test_loss_std": 0.001589710358530283,
+  "s2t_test_loss_max": 0.05754352564161474,
+  "s2t_test_loss_min": 0.054365804926915604,
+  "latex_s2t": "\\(5.60{\\scriptstyle \\pm0.16}\\)",
+  "mean_secs_per_run": 247.97851233333333,
+  "mean_secs_per_epoch": 0.27719863651663856,
+  "mean_best_val_loss_epoch": 914.6666666666666
+}

@@ -1,0 +1,94 @@
+{
+  "single_run_results": [
+    {
+      "s2t_test_loss": 0.06536406232044101,
+      "s2s_test_loss": 0.07931791571900249,
+      "best_val_loss_epoch": 676,
+      "start_time": "2026-11-09T05:15:15.940867",
+      "end_time": "2026-11-09T05:20:24.925542",
+      "model_path": "/tmp/tmpcfbnhr12/run_1/best_val_model.pth",
+      "run_time": 308.984675,
+      "seconds_per_epoch": 0.4570779215976331
+    }
+  ],
+  "config": {
+    "benchmark": {
+      "benchmark_name": "atom_no_equivariant_lifting",
+      "model_type": "atom",
+      "compile": true,
+      "compile_trace": false,
+      "runs": 1,
+      "log_weights": false
+    },
+    "dataloader": {
+      "multitask": false,
+      "dataset": "md17",
+      "molecule_type": "aspirin",
+      "num_timesteps": 8,
+      "delta_T": 3000,
+      "explicit_hydrogen": false,
+      "explicit_hydrogen_gradients": false,
+      "radius_graph_threshold": 1.6,
+      "rrwp_length": 0,
+      "time_lag_mode": "uniform",
+      "normalize_z": false,
+      "persistent_workers": true,
+      "num_workers": 4,
+      "pin_memory": true,
+      "prefetch_factor": 2,
+      "force_regenerate": true
+    },
+    "training": {
+      "seed": 42,
+      "batch_size": 128,
+      "epochs": 1000,
+      "max_grad_norm": 1.0,
+      "label_noise_std": 0.1
+    },
+    "optimizer": {
+      "type": "adamw",
+      "learning_rate": 0.001,
+      "weight_decay": 0.0001,
+      "adam_betas": [
+        0.9,
+        0.999
+      ],
+      "adam_eps": 1e-10
+    },
+    "scheduler": {
+      "type": "none"
+    },
+    "atom_config": {
+      "num_layers": 6,
+      "num_heads": 8,
+      "lifting_dim": 128,
+      "output_heads": 1,
+      "delta_update": false,
+      "heterogenous_attention_type": "ghca",
+      "positional_encoding": "trope",
+      "rope_base": 1000.0,
+      "rope_tau": 375.0,
+      "lifting_type": "non_equivariant",
+      "projection_type": "equivariant",
+      "norm": "rms",
+      "activation": "swiglu",
+      "value_residual_type": "learnable",
+      "output_mode": "pos"
+    },
+    "egno_config": null,
+    "egnn_config": null
+  },
+  "s2s_test_loss_mean": 0.07931791571900249,
+  "s2s_test_loss_std": null,
+  "s2s_test_loss_max": 0.07931791571900249,
+  "s2s_test_loss_min": 0.07931791571900249,
+  "latex_s2s": "\\(7.93{\\scriptstyle \\pmnan}\\)",
+  "s2t_test_loss_mean": 0.06536406232044101,
+  "s2t_test_loss_std": null,
+  "s2t_test_loss_max": 0.06536406232044101,
+  "s2t_test_loss_min": 0.06536406232044101,
+  "latex_s2t": "\\(6.54{\\scriptstyle \\pmnan}\\)",
+  "mean_secs_per_run": 308.984675,
+  "mean_secs_per_epoch": 0.4570779215976331,
+  "mean_best_val_loss_epoch": 676.0
+}

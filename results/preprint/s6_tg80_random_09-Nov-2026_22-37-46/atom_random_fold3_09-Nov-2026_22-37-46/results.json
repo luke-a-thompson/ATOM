@@ -1,0 +1,175 @@
+{
+  "single_run_results": [
+    {
+      "s2t_test_loss": 0.480609017983079,
+      "s2s_test_loss": 0.5630262069404125,
+      "best_val_loss_epoch": 1,
+      "start_time": "2026-11-09T23:22:24.132503",
+      "end_time": "2026-11-09T23:29:29.599529",
+      "model_path": "/tmp/tmpha8icrpk/run_1/best_val_model.pth",
+      "run_time": 425.467026,
+      "seconds_per_epoch": 425.467026
+    },
+    {
+      "s2t_test_loss": 0.45433549815788865,
+      "s2s_test_loss": 0.5322198815643787,
+      "best_val_loss_epoch": 0,
+      "start_time": "2026-11-09T23:29:36.030522",
+      "end_time": "2026-11-09T23:36:02.864791",
+      "model_path": "/tmp/tmpha8icrpk/run_2/best_val_model.pth",
+      "run_time": 386.834269,
+      "seconds_per_epoch": null
+    },
+    {
+      "s2t_test_loss": 0.46111127994954587,
+      "s2s_test_loss": 0.5481854096055031,
+      "best_val_loss_epoch": 1,
+      "start_time": "2026-11-09T23:36:09.297255",
+      "end_time": "2026-11-09T23:42:34.460819",
+      "model_path": "/tmp/tmpha8icrpk/run_3/best_val_model.pth",
+      "run_time": 385.163564,
+      "seconds_per_epoch": 385.163564
+    }
+  ],
+  "config": {
+    "benchmark": {
+      "benchmark_name": "tg80_random_fold3",
+      "model_type": "atom",
+      "compile": true,
+      "compile_trace": false,
+      "runs": 3,
+      "log_weights": false
+    },
+    "dataloader": {
+      "multitask": true,
+      "dataset": "tg80",
+      "train_molecules": [
+        "p-cresol",
+        "methanol",
+        "formaldehyde",
+        "aniline",
+        "cyclohexanone",
+        "biphenyl",
+        "malondialdehyde1",
+        "benzylamine",
+        "trimethylamine",
+        "uracil",
+        "quinoline",
+        "cyclohexanol",
+        "tropane3",
+        "heptanol",
+        "naphthalene",
+        "malonicacid",
+        "ethylene",
+        "1.3-butadiene",
+        "benzothiophene",
+        "uracil1",
+        "benzoicacid",
+        "propylene",
+        "acetaldehyde",
+        "succinicacid",
+        "pentanol",
+        "chlorobenzene",
+        "benzene2",
+        "acetonitrile",
+        "formamide",
+        "anthracene",
+        "acetamide",
+        "cyclohexane",
+        "coumarin",
+        "benzaldehyde",
+        "butylamine",
+        "furan",
+        "ethanethiol"
+      ],
+      "validation_molecules": [
+        "ethylamine",
+        "butanol",
+        "furfural",
+        "salicylicacid2",
+        "benzene",
+        "butane",
+        "cyclopropane",
+        "1.3-cyclohexadiene"
+      ],
+      "test_molecules": [
+        "indole",
+        "oxalicacid",
+        "nitrobenzene",
+        "2-butanone",
+        "1.2-dichloroethane",
+        "isopropanol",
+        "propane",
+        "tropane2"
+      ],
+      "num_timesteps": 8,
+      "delta_T": [
+        8,
+        24000
+      ],
+      "explicit_hydrogen": false,
+      "explicit_hydrogen_gradients": false,
+      "radius_graph_threshold": 1.6,
+      "rrwp_length": 8,
+      "time_lag_mode": "uniform",
+      "normalize_z": false,
+      "persistent_workers": true,
+      "num_workers": 6,
+      "pin_memory": true,
+      "prefetch_factor": 2,
+      "force_regenerate": true
+    },
+    "training": {
+      "seed": 42,
+      "batch_size": 192,
+      "epochs": 50,
+      "max_grad_norm": 1.0,
+      "label_noise_std": 0.0
+    },
+    "optimizer": {
+      "type": "muon",
+      "learning_rate": 0.002,
+      "weight_decay": 0.00001,
+      "adam_betas": [
+        0.95,
+        0.999
+      ],
+      "adam_eps": 1e-10
+    },
+    "scheduler": {
+      "type": "none"
+    },
+    "atom_config": {
+      "num_layers": 6,
+      "num_heads": 8,
+      "lifting_dim": 256,
+      "output_heads": 1,
+      "delta_update": false,
+      "heterogenous_attention_type": "ghca",
+      "positional_encoding": "trope",
+      "rope_base": 1000.0,
+      "rope_tau": 375.0,
+      "lifting_type": "quasi_equivariant",
+      "projection_type": "equivariant",
+      "norm": "rms",
+      "activation": "swiglu",
+      "value_residual_type": "learnable",
+      "output_mode": "pos_vel_energy"
+    },
+    "egno_config": null,
+    "egnn_config": null
+  },
+  "s2s_test_loss_mean": 0.5478104993700982,
+  "s2s_test_loss_std": 0.015406573191285133,
+  "s2s_test_loss_max": 0.5630262069404125,
+  "s2s_test_loss_min": 0.5322198815643787,
+  "latex_s2s": "\\(54.78{\\scriptstyle \\pm1.54}\\)",
+  "s2t_test_loss_mean": 0.46535193203017117,
+  "s2t_test_loss_std": 0.01364044938236475,
+  "s2t_test_loss_max": 0.480609017983079,
+  "s2t_test_loss_min": 0.45433549815788865,
+  "latex_s2t": "\\(46.54{\\scriptstyle \\pm1.36}\\)",
+  "mean_secs_per_run": 399.154953,
+  "mean_secs_per_epoch": 270.21019666666666,
+  "mean_best_val_loss_epoch": 0.6666666666666666
+}
