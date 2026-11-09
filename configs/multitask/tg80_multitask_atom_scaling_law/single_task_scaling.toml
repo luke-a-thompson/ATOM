@@ -3,33 +3,20 @@ use_wandb = false
 
 [benchmark]
 model_type = "atom"
-<<<<<<<< HEAD:configs/singletask/tg80_st_atom_new/atom_multitask_muon_fold5.toml
-benchmark_name = "atom_tg80_multitask_muon_fold5"
-========
 benchmark_name = "scaling_single_task"
->>>>>>>> c300add769b980ce2b97382b7d97248011f688a1:configs/multitask/tg80_multitask_atom_scaling_law/single_task_scaling.toml
 compile = true
 compile_trace = false
 runs = 3
 log_weights = false
 
 [dataloader]
-<<<<<<<< HEAD:configs/singletask/tg80_st_atom_new/atom_multitask_muon_fold5.toml
-multitask = true
-delta_T = [8, 24_000]
-========
 multitask = false
 delta_T = 3000
->>>>>>>> c300add769b980ce2b97382b7d97248011f688a1:configs/multitask/tg80_multitask_atom_scaling_law/single_task_scaling.toml
 dataset = "tg80"
 num_timesteps = 8
 
 # Single-task dataloader parameters
-<<<<<<<< HEAD:configs/singletask/tg80_st_atom_new/atom_multitask_muon_fold5.toml
-# molecule_type = "aspirin"  # Iterates through single-task learning on these molecules
-========
 molecule_type = "formicacid"  # Iterates through single-task learning on these molecules
->>>>>>>> c300add769b980ce2b97382b7d97248011f688a1:configs/multitask/tg80_multitask_atom_scaling_law/single_task_scaling.toml
 
 # Multitask dataloader parameters
 train_molecules = [
@@ -82,11 +69,7 @@ force_regenerate = true
 device = "cuda"
 seed = 42
 batch_size = 192
-<<<<<<<< HEAD:configs/singletask/tg80_st_atom_new/atom_multitask_muon_fold5.toml
-epochs = 50
-========
 epochs = 1000
->>>>>>>> c300add769b980ce2b97382b7d97248011f688a1:configs/multitask/tg80_multitask_atom_scaling_law/single_task_scaling.toml
 use_amp = true
 amp_dtype = "bfloat16"
 max_grad_norm = 1.0
@@ -115,10 +98,6 @@ heterogenous_attention_type = "ghca"
 positional_encoding = "trope"
 rope_base = 1000
 rope_tau = 24_000
-<<<<<<<< HEAD:configs/singletask/tg80_st_atom_new/atom_multitask_muon_fold5.toml
-learnable_attention_denom = false
-========
->>>>>>>> c300add769b980ce2b97382b7d97248011f688a1:configs/multitask/tg80_multitask_atom_scaling_law/single_task_scaling.toml
 # Feature parameters
 lifting_type = "quasi_equivariant"
 projection_type = "equivariant"

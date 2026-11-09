@@ -2,13 +2,8 @@
 use_wandb = false
 
 [benchmark]
-<<<<<<<< HEAD:configs/singletask/md17_uniform_paper_egnn_r/md_aspirin.toml
-model_type = "EGNN_R"
-benchmark_name = "paper_md17_egnn_r"
-========
 model_type = "atom"
 benchmark_name = "paper_md17_atom_non_equivariant"
->>>>>>>> c300add769b980ce2b97382b7d97248011f688a1:configs/singletask/md17_uniform_paper_atom_non_equivariant/md_salicylic.toml
 compile = true
 compile_trace = false
 runs = 1
@@ -34,10 +29,6 @@ explicit_hydrogen_gradients = false
 radius_graph_threshold = 1.6
 rrwp_length = 0  # 0 for no RRWPs
 time_lag_mode = "uniform"
-<<<<<<<< HEAD:configs/singletask/md17_uniform_paper_egnn_r/md_aspirin.toml
-
-========
->>>>>>>> c300add769b980ce2b97382b7d97248011f688a1:configs/singletask/md17_uniform_paper_atom_non_equivariant/md_salicylic.toml
 normalize_z = false
 persistent_workers = true
 num_workers = 6
@@ -53,7 +44,7 @@ epochs = 1000
 use_amp = true
 amp_dtype = "bfloat16"
 max_grad_norm = 1.0
-label_noise_std = 0.0
+label_noise_std = 0.1
 
 [optimizer]
 type = "adamw"
@@ -79,31 +70,10 @@ positional_encoding = "trope"
 rope_base = 1000
 rope_tau = 24_000
 # Feature parameters
-<<<<<<<< HEAD:configs/singletask/md17_uniform_paper_egnn_r/md_aspirin.toml
-lifting_type = "quasi_equivariant_tp"
-========
 lifting_type = "non_equivariant"
->>>>>>>> c300add769b980ce2b97382b7d97248011f688a1:configs/singletask/md17_uniform_paper_atom_non_equivariant/md_salicylic.toml
 projection_type = "equivariant"
 # Layer parameters
 norm = "rms"
 activation = "swiglu"
 value_residual_type = "learnable"
 
-<<<<<<<< HEAD:configs/singletask/md17_uniform_paper_egnn_r/md_aspirin.toml
-[egno_config]
-num_layers = 5
-lifting_dim = 64
-activation = "silu"
-normalise_scalars = true
-use_time_conv = true
-num_fourier_modes = 2
-time_embed_dim = 32
-
-[egnn_config]
-num_layers = 8
-lifting_dim = 64
-activation = "silu"
-time_embed_dim = 32
-========
->>>>>>>> c300add769b980ce2b97382b7d97248011f688a1:configs/singletask/md17_uniform_paper_atom_non_equivariant/md_salicylic.toml

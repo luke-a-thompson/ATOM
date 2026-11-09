@@ -16,7 +16,7 @@ dataset = "md17"
 num_timesteps = 8
 
 # Single-task dataloader parameters
-molecule_type = "benzene"  # Iterates through single-task learning on these molecules
+molecule_type = "aspirin"  # Iterates through single-task learning on these molecules
 
 # Multitask dataloader parameters
 train_molecules = ["aspirin", "benzene", "ethanol", "toluene", "uracil", "salicylic", "malonaldehyde"]
@@ -57,46 +57,8 @@ adam_eps = 1e-10
 [scheduler]
 type = "none"
 
-<<<<<<<< HEAD:configs/singletask/md17_uniform_paper_egnn_r/md_benzene.toml
-[atom_config]
-# Architecture parameters
-num_layers = 5
-num_heads = 8
-lifting_dim = 128
-# Output parameters
-output_heads = 1
-delta_update = false
-# Attention parameters
-heterogenous_attention_type = "ghca"
-positional_encoding = "trope"
-rope_base = 1000
-rope_tau = 10000
-learnable_attention_denom = false
-# Feature parameters
-lifting_type = "quasi_equivariant_tp"
-projection_type = "equivariant"
-# Layer parameters
-norm = "rms"
-activation = "swiglu"
-value_residual_type = "learnable"
-
-[egno_config]
-num_layers = 5
-lifting_dim = 64
-activation = "silu"
-normalise_scalars = true
-use_time_conv = true
-num_fourier_modes = 2
-time_embed_dim = 32
-
 [egnn_config]
 num_layers = 8
 lifting_dim = 64
 activation = "silu"
-========
-[egnn_config]
-num_layers = 8
-lifting_dim = 64
-activation = "silu"
->>>>>>>> c300add769b980ce2b97382b7d97248011f688a1:configs/singletask/md17_uniform_paper_egnn_r/md_aspirin.toml
 time_embed_dim = 32
