@@ -26,4 +26,4 @@ __pycache__/
 /data/similar_molecules_results.txt
 /data/*md*
 *.pkl
-optuna*
+optuna*configs/preprint_reruns/logs/

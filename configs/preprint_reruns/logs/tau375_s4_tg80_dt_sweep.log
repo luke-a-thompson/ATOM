@@ -1,0 +1,2009 @@
+/home/luke/ATOM/src/atom/training/create_config.py:151: UserWarning: Train and validation molecule sets overlap: tropane1, cyclobutane, cyclopentanone, 1.3-cyclohexadiene, cyclohexanone, tetrahydrofuran, 1.4-dioxane, uracil1, cyclohexanol, tropane3, cyclohexane, cyclopentadiene, cyclopropane
+  warnings.warn(f"Train and validation molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(val_set))}")
+/home/luke/ATOM/src/atom/training/create_config.py:153: UserWarning: Train and test molecule sets overlap: tropane1, cyclobutane, cyclopentanone, 1.3-cyclohexadiene, cyclohexanone, tetrahydrofuran, 1.4-dioxane, uracil1, cyclohexanol, tropane3, cyclohexane, cyclopentadiene, cyclopropane.
+  warnings.warn(f"Train and test molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(test_set))}.")
+/home/luke/ATOM/src/atom/training/create_config.py:155: UserWarning: Validation and test molecule sets overlap: tropane1, cyclobutane, cyclopentanone, 1.3-cyclohexadiene, cyclohexanone, tetrahydrofuran, 1.4-dioxane, uracil1, cyclohexanol, tropane3, cyclohexane, cyclopentadiene, cyclopropane
+  warnings.warn(f"Validation and test molecule sets overlap: {', '.join(str(mol) for mol in val_set.intersection(test_set))}")
+
+  0%|          | 0/3 [00:00<?, ?run/s][A
+Run 1/3:   0%|          | 0/3 [00:00<?, ?run/s][A
+                                               [A
+Run 1/3:   0%|          | 0/3 [00:03<?, ?run/s][A
+                                               [A
+Run 1/3:   0%|          | 0/3 [00:03<?, ?run/s][AInferred max_nodes across all molecules as: 9
+Inferred max_edges across all molecules as: 18
+
+
+Training:   0%|          | 0/50 [00:00<?, ?epoch/s][A[A
+
+Training:   0%|          | 0/50 [00:28<?, ?epoch/s, Train s2t loss=99.21x10^-2, Val s2t loss=42.01x10^-2, Best val s2t loss=42.01x10^-2, Current muon LR=0.0020][A[A
+
+Training:   2%|▏         | 1/50 [00:28<23:39, 28.97s/epoch, Train s2t loss=99.21x10^-2, Val s2t loss=42.01x10^-2, Best val s2t loss=42.01x10^-2, Current muon LR=0.0020][A[A
+
+Training:   2%|▏         | 1/50 [00:32<23:39, 28.97s/epoch, Train s2t loss=33.33x10^-2, Val s2t loss=21.82x10^-2, Best val s2t loss=21.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:   4%|▍         | 2/50 [00:32<11:24, 14.27s/epoch, Train s2t loss=33.33x10^-2, Val s2t loss=21.82x10^-2, Best val s2t loss=21.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:   4%|▍         | 2/50 [00:36<11:24, 14.27s/epoch, Train s2t loss=19.90x10^-2, Val s2t loss=14.45x10^-2, Best val s2t loss=14.45x10^-2, Current muon LR=0.0020][A[A
+
+Training:   6%|▌         | 3/50 [00:36<07:27,  9.52s/epoch, Train s2t loss=19.90x10^-2, Val s2t loss=14.45x10^-2, Best val s2t loss=14.45x10^-2, Current muon LR=0.0020][A[A
+
+Training:   6%|▌         | 3/50 [00:40<07:27,  9.52s/epoch, Train s2t loss=14.77x10^-2, Val s2t loss=11.90x10^-2, Best val s2t loss=11.90x10^-2, Current muon LR=0.0020][A[A
+
+Training:   8%|▊         | 4/50 [00:40<05:34,  7.26s/epoch, Train s2t loss=14.77x10^-2, Val s2t loss=11.90x10^-2, Best val s2t loss=11.90x10^-2, Current muon LR=0.0020][A[A
+
+Training:   8%|▊         | 4/50 [00:44<05:34,  7.26s/epoch, Train s2t loss=12.09x10^-2, Val s2t loss=10.14x10^-2, Best val s2t loss=10.14x10^-2, Current muon LR=0.0020][A[A
+
+Training:  10%|█         | 5/50 [00:44<04:33,  6.08s/epoch, Train s2t loss=12.09x10^-2, Val s2t loss=10.14x10^-2, Best val s2t loss=10.14x10^-2, Current muon LR=0.0020][A[A
+
+Training:  10%|█         | 5/50 [00:48<04:33,  6.08s/epoch, Train s2t loss=10.63x10^-2, Val s2t loss=9.65x10^-2, Best val s2t loss=9.65x10^-2, Current muon LR=0.0020]  [A[A
+
+Training:  12%|█▏        | 6/50 [00:48<03:53,  5.31s/epoch, Train s2t loss=10.63x10^-2, Val s2t loss=9.65x10^-2, Best val s2t loss=9.65x10^-2, Current muon LR=0.0020][A[A
+
+Training:  12%|█▏        | 6/50 [00:52<03:53,  5.31s/epoch, Train s2t loss=9.73x10^-2, Val s2t loss=8.79x10^-2, Best val s2t loss=8.79x10^-2, Current muon LR=0.0020] [A[A
+
+Training:  14%|█▍        | 7/50 [00:52<03:27,  4.82s/epoch, Train s2t loss=9.73x10^-2, Val s2t loss=8.79x10^-2, Best val s2t loss=8.79x10^-2, Current muon LR=0.0020][A[A
+
+Training:  14%|█▍        | 7/50 [00:56<03:27,  4.82s/epoch, Train s2t loss=8.91x10^-2, Val s2t loss=8.26x10^-2, Best val s2t loss=8.26x10^-2, Current muon LR=0.0020][A[A
+
+Training:  16%|█▌        | 8/50 [00:56<03:08,  4.49s/epoch, Train s2t loss=8.91x10^-2, Val s2t loss=8.26x10^-2, Best val s2t loss=8.26x10^-2, Current muon LR=0.0020][A[A
+
+Training:  16%|█▌        | 8/50 [00:59<03:08,  4.49s/epoch, Train s2t loss=8.29x10^-2, Val s2t loss=7.78x10^-2, Best val s2t loss=7.78x10^-2, Current muon LR=0.0020][A[A
+
+Training:  18%|█▊        | 9/50 [00:59<02:55,  4.29s/epoch, Train s2t loss=8.29x10^-2, Val s2t loss=7.78x10^-2, Best val s2t loss=7.78x10^-2, Current muon LR=0.0020][A[A
+
+Training:  18%|█▊        | 9/50 [01:03<02:55,  4.29s/epoch, Train s2t loss=7.78x10^-2, Val s2t loss=7.86x10^-2, Best val s2t loss=7.78x10^-2, Current muon LR=0.0020][A[A
+
+Training:  20%|██        | 10/50 [01:03<02:45,  4.13s/epoch, Train s2t loss=7.78x10^-2, Val s2t loss=7.86x10^-2, Best val s2t loss=7.78x10^-2, Current muon LR=0.0020][A[A
+
+Training:  20%|██        | 10/50 [01:07<02:45,  4.13s/epoch, Train s2t loss=7.36x10^-2, Val s2t loss=7.33x10^-2, Best val s2t loss=7.33x10^-2, Current muon LR=0.0020][A[A
+
+Training:  22%|██▏       | 11/50 [01:07<02:38,  4.05s/epoch, Train s2t loss=7.36x10^-2, Val s2t loss=7.33x10^-2, Best val s2t loss=7.33x10^-2, Current muon LR=0.0020][A[A
+
+Training:  22%|██▏       | 11/50 [01:11<02:38,  4.05s/epoch, Train s2t loss=7.00x10^-2, Val s2t loss=7.17x10^-2, Best val s2t loss=7.17x10^-2, Current muon LR=0.0020][A[A
+
+Training:  24%|██▍       | 12/50 [01:11<02:31,  4.00s/epoch, Train s2t loss=7.00x10^-2, Val s2t loss=7.17x10^-2, Best val s2t loss=7.17x10^-2, Current muon LR=0.0020][A[A
+
+Training:  24%|██▍       | 12/50 [01:15<02:31,  4.00s/epoch, Train s2t loss=6.80x10^-2, Val s2t loss=7.01x10^-2, Best val s2t loss=7.01x10^-2, Current muon LR=0.0020][A[A
+
+Training:  26%|██▌       | 13/50 [01:15<02:25,  3.94s/epoch, Train s2t loss=6.80x10^-2, Val s2t loss=7.01x10^-2, Best val s2t loss=7.01x10^-2, Current muon LR=0.0020][A[A
+
+Training:  26%|██▌       | 13/50 [01:18<02:25,  3.94s/epoch, Train s2t loss=6.59x10^-2, Val s2t loss=6.83x10^-2, Best val s2t loss=6.83x10^-2, Current muon LR=0.0020][A[A
+
+Training:  28%|██▊       | 14/50 [01:18<02:20,  3.90s/epoch, Train s2t loss=6.59x10^-2, Val s2t loss=6.83x10^-2, Best val s2t loss=6.83x10^-2, Current muon LR=0.0020][A[A
+
+Training:  28%|██▊       | 14/50 [01:22<02:20,  3.90s/epoch, Train s2t loss=6.32x10^-2, Val s2t loss=6.62x10^-2, Best val s2t loss=6.62x10^-2, Current muon LR=0.0020][A[A
+
+Training:  30%|███       | 15/50 [01:22<02:15,  3.87s/epoch, Train s2t loss=6.32x10^-2, Val s2t loss=6.62x10^-2, Best val s2t loss=6.62x10^-2, Current muon LR=0.0020][A[A
+
+Training:  30%|███       | 15/50 [01:26<02:15,  3.87s/epoch, Train s2t loss=6.03x10^-2, Val s2t loss=7.16x10^-2, Best val s2t loss=6.62x10^-2, Current muon LR=0.0020][A[A
+
+Training:  32%|███▏      | 16/50 [01:26<02:10,  3.85s/epoch, Train s2t loss=6.03x10^-2, Val s2t loss=7.16x10^-2, Best val s2t loss=6.62x10^-2, Current muon LR=0.0020][A[A
+
+Training:  32%|███▏      | 16/50 [01:30<02:10,  3.85s/epoch, Train s2t loss=5.79x10^-2, Val s2t loss=6.53x10^-2, Best val s2t loss=6.53x10^-2, Current muon LR=0.0020][A[A
+
+Training:  34%|███▍      | 17/50 [01:30<02:06,  3.83s/epoch, Train s2t loss=5.79x10^-2, Val s2t loss=6.53x10^-2, Best val s2t loss=6.53x10^-2, Current muon LR=0.0020][A[A
+
+Training:  34%|███▍      | 17/50 [01:34<02:06,  3.83s/epoch, Train s2t loss=5.62x10^-2, Val s2t loss=6.79x10^-2, Best val s2t loss=6.53x10^-2, Current muon LR=0.0020][A[A
+
+Training:  36%|███▌      | 18/50 [01:34<02:02,  3.82s/epoch, Train s2t loss=5.62x10^-2, Val s2t loss=6.79x10^-2, Best val s2t loss=6.53x10^-2, Current muon LR=0.0020][A[A
+
+Training:  36%|███▌      | 18/50 [01:38<02:02,  3.82s/epoch, Train s2t loss=5.52x10^-2, Val s2t loss=6.42x10^-2, Best val s2t loss=6.42x10^-2, Current muon LR=0.0020][A[A
+
+Training:  38%|███▊      | 19/50 [01:38<01:59,  3.85s/epoch, Train s2t loss=5.52x10^-2, Val s2t loss=6.42x10^-2, Best val s2t loss=6.42x10^-2, Current muon LR=0.0020][A[A
+
+Training:  38%|███▊      | 19/50 [01:42<01:59,  3.85s/epoch, Train s2t loss=5.18x10^-2, Val s2t loss=6.51x10^-2, Best val s2t loss=6.42x10^-2, Current muon LR=0.0020][A[A
+
+Training:  40%|████      | 20/50 [01:42<01:55,  3.86s/epoch, Train s2t loss=5.18x10^-2, Val s2t loss=6.51x10^-2, Best val s2t loss=6.42x10^-2, Current muon LR=0.0020][A[A
+
+Training:  40%|████      | 20/50 [01:45<01:55,  3.86s/epoch, Train s2t loss=5.02x10^-2, Val s2t loss=6.19x10^-2, Best val s2t loss=6.19x10^-2, Current muon LR=0.0020][A[A
+
+Training:  42%|████▏     | 21/50 [01:45<01:51,  3.85s/epoch, Train s2t loss=5.02x10^-2, Val s2t loss=6.19x10^-2, Best val s2t loss=6.19x10^-2, Current muon LR=0.0020][A[A
+
+Training:  42%|████▏     | 21/50 [01:49<01:51,  3.85s/epoch, Train s2t loss=4.78x10^-2, Val s2t loss=6.65x10^-2, Best val s2t loss=6.19x10^-2, Current muon LR=0.0020][A[A
+
+Training:  44%|████▍     | 22/50 [01:49<01:47,  3.83s/epoch, Train s2t loss=4.78x10^-2, Val s2t loss=6.65x10^-2, Best val s2t loss=6.19x10^-2, Current muon LR=0.0020][A[A
+
+Training:  44%|████▍     | 22/50 [01:53<01:47,  3.83s/epoch, Train s2t loss=4.66x10^-2, Val s2t loss=6.38x10^-2, Best val s2t loss=6.19x10^-2, Current muon LR=0.0020][A[A
+
+Training:  46%|████▌     | 23/50 [01:53<01:42,  3.80s/epoch, Train s2t loss=4.66x10^-2, Val s2t loss=6.38x10^-2, Best val s2t loss=6.19x10^-2, Current muon LR=0.0020][A[A
+
+Training:  46%|████▌     | 23/50 [01:57<01:42,  3.80s/epoch, Train s2t loss=4.61x10^-2, Val s2t loss=6.20x10^-2, Best val s2t loss=6.19x10^-2, Current muon LR=0.0020][A[A
+
+Training:  48%|████▊     | 24/50 [01:57<01:38,  3.81s/epoch, Train s2t loss=4.61x10^-2, Val s2t loss=6.20x10^-2, Best val s2t loss=6.19x10^-2, Current muon LR=0.0020][A[A
+
+Training:  48%|████▊     | 24/50 [02:00<01:38,  3.81s/epoch, Train s2t loss=4.51x10^-2, Val s2t loss=6.25x10^-2, Best val s2t loss=6.19x10^-2, Current muon LR=0.0020][A[A
+
+Training:  50%|█████     | 25/50 [02:00<01:35,  3.80s/epoch, Train s2t loss=4.51x10^-2, Val s2t loss=6.25x10^-2, Best val s2t loss=6.19x10^-2, Current muon LR=0.0020][A[A
+
+Training:  50%|█████     | 25/50 [02:04<01:35,  3.80s/epoch, Train s2t loss=4.40x10^-2, Val s2t loss=6.42x10^-2, Best val s2t loss=6.19x10^-2, Current muon LR=0.0020][A[A
+
+Training:  52%|█████▏    | 26/50 [02:04<01:31,  3.81s/epoch, Train s2t loss=4.40x10^-2, Val s2t loss=6.42x10^-2, Best val s2t loss=6.19x10^-2, Current muon LR=0.0020][A[A
+
+Training:  52%|█████▏    | 26/50 [02:08<01:31,  3.81s/epoch, Train s2t loss=4.25x10^-2, Val s2t loss=6.20x10^-2, Best val s2t loss=6.19x10^-2, Current muon LR=0.0020][A[A
+
+Training:  54%|█████▍    | 27/50 [02:08<01:27,  3.82s/epoch, Train s2t loss=4.25x10^-2, Val s2t loss=6.20x10^-2, Best val s2t loss=6.19x10^-2, Current muon LR=0.0020][A[A
+
+Training:  54%|█████▍    | 27/50 [02:12<01:27,  3.82s/epoch, Train s2t loss=4.03x10^-2, Val s2t loss=6.09x10^-2, Best val s2t loss=6.09x10^-2, Current muon LR=0.0020][A[A
+
+Training:  56%|█████▌    | 28/50 [02:12<01:27,  3.97s/epoch, Train s2t loss=4.03x10^-2, Val s2t loss=6.09x10^-2, Best val s2t loss=6.09x10^-2, Current muon LR=0.0020][A[A
+
+Training:  56%|█████▌    | 28/50 [02:17<01:27,  3.97s/epoch, Train s2t loss=4.08x10^-2, Val s2t loss=6.13x10^-2, Best val s2t loss=6.09x10^-2, Current muon LR=0.0020][A[A
+
+Training:  58%|█████▊    | 29/50 [02:17<01:26,  4.14s/epoch, Train s2t loss=4.08x10^-2, Val s2t loss=6.13x10^-2, Best val s2t loss=6.09x10^-2, Current muon LR=0.0020][A[A
+
+Training:  58%|█████▊    | 29/50 [02:21<01:26,  4.14s/epoch, Train s2t loss=3.92x10^-2, Val s2t loss=6.28x10^-2, Best val s2t loss=6.09x10^-2, Current muon LR=0.0020][A[A
+
+Training:  60%|██████    | 30/50 [02:21<01:20,  4.04s/epoch, Train s2t loss=3.92x10^-2, Val s2t loss=6.28x10^-2, Best val s2t loss=6.09x10^-2, Current muon LR=0.0020][A[A
+
+Training:  60%|██████    | 30/50 [02:25<01:20,  4.04s/epoch, Train s2t loss=3.79x10^-2, Val s2t loss=6.19x10^-2, Best val s2t loss=6.09x10^-2, Current muon LR=0.0020][A[A
+
+Training:  62%|██████▏   | 31/50 [02:25<01:15,  3.97s/epoch, Train s2t loss=3.79x10^-2, Val s2t loss=6.19x10^-2, Best val s2t loss=6.09x10^-2, Current muon LR=0.0020][A[A
+
+Training:  62%|██████▏   | 31/50 [02:28<01:15,  3.97s/epoch, Train s2t loss=3.75x10^-2, Val s2t loss=6.09x10^-2, Best val s2t loss=6.09x10^-2, Current muon LR=0.0020][A[A
+
+Training:  64%|██████▍   | 32/50 [02:28<01:10,  3.93s/epoch, Train s2t loss=3.75x10^-2, Val s2t loss=6.09x10^-2, Best val s2t loss=6.09x10^-2, Current muon LR=0.0020][A[A
+
+Training:  64%|██████▍   | 32/50 [02:32<01:10,  3.93s/epoch, Train s2t loss=3.69x10^-2, Val s2t loss=6.15x10^-2, Best val s2t loss=6.09x10^-2, Current muon LR=0.0020][A[A
+
+Training:  66%|██████▌   | 33/50 [02:32<01:06,  3.89s/epoch, Train s2t loss=3.69x10^-2, Val s2t loss=6.15x10^-2, Best val s2t loss=6.09x10^-2, Current muon LR=0.0020][A[A
+
+Training:  66%|██████▌   | 33/50 [02:36<01:06,  3.89s/epoch, Train s2t loss=3.64x10^-2, Val s2t loss=5.98x10^-2, Best val s2t loss=5.98x10^-2, Current muon LR=0.0020][A[A
+
+Training:  68%|██████▊   | 34/50 [02:36<01:02,  3.90s/epoch, Train s2t loss=3.64x10^-2, Val s2t loss=5.98x10^-2, Best val s2t loss=5.98x10^-2, Current muon LR=0.0020][A[A
+
+Training:  68%|██████▊   | 34/50 [02:40<01:02,  3.90s/epoch, Train s2t loss=3.63x10^-2, Val s2t loss=6.12x10^-2, Best val s2t loss=5.98x10^-2, Current muon LR=0.0020][A[A
+
+Training:  70%|███████   | 35/50 [02:40<00:58,  3.87s/epoch, Train s2t loss=3.63x10^-2, Val s2t loss=6.12x10^-2, Best val s2t loss=5.98x10^-2, Current muon LR=0.0020][A[A
+
+Training:  70%|███████   | 35/50 [02:44<00:58,  3.87s/epoch, Train s2t loss=3.59x10^-2, Val s2t loss=5.92x10^-2, Best val s2t loss=5.92x10^-2, Current muon LR=0.0020][A[A
+
+Training:  72%|███████▏  | 36/50 [02:44<00:54,  3.86s/epoch, Train s2t loss=3.59x10^-2, Val s2t loss=5.92x10^-2, Best val s2t loss=5.92x10^-2, Current muon LR=0.0020][A[A
+
+Training:  72%|███████▏  | 36/50 [02:48<00:54,  3.86s/epoch, Train s2t loss=3.44x10^-2, Val s2t loss=5.84x10^-2, Best val s2t loss=5.84x10^-2, Current muon LR=0.0020][A[A
+
+Training:  74%|███████▍  | 37/50 [02:48<00:49,  3.85s/epoch, Train s2t loss=3.44x10^-2, Val s2t loss=5.84x10^-2, Best val s2t loss=5.84x10^-2, Current muon LR=0.0020][A[A
+
+Training:  74%|███████▍  | 37/50 [02:51<00:49,  3.85s/epoch, Train s2t loss=3.30x10^-2, Val s2t loss=6.16x10^-2, Best val s2t loss=5.84x10^-2, Current muon LR=0.0020][A[A
+
+Training:  76%|███████▌  | 38/50 [02:51<00:46,  3.83s/epoch, Train s2t loss=3.30x10^-2, Val s2t loss=6.16x10^-2, Best val s2t loss=5.84x10^-2, Current muon LR=0.0020][A[A
+
+Training:  76%|███████▌  | 38/50 [02:55<00:46,  3.83s/epoch, Train s2t loss=3.29x10^-2, Val s2t loss=5.89x10^-2, Best val s2t loss=5.84x10^-2, Current muon LR=0.0020][A[A
+
+Training:  78%|███████▊  | 39/50 [02:55<00:42,  3.82s/epoch, Train s2t loss=3.29x10^-2, Val s2t loss=5.89x10^-2, Best val s2t loss=5.84x10^-2, Current muon LR=0.0020][A[A
+
+Training:  78%|███████▊  | 39/50 [02:59<00:42,  3.82s/epoch, Train s2t loss=3.19x10^-2, Val s2t loss=6.15x10^-2, Best val s2t loss=5.84x10^-2, Current muon LR=0.0020][A[A
+
+Training:  80%|████████  | 40/50 [02:59<00:38,  3.82s/epoch, Train s2t loss=3.19x10^-2, Val s2t loss=6.15x10^-2, Best val s2t loss=5.84x10^-2, Current muon LR=0.0020][A[A
+
+Training:  80%|████████  | 40/50 [03:03<00:38,  3.82s/epoch, Train s2t loss=3.19x10^-2, Val s2t loss=5.87x10^-2, Best val s2t loss=5.84x10^-2, Current muon LR=0.0020][A[A
+
+Training:  82%|████████▏ | 41/50 [03:03<00:34,  3.82s/epoch, Train s2t loss=3.19x10^-2, Val s2t loss=5.87x10^-2, Best val s2t loss=5.84x10^-2, Current muon LR=0.0020][A[A
+
+Training:  82%|████████▏ | 41/50 [03:07<00:34,  3.82s/epoch, Train s2t loss=3.14x10^-2, Val s2t loss=6.08x10^-2, Best val s2t loss=5.84x10^-2, Current muon LR=0.0020][A[A
+
+Training:  84%|████████▍ | 42/50 [03:07<00:30,  3.84s/epoch, Train s2t loss=3.14x10^-2, Val s2t loss=6.08x10^-2, Best val s2t loss=5.84x10^-2, Current muon LR=0.0020][A[A
+
+Training:  84%|████████▍ | 42/50 [03:11<00:30,  3.84s/epoch, Train s2t loss=3.14x10^-2, Val s2t loss=5.97x10^-2, Best val s2t loss=5.84x10^-2, Current muon LR=0.0020][A[A
+
+Training:  86%|████████▌ | 43/50 [03:11<00:26,  3.82s/epoch, Train s2t loss=3.14x10^-2, Val s2t loss=5.97x10^-2, Best val s2t loss=5.84x10^-2, Current muon LR=0.0020][A[A
+
+Training:  86%|████████▌ | 43/50 [03:14<00:26,  3.82s/epoch, Train s2t loss=3.05x10^-2, Val s2t loss=6.02x10^-2, Best val s2t loss=5.84x10^-2, Current muon LR=0.0020][A[A
+
+Training:  88%|████████▊ | 44/50 [03:14<00:22,  3.82s/epoch, Train s2t loss=3.05x10^-2, Val s2t loss=6.02x10^-2, Best val s2t loss=5.84x10^-2, Current muon LR=0.0020][A[A
+
+Training:  88%|████████▊ | 44/50 [03:18<00:22,  3.82s/epoch, Train s2t loss=3.03x10^-2, Val s2t loss=6.03x10^-2, Best val s2t loss=5.84x10^-2, Current muon LR=0.0020][A[A
+
+Training:  90%|█████████ | 45/50 [03:18<00:19,  3.81s/epoch, Train s2t loss=3.03x10^-2, Val s2t loss=6.03x10^-2, Best val s2t loss=5.84x10^-2, Current muon LR=0.0020][A[A
+
+Training:  90%|█████████ | 45/50 [03:22<00:19,  3.81s/epoch, Train s2t loss=2.91x10^-2, Val s2t loss=5.94x10^-2, Best val s2t loss=5.84x10^-2, Current muon LR=0.0020][A[A
+
+Training:  92%|█████████▏| 46/50 [03:22<00:15,  3.82s/epoch, Train s2t loss=2.91x10^-2, Val s2t loss=5.94x10^-2, Best val s2t loss=5.84x10^-2, Current muon LR=0.0020][A[A
+
+Training:  92%|█████████▏| 46/50 [03:26<00:15,  3.82s/epoch, Train s2t loss=2.80x10^-2, Val s2t loss=5.93x10^-2, Best val s2t loss=5.84x10^-2, Current muon LR=0.0020][A[A
+
+Training:  94%|█████████▍| 47/50 [03:26<00:11,  3.82s/epoch, Train s2t loss=2.80x10^-2, Val s2t loss=5.93x10^-2, Best val s2t loss=5.84x10^-2, Current muon LR=0.0020][A[A
+
+Training:  94%|█████████▍| 47/50 [03:30<00:11,  3.82s/epoch, Train s2t loss=2.83x10^-2, Val s2t loss=5.75x10^-2, Best val s2t loss=5.75x10^-2, Current muon LR=0.0020][A[A
+
+Training:  96%|█████████▌| 48/50 [03:30<00:07,  3.82s/epoch, Train s2t loss=2.83x10^-2, Val s2t loss=5.75x10^-2, Best val s2t loss=5.75x10^-2, Current muon LR=0.0020][A[A
+
+Training:  96%|█████████▌| 48/50 [03:33<00:07,  3.82s/epoch, Train s2t loss=2.79x10^-2, Val s2t loss=6.07x10^-2, Best val s2t loss=5.75x10^-2, Current muon LR=0.0020][A[A
+
+Training:  98%|█████████▊| 49/50 [03:33<00:03,  3.82s/epoch, Train s2t loss=2.79x10^-2, Val s2t loss=6.07x10^-2, Best val s2t loss=5.75x10^-2, Current muon LR=0.0020][A[A
+
+Training:  98%|█████████▊| 49/50 [03:37<00:03,  3.82s/epoch, Train s2t loss=2.76x10^-2, Val s2t loss=6.00x10^-2, Best val s2t loss=5.75x10^-2, Current muon LR=0.0020][A[A
+
+Training: 100%|██████████| 50/50 [03:37<00:00,  3.84s/epoch, Train s2t loss=2.76x10^-2, Val s2t loss=6.00x10^-2, Best val s2t loss=5.75x10^-2, Current muon LR=0.0020][A[A
+
+                                                                                                                                                                      [A[A
+                                               [A
+Run 1/3:   0%|          | 0/3 [03:46<?, ?run/s][A
+                                               [A
+Run 1/3:   0%|          | 0/3 [03:46<?, ?run/s][A
+Run 1/3:  33%|███▎      | 1/3 [03:46<07:32, 226.19s/run][A
+Run 2/3:  33%|███▎      | 1/3 [03:46<07:32, 226.19s/run][A
+                                                        [A
+Run 2/3:  33%|███▎      | 1/3 [03:48<07:32, 226.19s/run][A
+                                                        [A
+Run 2/3:  33%|███▎      | 1/3 [03:48<07:32, 226.19s/run][ATotal params: 4,347,428
+Total trainable params: 4,347,428
+Inferred max_nodes across all molecules as: 9
+Inferred max_edges across all molecules as: 18
+
+
+Training:   0%|          | 0/50 [00:00<?, ?epoch/s][A[A
+
+Training:   0%|          | 0/50 [00:05<?, ?epoch/s, Train s2t loss=78.81x10^-2, Val s2t loss=43.16x10^-2, Best val s2t loss=43.16x10^-2, Current muon LR=0.0020][A[A
+
+Training:   2%|▏         | 1/50 [00:05<04:46,  5.84s/epoch, Train s2t loss=78.81x10^-2, Val s2t loss=43.16x10^-2, Best val s2t loss=43.16x10^-2, Current muon LR=0.0020][A[A
+
+Training:   2%|▏         | 1/50 [00:09<04:46,  5.84s/epoch, Train s2t loss=34.22x10^-2, Val s2t loss=23.11x10^-2, Best val s2t loss=23.11x10^-2, Current muon LR=0.0020][A[A
+
+Training:   4%|▍         | 2/50 [00:09<03:47,  4.75s/epoch, Train s2t loss=34.22x10^-2, Val s2t loss=23.11x10^-2, Best val s2t loss=23.11x10^-2, Current muon LR=0.0020][A[A
+
+Training:   4%|▍         | 2/50 [00:14<03:47,  4.75s/epoch, Train s2t loss=20.84x10^-2, Val s2t loss=16.36x10^-2, Best val s2t loss=16.36x10^-2, Current muon LR=0.0020][A[A
+
+Training:   6%|▌         | 3/50 [00:14<03:34,  4.56s/epoch, Train s2t loss=20.84x10^-2, Val s2t loss=16.36x10^-2, Best val s2t loss=16.36x10^-2, Current muon LR=0.0020][A[A
+
+Training:   6%|▌         | 3/50 [00:17<03:34,  4.56s/epoch, Train s2t loss=15.42x10^-2, Val s2t loss=12.96x10^-2, Best val s2t loss=12.96x10^-2, Current muon LR=0.0020][A[A
+
+Training:   8%|▊         | 4/50 [00:17<03:16,  4.26s/epoch, Train s2t loss=15.42x10^-2, Val s2t loss=12.96x10^-2, Best val s2t loss=12.96x10^-2, Current muon LR=0.0020][A[A
+
+Training:   8%|▊         | 4/50 [00:21<03:16,  4.26s/epoch, Train s2t loss=12.72x10^-2, Val s2t loss=11.56x10^-2, Best val s2t loss=11.56x10^-2, Current muon LR=0.0020][A[A
+
+Training:  10%|█         | 5/50 [00:21<03:05,  4.13s/epoch, Train s2t loss=12.72x10^-2, Val s2t loss=11.56x10^-2, Best val s2t loss=11.56x10^-2, Current muon LR=0.0020][A[A
+
+Training:  10%|█         | 5/50 [00:25<03:05,  4.13s/epoch, Train s2t loss=11.25x10^-2, Val s2t loss=10.09x10^-2, Best val s2t loss=10.09x10^-2, Current muon LR=0.0020][A[A
+
+Training:  12%|█▏        | 6/50 [00:25<02:57,  4.03s/epoch, Train s2t loss=11.25x10^-2, Val s2t loss=10.09x10^-2, Best val s2t loss=10.09x10^-2, Current muon LR=0.0020][A[A
+
+Training:  12%|█▏        | 6/50 [00:29<02:57,  4.03s/epoch, Train s2t loss=10.07x10^-2, Val s2t loss=9.68x10^-2, Best val s2t loss=9.68x10^-2, Current muon LR=0.0020]  [A[A
+
+Training:  14%|█▍        | 7/50 [00:29<02:50,  3.97s/epoch, Train s2t loss=10.07x10^-2, Val s2t loss=9.68x10^-2, Best val s2t loss=9.68x10^-2, Current muon LR=0.0020][A[A
+
+Training:  14%|█▍        | 7/50 [00:33<02:50,  3.97s/epoch, Train s2t loss=9.47x10^-2, Val s2t loss=8.90x10^-2, Best val s2t loss=8.90x10^-2, Current muon LR=0.0020] [A[A
+
+Training:  16%|█▌        | 8/50 [00:33<02:48,  4.01s/epoch, Train s2t loss=9.47x10^-2, Val s2t loss=8.90x10^-2, Best val s2t loss=8.90x10^-2, Current muon LR=0.0020][A[A
+
+Training:  16%|█▌        | 8/50 [00:37<02:48,  4.01s/epoch, Train s2t loss=8.75x10^-2, Val s2t loss=8.17x10^-2, Best val s2t loss=8.17x10^-2, Current muon LR=0.0020][A[A
+
+Training:  18%|█▊        | 9/50 [00:37<02:42,  3.97s/epoch, Train s2t loss=8.75x10^-2, Val s2t loss=8.17x10^-2, Best val s2t loss=8.17x10^-2, Current muon LR=0.0020][A[A
+
+Training:  18%|█▊        | 9/50 [00:41<02:42,  3.97s/epoch, Train s2t loss=8.13x10^-2, Val s2t loss=8.07x10^-2, Best val s2t loss=8.07x10^-2, Current muon LR=0.0020][A[A
+
+Training:  20%|██        | 10/50 [00:41<02:36,  3.92s/epoch, Train s2t loss=8.13x10^-2, Val s2t loss=8.07x10^-2, Best val s2t loss=8.07x10^-2, Current muon LR=0.0020][A[A
+
+Training:  20%|██        | 10/50 [00:45<02:36,  3.92s/epoch, Train s2t loss=7.71x10^-2, Val s2t loss=7.77x10^-2, Best val s2t loss=7.77x10^-2, Current muon LR=0.0020][A[A
+
+Training:  22%|██▏       | 11/50 [00:45<02:31,  3.89s/epoch, Train s2t loss=7.71x10^-2, Val s2t loss=7.77x10^-2, Best val s2t loss=7.77x10^-2, Current muon LR=0.0020][A[A
+
+Training:  22%|██▏       | 11/50 [00:48<02:31,  3.89s/epoch, Train s2t loss=7.38x10^-2, Val s2t loss=7.52x10^-2, Best val s2t loss=7.52x10^-2, Current muon LR=0.0020][A[A
+
+Training:  24%|██▍       | 12/50 [00:48<02:27,  3.87s/epoch, Train s2t loss=7.38x10^-2, Val s2t loss=7.52x10^-2, Best val s2t loss=7.52x10^-2, Current muon LR=0.0020][A[A
+
+Training:  24%|██▍       | 12/50 [00:52<02:27,  3.87s/epoch, Train s2t loss=7.11x10^-2, Val s2t loss=7.53x10^-2, Best val s2t loss=7.52x10^-2, Current muon LR=0.0020][A[A
+
+Training:  26%|██▌       | 13/50 [00:52<02:23,  3.87s/epoch, Train s2t loss=7.11x10^-2, Val s2t loss=7.53x10^-2, Best val s2t loss=7.52x10^-2, Current muon LR=0.0020][A[A
+
+Training:  26%|██▌       | 13/50 [00:56<02:23,  3.87s/epoch, Train s2t loss=6.68x10^-2, Val s2t loss=7.18x10^-2, Best val s2t loss=7.18x10^-2, Current muon LR=0.0020][A[A
+
+Training:  28%|██▊       | 14/50 [00:56<02:19,  3.87s/epoch, Train s2t loss=6.68x10^-2, Val s2t loss=7.18x10^-2, Best val s2t loss=7.18x10^-2, Current muon LR=0.0020][A[A
+
+Training:  28%|██▊       | 14/50 [01:00<02:19,  3.87s/epoch, Train s2t loss=6.37x10^-2, Val s2t loss=7.08x10^-2, Best val s2t loss=7.08x10^-2, Current muon LR=0.0020][A[A
+
+Training:  30%|███       | 15/50 [01:00<02:14,  3.85s/epoch, Train s2t loss=6.37x10^-2, Val s2t loss=7.08x10^-2, Best val s2t loss=7.08x10^-2, Current muon LR=0.0020][A[A
+
+Training:  30%|███       | 15/50 [01:04<02:14,  3.85s/epoch, Train s2t loss=5.99x10^-2, Val s2t loss=7.03x10^-2, Best val s2t loss=7.03x10^-2, Current muon LR=0.0020][A[A
+
+Training:  32%|███▏      | 16/50 [01:04<02:10,  3.84s/epoch, Train s2t loss=5.99x10^-2, Val s2t loss=7.03x10^-2, Best val s2t loss=7.03x10^-2, Current muon LR=0.0020][A[A
+
+Training:  32%|███▏      | 16/50 [01:08<02:10,  3.84s/epoch, Train s2t loss=5.76x10^-2, Val s2t loss=7.05x10^-2, Best val s2t loss=7.03x10^-2, Current muon LR=0.0020][A[A
+
+Training:  34%|███▍      | 17/50 [01:08<02:06,  3.82s/epoch, Train s2t loss=5.76x10^-2, Val s2t loss=7.05x10^-2, Best val s2t loss=7.03x10^-2, Current muon LR=0.0020][A[A
+
+Training:  34%|███▍      | 17/50 [01:12<02:06,  3.82s/epoch, Train s2t loss=5.59x10^-2, Val s2t loss=7.19x10^-2, Best val s2t loss=7.03x10^-2, Current muon LR=0.0020][A[A
+
+Training:  36%|███▌      | 18/50 [01:12<02:02,  3.84s/epoch, Train s2t loss=5.59x10^-2, Val s2t loss=7.19x10^-2, Best val s2t loss=7.03x10^-2, Current muon LR=0.0020][A[A
+
+Training:  36%|███▌      | 18/50 [01:15<02:02,  3.84s/epoch, Train s2t loss=5.40x10^-2, Val s2t loss=6.78x10^-2, Best val s2t loss=6.78x10^-2, Current muon LR=0.0020][A[A
+
+Training:  38%|███▊      | 19/50 [01:15<01:59,  3.85s/epoch, Train s2t loss=5.40x10^-2, Val s2t loss=6.78x10^-2, Best val s2t loss=6.78x10^-2, Current muon LR=0.0020][A[A
+
+Training:  38%|███▊      | 19/50 [01:19<01:59,  3.85s/epoch, Train s2t loss=5.21x10^-2, Val s2t loss=6.85x10^-2, Best val s2t loss=6.78x10^-2, Current muon LR=0.0020][A[A
+
+Training:  40%|████      | 20/50 [01:19<01:55,  3.84s/epoch, Train s2t loss=5.21x10^-2, Val s2t loss=6.85x10^-2, Best val s2t loss=6.78x10^-2, Current muon LR=0.0020][A[A
+
+Training:  40%|████      | 20/50 [01:23<01:55,  3.84s/epoch, Train s2t loss=5.03x10^-2, Val s2t loss=6.74x10^-2, Best val s2t loss=6.74x10^-2, Current muon LR=0.0020][A[A
+
+Training:  42%|████▏     | 21/50 [01:23<01:52,  3.90s/epoch, Train s2t loss=5.03x10^-2, Val s2t loss=6.74x10^-2, Best val s2t loss=6.74x10^-2, Current muon LR=0.0020][A[A
+
+Training:  42%|████▏     | 21/50 [01:27<01:52,  3.90s/epoch, Train s2t loss=4.86x10^-2, Val s2t loss=6.76x10^-2, Best val s2t loss=6.74x10^-2, Current muon LR=0.0020][A[A
+
+Training:  44%|████▍     | 22/50 [01:27<01:48,  3.89s/epoch, Train s2t loss=4.86x10^-2, Val s2t loss=6.76x10^-2, Best val s2t loss=6.74x10^-2, Current muon LR=0.0020][A[A
+
+Training:  44%|████▍     | 22/50 [01:31<01:48,  3.89s/epoch, Train s2t loss=4.72x10^-2, Val s2t loss=6.91x10^-2, Best val s2t loss=6.74x10^-2, Current muon LR=0.0020][A[A
+
+Training:  46%|████▌     | 23/50 [01:31<01:44,  3.87s/epoch, Train s2t loss=4.72x10^-2, Val s2t loss=6.91x10^-2, Best val s2t loss=6.74x10^-2, Current muon LR=0.0020][A[A
+
+Training:  46%|████▌     | 23/50 [01:35<01:44,  3.87s/epoch, Train s2t loss=4.57x10^-2, Val s2t loss=6.90x10^-2, Best val s2t loss=6.74x10^-2, Current muon LR=0.0020][A[A
+
+Training:  48%|████▊     | 24/50 [01:35<01:40,  3.86s/epoch, Train s2t loss=4.57x10^-2, Val s2t loss=6.90x10^-2, Best val s2t loss=6.74x10^-2, Current muon LR=0.0020][A[A
+
+Training:  48%|████▊     | 24/50 [01:39<01:40,  3.86s/epoch, Train s2t loss=4.34x10^-2, Val s2t loss=6.76x10^-2, Best val s2t loss=6.74x10^-2, Current muon LR=0.0020][A[A
+
+Training:  50%|█████     | 25/50 [01:39<01:36,  3.85s/epoch, Train s2t loss=4.34x10^-2, Val s2t loss=6.76x10^-2, Best val s2t loss=6.74x10^-2, Current muon LR=0.0020][A[A
+
+Training:  50%|█████     | 25/50 [01:42<01:36,  3.85s/epoch, Train s2t loss=4.19x10^-2, Val s2t loss=6.66x10^-2, Best val s2t loss=6.66x10^-2, Current muon LR=0.0020][A[A
+
+Training:  52%|█████▏    | 26/50 [01:42<01:32,  3.86s/epoch, Train s2t loss=4.19x10^-2, Val s2t loss=6.66x10^-2, Best val s2t loss=6.66x10^-2, Current muon LR=0.0020][A[A
+
+Training:  52%|█████▏    | 26/50 [01:46<01:32,  3.86s/epoch, Train s2t loss=4.13x10^-2, Val s2t loss=6.61x10^-2, Best val s2t loss=6.61x10^-2, Current muon LR=0.0020][A[A
+
+Training:  54%|█████▍    | 27/50 [01:46<01:28,  3.86s/epoch, Train s2t loss=4.13x10^-2, Val s2t loss=6.61x10^-2, Best val s2t loss=6.61x10^-2, Current muon LR=0.0020][A[A
+
+Training:  54%|█████▍    | 27/50 [01:50<01:28,  3.86s/epoch, Train s2t loss=3.99x10^-2, Val s2t loss=6.62x10^-2, Best val s2t loss=6.61x10^-2, Current muon LR=0.0020][A[A
+
+Training:  56%|█████▌    | 28/50 [01:50<01:25,  3.87s/epoch, Train s2t loss=3.99x10^-2, Val s2t loss=6.62x10^-2, Best val s2t loss=6.61x10^-2, Current muon LR=0.0020][A[A
+
+Training:  56%|█████▌    | 28/50 [01:54<01:25,  3.87s/epoch, Train s2t loss=3.88x10^-2, Val s2t loss=6.45x10^-2, Best val s2t loss=6.45x10^-2, Current muon LR=0.0020][A[A
+
+Training:  58%|█████▊    | 29/50 [01:54<01:21,  3.89s/epoch, Train s2t loss=3.88x10^-2, Val s2t loss=6.45x10^-2, Best val s2t loss=6.45x10^-2, Current muon LR=0.0020][A[A
+
+Training:  58%|█████▊    | 29/50 [01:58<01:21,  3.89s/epoch, Train s2t loss=3.82x10^-2, Val s2t loss=6.74x10^-2, Best val s2t loss=6.45x10^-2, Current muon LR=0.0020][A[A
+
+Training:  60%|██████    | 30/50 [01:58<01:17,  3.87s/epoch, Train s2t loss=3.82x10^-2, Val s2t loss=6.74x10^-2, Best val s2t loss=6.45x10^-2, Current muon LR=0.0020][A[A
+
+Training:  60%|██████    | 30/50 [02:02<01:17,  3.87s/epoch, Train s2t loss=3.89x10^-2, Val s2t loss=6.76x10^-2, Best val s2t loss=6.45x10^-2, Current muon LR=0.0020][A[A
+
+Training:  62%|██████▏   | 31/50 [02:02<01:13,  3.86s/epoch, Train s2t loss=3.89x10^-2, Val s2t loss=6.76x10^-2, Best val s2t loss=6.45x10^-2, Current muon LR=0.0020][A[A
+
+Training:  62%|██████▏   | 31/50 [02:06<01:13,  3.86s/epoch, Train s2t loss=3.87x10^-2, Val s2t loss=6.64x10^-2, Best val s2t loss=6.45x10^-2, Current muon LR=0.0020][A[A
+
+Training:  64%|██████▍   | 32/50 [02:06<01:09,  3.84s/epoch, Train s2t loss=3.87x10^-2, Val s2t loss=6.64x10^-2, Best val s2t loss=6.45x10^-2, Current muon LR=0.0020][A[A
+
+Training:  64%|██████▍   | 32/50 [02:09<01:09,  3.84s/epoch, Train s2t loss=3.88x10^-2, Val s2t loss=6.60x10^-2, Best val s2t loss=6.45x10^-2, Current muon LR=0.0020][A[A
+
+Training:  66%|██████▌   | 33/50 [02:09<01:05,  3.83s/epoch, Train s2t loss=3.88x10^-2, Val s2t loss=6.60x10^-2, Best val s2t loss=6.45x10^-2, Current muon LR=0.0020][A[A
+
+Training:  66%|██████▌   | 33/50 [02:13<01:05,  3.83s/epoch, Train s2t loss=3.82x10^-2, Val s2t loss=6.66x10^-2, Best val s2t loss=6.45x10^-2, Current muon LR=0.0020][A[A
+
+Training:  68%|██████▊   | 34/50 [02:13<01:01,  3.83s/epoch, Train s2t loss=3.82x10^-2, Val s2t loss=6.66x10^-2, Best val s2t loss=6.45x10^-2, Current muon LR=0.0020][A[A
+
+Training:  68%|██████▊   | 34/50 [02:17<01:01,  3.83s/epoch, Train s2t loss=3.69x10^-2, Val s2t loss=6.68x10^-2, Best val s2t loss=6.45x10^-2, Current muon LR=0.0020][A[A
+
+Training:  70%|███████   | 35/50 [02:17<00:57,  3.82s/epoch, Train s2t loss=3.69x10^-2, Val s2t loss=6.68x10^-2, Best val s2t loss=6.45x10^-2, Current muon LR=0.0020][A[A
+
+Training:  70%|███████   | 35/50 [02:21<00:57,  3.82s/epoch, Train s2t loss=3.54x10^-2, Val s2t loss=6.42x10^-2, Best val s2t loss=6.42x10^-2, Current muon LR=0.0020][A[A
+
+Training:  72%|███████▏  | 36/50 [02:21<00:53,  3.85s/epoch, Train s2t loss=3.54x10^-2, Val s2t loss=6.42x10^-2, Best val s2t loss=6.42x10^-2, Current muon LR=0.0020][A[A
+
+Training:  72%|███████▏  | 36/50 [02:25<00:53,  3.85s/epoch, Train s2t loss=3.46x10^-2, Val s2t loss=6.27x10^-2, Best val s2t loss=6.27x10^-2, Current muon LR=0.0020][A[A
+
+Training:  74%|███████▍  | 37/50 [02:25<00:50,  3.85s/epoch, Train s2t loss=3.46x10^-2, Val s2t loss=6.27x10^-2, Best val s2t loss=6.27x10^-2, Current muon LR=0.0020][A[A
+
+Training:  74%|███████▍  | 37/50 [02:29<00:50,  3.85s/epoch, Train s2t loss=3.33x10^-2, Val s2t loss=6.36x10^-2, Best val s2t loss=6.27x10^-2, Current muon LR=0.0020][A[A
+
+Training:  76%|███████▌  | 38/50 [02:29<00:46,  3.84s/epoch, Train s2t loss=3.33x10^-2, Val s2t loss=6.36x10^-2, Best val s2t loss=6.27x10^-2, Current muon LR=0.0020][A[A
+
+Training:  76%|███████▌  | 38/50 [02:32<00:46,  3.84s/epoch, Train s2t loss=3.31x10^-2, Val s2t loss=6.57x10^-2, Best val s2t loss=6.27x10^-2, Current muon LR=0.0020][A[A
+
+Training:  78%|███████▊  | 39/50 [02:32<00:42,  3.84s/epoch, Train s2t loss=3.31x10^-2, Val s2t loss=6.57x10^-2, Best val s2t loss=6.27x10^-2, Current muon LR=0.0020][A[A
+
+Training:  78%|███████▊  | 39/50 [02:37<00:42,  3.84s/epoch, Train s2t loss=3.28x10^-2, Val s2t loss=6.28x10^-2, Best val s2t loss=6.27x10^-2, Current muon LR=0.0020][A[A
+
+Training:  80%|████████  | 40/50 [02:37<00:39,  3.91s/epoch, Train s2t loss=3.28x10^-2, Val s2t loss=6.28x10^-2, Best val s2t loss=6.27x10^-2, Current muon LR=0.0020][A[A
+
+Training:  80%|████████  | 40/50 [02:40<00:39,  3.91s/epoch, Train s2t loss=3.20x10^-2, Val s2t loss=6.35x10^-2, Best val s2t loss=6.27x10^-2, Current muon LR=0.0020][A[A
+
+Training:  82%|████████▏ | 41/50 [02:40<00:35,  3.92s/epoch, Train s2t loss=3.20x10^-2, Val s2t loss=6.35x10^-2, Best val s2t loss=6.27x10^-2, Current muon LR=0.0020][A[A
+
+Training:  82%|████████▏ | 41/50 [02:44<00:35,  3.92s/epoch, Train s2t loss=3.19x10^-2, Val s2t loss=6.20x10^-2, Best val s2t loss=6.20x10^-2, Current muon LR=0.0020][A[A
+
+Training:  84%|████████▍ | 42/50 [02:44<00:31,  3.89s/epoch, Train s2t loss=3.19x10^-2, Val s2t loss=6.20x10^-2, Best val s2t loss=6.20x10^-2, Current muon LR=0.0020][A[A
+
+Training:  84%|████████▍ | 42/50 [02:48<00:31,  3.89s/epoch, Train s2t loss=3.14x10^-2, Val s2t loss=6.48x10^-2, Best val s2t loss=6.20x10^-2, Current muon LR=0.0020][A[A
+
+Training:  86%|████████▌ | 43/50 [02:48<00:27,  3.92s/epoch, Train s2t loss=3.14x10^-2, Val s2t loss=6.48x10^-2, Best val s2t loss=6.20x10^-2, Current muon LR=0.0020][A[A
+
+Training:  86%|████████▌ | 43/50 [02:52<00:27,  3.92s/epoch, Train s2t loss=3.15x10^-2, Val s2t loss=6.39x10^-2, Best val s2t loss=6.20x10^-2, Current muon LR=0.0020][A[A
+
+Training:  88%|████████▊ | 44/50 [02:52<00:23,  3.93s/epoch, Train s2t loss=3.15x10^-2, Val s2t loss=6.39x10^-2, Best val s2t loss=6.20x10^-2, Current muon LR=0.0020][A[A
+
+Training:  88%|████████▊ | 44/50 [02:56<00:23,  3.93s/epoch, Train s2t loss=3.22x10^-2, Val s2t loss=6.58x10^-2, Best val s2t loss=6.20x10^-2, Current muon LR=0.0020][A[A
+
+Training:  90%|█████████ | 45/50 [02:56<00:19,  3.90s/epoch, Train s2t loss=3.22x10^-2, Val s2t loss=6.58x10^-2, Best val s2t loss=6.20x10^-2, Current muon LR=0.0020][A[A
+
+Training:  90%|█████████ | 45/50 [03:00<00:19,  3.90s/epoch, Train s2t loss=3.10x10^-2, Val s2t loss=6.30x10^-2, Best val s2t loss=6.20x10^-2, Current muon LR=0.0020][A[A
+
+Training:  92%|█████████▏| 46/50 [03:00<00:15,  3.87s/epoch, Train s2t loss=3.10x10^-2, Val s2t loss=6.30x10^-2, Best val s2t loss=6.20x10^-2, Current muon LR=0.0020][A[A
+
+Training:  92%|█████████▏| 46/50 [03:04<00:15,  3.87s/epoch, Train s2t loss=2.99x10^-2, Val s2t loss=6.39x10^-2, Best val s2t loss=6.20x10^-2, Current muon LR=0.0020][A[A
+
+Training:  94%|█████████▍| 47/50 [03:04<00:11,  3.85s/epoch, Train s2t loss=2.99x10^-2, Val s2t loss=6.39x10^-2, Best val s2t loss=6.20x10^-2, Current muon LR=0.0020][A[A
+
+Training:  94%|█████████▍| 47/50 [03:08<00:11,  3.85s/epoch, Train s2t loss=2.95x10^-2, Val s2t loss=6.37x10^-2, Best val s2t loss=6.20x10^-2, Current muon LR=0.0020][A[A
+
+Training:  96%|█████████▌| 48/50 [03:08<00:07,  3.84s/epoch, Train s2t loss=2.95x10^-2, Val s2t loss=6.37x10^-2, Best val s2t loss=6.20x10^-2, Current muon LR=0.0020][A[A
+
+Training:  96%|█████████▌| 48/50 [03:11<00:07,  3.84s/epoch, Train s2t loss=2.89x10^-2, Val s2t loss=6.13x10^-2, Best val s2t loss=6.13x10^-2, Current muon LR=0.0020][A[A
+
+Training:  98%|█████████▊| 49/50 [03:11<00:03,  3.84s/epoch, Train s2t loss=2.89x10^-2, Val s2t loss=6.13x10^-2, Best val s2t loss=6.13x10^-2, Current muon LR=0.0020][A[A
+
+Training:  98%|█████████▊| 49/50 [03:15<00:03,  3.84s/epoch, Train s2t loss=2.83x10^-2, Val s2t loss=6.29x10^-2, Best val s2t loss=6.13x10^-2, Current muon LR=0.0020][A[A
+
+Training: 100%|██████████| 50/50 [03:15<00:00,  3.83s/epoch, Train s2t loss=2.83x10^-2, Val s2t loss=6.29x10^-2, Best val s2t loss=6.13x10^-2, Current muon LR=0.0020][A[A
+
+                                                                                                                                                                      [A[A
+Run 2/3:  67%|██████▋   | 2/3 [07:09<03:32, 212.64s/run][A
+Run 3/3:  67%|██████▋   | 2/3 [07:09<03:32, 212.64s/run][A
+                                                        [A
+Run 3/3:  67%|██████▋   | 2/3 [07:11<03:32, 212.64s/run][A
+                                                        [A
+Run 3/3:  67%|██████▋   | 2/3 [07:11<03:32, 212.64s/run][AInferred max_nodes across all molecules as: 9
+Inferred max_edges across all molecules as: 18
+
+
+Training:   0%|          | 0/50 [00:00<?, ?epoch/s][A[A
+
+Training:   0%|          | 0/50 [00:04<?, ?epoch/s, Train s2t loss=92.29x10^-2, Val s2t loss=44.35x10^-2, Best val s2t loss=44.35x10^-2, Current muon LR=0.0020][A[A
+
+Training:   2%|▏         | 1/50 [00:04<03:37,  4.45s/epoch, Train s2t loss=92.29x10^-2, Val s2t loss=44.35x10^-2, Best val s2t loss=44.35x10^-2, Current muon LR=0.0020][A[A
+
+Training:   2%|▏         | 1/50 [00:08<03:37,  4.45s/epoch, Train s2t loss=36.02x10^-2, Val s2t loss=24.03x10^-2, Best val s2t loss=24.03x10^-2, Current muon LR=0.0020][A[A
+
+Training:   4%|▍         | 2/50 [00:08<03:20,  4.17s/epoch, Train s2t loss=36.02x10^-2, Val s2t loss=24.03x10^-2, Best val s2t loss=24.03x10^-2, Current muon LR=0.0020][A[A
+
+Training:   4%|▍         | 2/50 [00:12<03:20,  4.17s/epoch, Train s2t loss=21.90x10^-2, Val s2t loss=16.52x10^-2, Best val s2t loss=16.52x10^-2, Current muon LR=0.0020][A[A
+
+Training:   6%|▌         | 3/50 [00:12<03:08,  4.01s/epoch, Train s2t loss=21.90x10^-2, Val s2t loss=16.52x10^-2, Best val s2t loss=16.52x10^-2, Current muon LR=0.0020][A[A
+
+Training:   6%|▌         | 3/50 [00:16<03:08,  4.01s/epoch, Train s2t loss=16.03x10^-2, Val s2t loss=12.98x10^-2, Best val s2t loss=12.98x10^-2, Current muon LR=0.0020][A[A
+
+Training:   8%|▊         | 4/50 [00:16<03:00,  3.93s/epoch, Train s2t loss=16.03x10^-2, Val s2t loss=12.98x10^-2, Best val s2t loss=12.98x10^-2, Current muon LR=0.0020][A[A
+
+Training:   8%|▊         | 4/50 [00:19<03:00,  3.93s/epoch, Train s2t loss=13.27x10^-2, Val s2t loss=11.24x10^-2, Best val s2t loss=11.24x10^-2, Current muon LR=0.0020][A[A
+
+Training:  10%|█         | 5/50 [00:19<02:55,  3.90s/epoch, Train s2t loss=13.27x10^-2, Val s2t loss=11.24x10^-2, Best val s2t loss=11.24x10^-2, Current muon LR=0.0020][A[A
+
+Training:  10%|█         | 5/50 [00:23<02:55,  3.90s/epoch, Train s2t loss=11.41x10^-2, Val s2t loss=10.52x10^-2, Best val s2t loss=10.52x10^-2, Current muon LR=0.0020][A[A
+
+Training:  12%|█▏        | 6/50 [00:23<02:50,  3.87s/epoch, Train s2t loss=11.41x10^-2, Val s2t loss=10.52x10^-2, Best val s2t loss=10.52x10^-2, Current muon LR=0.0020][A[A
+
+Training:  12%|█▏        | 6/50 [00:27<02:50,  3.87s/epoch, Train s2t loss=10.03x10^-2, Val s2t loss=9.13x10^-2, Best val s2t loss=9.13x10^-2, Current muon LR=0.0020]  [A[A
+
+Training:  14%|█▍        | 7/50 [00:27<02:46,  3.87s/epoch, Train s2t loss=10.03x10^-2, Val s2t loss=9.13x10^-2, Best val s2t loss=9.13x10^-2, Current muon LR=0.0020][A[A
+
+Training:  14%|█▍        | 7/50 [00:31<02:46,  3.87s/epoch, Train s2t loss=9.20x10^-2, Val s2t loss=8.94x10^-2, Best val s2t loss=8.94x10^-2, Current muon LR=0.0020] [A[A
+
+Training:  16%|█▌        | 8/50 [00:31<02:42,  3.87s/epoch, Train s2t loss=9.20x10^-2, Val s2t loss=8.94x10^-2, Best val s2t loss=8.94x10^-2, Current muon LR=0.0020][A[A
+
+Training:  16%|█▌        | 8/50 [00:35<02:42,  3.87s/epoch, Train s2t loss=8.66x10^-2, Val s2t loss=8.29x10^-2, Best val s2t loss=8.29x10^-2, Current muon LR=0.0020][A[A
+
+Training:  18%|█▊        | 9/50 [00:35<02:37,  3.85s/epoch, Train s2t loss=8.66x10^-2, Val s2t loss=8.29x10^-2, Best val s2t loss=8.29x10^-2, Current muon LR=0.0020][A[A
+
+Training:  18%|█▊        | 9/50 [00:39<02:37,  3.85s/epoch, Train s2t loss=8.15x10^-2, Val s2t loss=8.07x10^-2, Best val s2t loss=8.07x10^-2, Current muon LR=0.0020][A[A
+
+Training:  20%|██        | 10/50 [00:39<02:33,  3.84s/epoch, Train s2t loss=8.15x10^-2, Val s2t loss=8.07x10^-2, Best val s2t loss=8.07x10^-2, Current muon LR=0.0020][A[A
+
+Training:  20%|██        | 10/50 [00:42<02:33,  3.84s/epoch, Train s2t loss=7.63x10^-2, Val s2t loss=7.75x10^-2, Best val s2t loss=7.75x10^-2, Current muon LR=0.0020][A[A
+
+Training:  22%|██▏       | 11/50 [00:42<02:29,  3.83s/epoch, Train s2t loss=7.63x10^-2, Val s2t loss=7.75x10^-2, Best val s2t loss=7.75x10^-2, Current muon LR=0.0020][A[A
+
+Training:  22%|██▏       | 11/50 [00:46<02:29,  3.83s/epoch, Train s2t loss=7.21x10^-2, Val s2t loss=7.49x10^-2, Best val s2t loss=7.49x10^-2, Current muon LR=0.0020][A[A
+
+Training:  24%|██▍       | 12/50 [00:46<02:25,  3.83s/epoch, Train s2t loss=7.21x10^-2, Val s2t loss=7.49x10^-2, Best val s2t loss=7.49x10^-2, Current muon LR=0.0020][A[A
+
+Training:  24%|██▍       | 12/50 [00:50<02:25,  3.83s/epoch, Train s2t loss=6.68x10^-2, Val s2t loss=7.11x10^-2, Best val s2t loss=7.11x10^-2, Current muon LR=0.0020][A[A
+
+Training:  26%|██▌       | 13/50 [00:50<02:21,  3.82s/epoch, Train s2t loss=6.68x10^-2, Val s2t loss=7.11x10^-2, Best val s2t loss=7.11x10^-2, Current muon LR=0.0020][A[A
+
+Training:  26%|██▌       | 13/50 [00:54<02:21,  3.82s/epoch, Train s2t loss=6.41x10^-2, Val s2t loss=7.15x10^-2, Best val s2t loss=7.11x10^-2, Current muon LR=0.0020][A[A
+
+Training:  28%|██▊       | 14/50 [00:54<02:17,  3.81s/epoch, Train s2t loss=6.41x10^-2, Val s2t loss=7.15x10^-2, Best val s2t loss=7.11x10^-2, Current muon LR=0.0020][A[A
+
+Training:  28%|██▊       | 14/50 [00:58<02:17,  3.81s/epoch, Train s2t loss=6.17x10^-2, Val s2t loss=7.02x10^-2, Best val s2t loss=7.02x10^-2, Current muon LR=0.0020][A[A
+
+Training:  30%|███       | 15/50 [00:58<02:13,  3.82s/epoch, Train s2t loss=6.17x10^-2, Val s2t loss=7.02x10^-2, Best val s2t loss=7.02x10^-2, Current muon LR=0.0020][A[A
+
+Training:  30%|███       | 15/50 [01:02<02:13,  3.82s/epoch, Train s2t loss=5.83x10^-2, Val s2t loss=6.92x10^-2, Best val s2t loss=6.92x10^-2, Current muon LR=0.0020][A[A
+
+Training:  32%|███▏      | 16/50 [01:02<02:10,  3.83s/epoch, Train s2t loss=5.83x10^-2, Val s2t loss=6.92x10^-2, Best val s2t loss=6.92x10^-2, Current muon LR=0.0020][A[A
+
+Training:  32%|███▏      | 16/50 [01:05<02:10,  3.83s/epoch, Train s2t loss=5.64x10^-2, Val s2t loss=6.99x10^-2, Best val s2t loss=6.92x10^-2, Current muon LR=0.0020][A[A
+
+Training:  34%|███▍      | 17/50 [01:05<02:06,  3.82s/epoch, Train s2t loss=5.64x10^-2, Val s2t loss=6.99x10^-2, Best val s2t loss=6.92x10^-2, Current muon LR=0.0020][A[A
+
+Training:  34%|███▍      | 17/50 [01:09<02:06,  3.82s/epoch, Train s2t loss=5.34x10^-2, Val s2t loss=6.92x10^-2, Best val s2t loss=6.92x10^-2, Current muon LR=0.0020][A[A
+
+Training:  36%|███▌      | 18/50 [01:09<02:02,  3.82s/epoch, Train s2t loss=5.34x10^-2, Val s2t loss=6.92x10^-2, Best val s2t loss=6.92x10^-2, Current muon LR=0.0020][A[A
+
+Training:  36%|███▌      | 18/50 [01:13<02:02,  3.82s/epoch, Train s2t loss=5.18x10^-2, Val s2t loss=6.84x10^-2, Best val s2t loss=6.84x10^-2, Current muon LR=0.0020][A[A
+
+Training:  38%|███▊      | 19/50 [01:13<01:58,  3.83s/epoch, Train s2t loss=5.18x10^-2, Val s2t loss=6.84x10^-2, Best val s2t loss=6.84x10^-2, Current muon LR=0.0020][A[A
+
+Training:  38%|███▊      | 19/50 [01:17<01:58,  3.83s/epoch, Train s2t loss=5.16x10^-2, Val s2t loss=6.99x10^-2, Best val s2t loss=6.84x10^-2, Current muon LR=0.0020][A[A
+
+Training:  40%|████      | 20/50 [01:17<01:56,  3.88s/epoch, Train s2t loss=5.16x10^-2, Val s2t loss=6.99x10^-2, Best val s2t loss=6.84x10^-2, Current muon LR=0.0020][A[A
+
+Training:  40%|████      | 20/50 [01:21<01:56,  3.88s/epoch, Train s2t loss=4.91x10^-2, Val s2t loss=7.01x10^-2, Best val s2t loss=6.84x10^-2, Current muon LR=0.0020][A[A
+
+Training:  42%|████▏     | 21/50 [01:21<01:51,  3.85s/epoch, Train s2t loss=4.91x10^-2, Val s2t loss=7.01x10^-2, Best val s2t loss=6.84x10^-2, Current muon LR=0.0020][A[A
+
+Training:  42%|████▏     | 21/50 [01:25<01:51,  3.85s/epoch, Train s2t loss=4.81x10^-2, Val s2t loss=6.80x10^-2, Best val s2t loss=6.80x10^-2, Current muon LR=0.0020][A[A
+
+Training:  44%|████▍     | 22/50 [01:25<01:47,  3.84s/epoch, Train s2t loss=4.81x10^-2, Val s2t loss=6.80x10^-2, Best val s2t loss=6.80x10^-2, Current muon LR=0.0020][A[A
+
+Training:  44%|████▍     | 22/50 [01:28<01:47,  3.84s/epoch, Train s2t loss=4.61x10^-2, Val s2t loss=6.96x10^-2, Best val s2t loss=6.80x10^-2, Current muon LR=0.0020][A[A
+
+Training:  46%|████▌     | 23/50 [01:28<01:43,  3.85s/epoch, Train s2t loss=4.61x10^-2, Val s2t loss=6.96x10^-2, Best val s2t loss=6.80x10^-2, Current muon LR=0.0020][A[A
+
+Training:  46%|████▌     | 23/50 [01:32<01:43,  3.85s/epoch, Train s2t loss=4.40x10^-2, Val s2t loss=6.78x10^-2, Best val s2t loss=6.78x10^-2, Current muon LR=0.0020][A[A
+
+Training:  48%|████▊     | 24/50 [01:32<01:39,  3.84s/epoch, Train s2t loss=4.40x10^-2, Val s2t loss=6.78x10^-2, Best val s2t loss=6.78x10^-2, Current muon LR=0.0020][A[A
+
+Training:  48%|████▊     | 24/50 [01:36<01:39,  3.84s/epoch, Train s2t loss=4.30x10^-2, Val s2t loss=6.83x10^-2, Best val s2t loss=6.78x10^-2, Current muon LR=0.0020][A[A
+
+Training:  50%|█████     | 25/50 [01:36<01:35,  3.82s/epoch, Train s2t loss=4.30x10^-2, Val s2t loss=6.83x10^-2, Best val s2t loss=6.78x10^-2, Current muon LR=0.0020][A[A
+
+Training:  50%|█████     | 25/50 [01:40<01:35,  3.82s/epoch, Train s2t loss=4.17x10^-2, Val s2t loss=6.91x10^-2, Best val s2t loss=6.78x10^-2, Current muon LR=0.0020][A[A
+
+Training:  52%|█████▏    | 26/50 [01:40<01:31,  3.81s/epoch, Train s2t loss=4.17x10^-2, Val s2t loss=6.91x10^-2, Best val s2t loss=6.78x10^-2, Current muon LR=0.0020][A[A
+
+Training:  52%|█████▏    | 26/50 [01:44<01:31,  3.81s/epoch, Train s2t loss=4.08x10^-2, Val s2t loss=6.70x10^-2, Best val s2t loss=6.70x10^-2, Current muon LR=0.0020][A[A
+
+Training:  54%|█████▍    | 27/50 [01:44<01:27,  3.81s/epoch, Train s2t loss=4.08x10^-2, Val s2t loss=6.70x10^-2, Best val s2t loss=6.70x10^-2, Current muon LR=0.0020][A[A
+
+Training:  54%|█████▍    | 27/50 [01:47<01:27,  3.81s/epoch, Train s2t loss=3.92x10^-2, Val s2t loss=6.48x10^-2, Best val s2t loss=6.48x10^-2, Current muon LR=0.0020][A[A
+
+Training:  56%|█████▌    | 28/50 [01:47<01:23,  3.81s/epoch, Train s2t loss=3.92x10^-2, Val s2t loss=6.48x10^-2, Best val s2t loss=6.48x10^-2, Current muon LR=0.0020][A[A
+
+Training:  56%|█████▌    | 28/50 [01:51<01:23,  3.81s/epoch, Train s2t loss=3.78x10^-2, Val s2t loss=6.62x10^-2, Best val s2t loss=6.48x10^-2, Current muon LR=0.0020][A[A
+
+Training:  58%|█████▊    | 29/50 [01:51<01:20,  3.82s/epoch, Train s2t loss=3.78x10^-2, Val s2t loss=6.62x10^-2, Best val s2t loss=6.48x10^-2, Current muon LR=0.0020][A[A
+
+Training:  58%|█████▊    | 29/50 [01:55<01:20,  3.82s/epoch, Train s2t loss=3.77x10^-2, Val s2t loss=6.70x10^-2, Best val s2t loss=6.48x10^-2, Current muon LR=0.0020][A[A
+
+Training:  60%|██████    | 30/50 [01:55<01:16,  3.81s/epoch, Train s2t loss=3.77x10^-2, Val s2t loss=6.70x10^-2, Best val s2t loss=6.48x10^-2, Current muon LR=0.0020][A[A
+
+Training:  60%|██████    | 30/50 [01:59<01:16,  3.81s/epoch, Train s2t loss=3.76x10^-2, Val s2t loss=6.74x10^-2, Best val s2t loss=6.48x10^-2, Current muon LR=0.0020][A[A
+
+Training:  62%|██████▏   | 31/50 [01:59<01:12,  3.84s/epoch, Train s2t loss=3.76x10^-2, Val s2t loss=6.74x10^-2, Best val s2t loss=6.48x10^-2, Current muon LR=0.0020][A[A
+
+Training:  62%|██████▏   | 31/50 [02:03<01:12,  3.84s/epoch, Train s2t loss=3.62x10^-2, Val s2t loss=6.46x10^-2, Best val s2t loss=6.46x10^-2, Current muon LR=0.0020][A[A
+
+Training:  64%|██████▍   | 32/50 [02:03<01:09,  3.86s/epoch, Train s2t loss=3.62x10^-2, Val s2t loss=6.46x10^-2, Best val s2t loss=6.46x10^-2, Current muon LR=0.0020][A[A
+
+Training:  64%|██████▍   | 32/50 [02:07<01:09,  3.86s/epoch, Train s2t loss=3.64x10^-2, Val s2t loss=6.47x10^-2, Best val s2t loss=6.46x10^-2, Current muon LR=0.0020][A[A
+
+Training:  66%|██████▌   | 33/50 [02:07<01:05,  3.84s/epoch, Train s2t loss=3.64x10^-2, Val s2t loss=6.47x10^-2, Best val s2t loss=6.46x10^-2, Current muon LR=0.0020][A[A
+
+Training:  66%|██████▌   | 33/50 [02:10<01:05,  3.84s/epoch, Train s2t loss=3.51x10^-2, Val s2t loss=6.44x10^-2, Best val s2t loss=6.44x10^-2, Current muon LR=0.0020][A[A
+
+Training:  68%|██████▊   | 34/50 [02:10<01:01,  3.83s/epoch, Train s2t loss=3.51x10^-2, Val s2t loss=6.44x10^-2, Best val s2t loss=6.44x10^-2, Current muon LR=0.0020][A[A
+
+Training:  68%|██████▊   | 34/50 [02:14<01:01,  3.83s/epoch, Train s2t loss=3.49x10^-2, Val s2t loss=6.45x10^-2, Best val s2t loss=6.44x10^-2, Current muon LR=0.0020][A[A
+
+Training:  70%|███████   | 35/50 [02:14<00:57,  3.82s/epoch, Train s2t loss=3.49x10^-2, Val s2t loss=6.45x10^-2, Best val s2t loss=6.44x10^-2, Current muon LR=0.0020][A[A
+
+Training:  70%|███████   | 35/50 [02:18<00:57,  3.82s/epoch, Train s2t loss=3.47x10^-2, Val s2t loss=6.68x10^-2, Best val s2t loss=6.44x10^-2, Current muon LR=0.0020][A[A
+
+Training:  72%|███████▏  | 36/50 [02:18<00:53,  3.83s/epoch, Train s2t loss=3.47x10^-2, Val s2t loss=6.68x10^-2, Best val s2t loss=6.44x10^-2, Current muon LR=0.0020][A[A
+
+Training:  72%|███████▏  | 36/50 [02:22<00:53,  3.83s/epoch, Train s2t loss=3.34x10^-2, Val s2t loss=6.50x10^-2, Best val s2t loss=6.44x10^-2, Current muon LR=0.0020][A[A
+
+Training:  74%|███████▍  | 37/50 [02:22<00:49,  3.83s/epoch, Train s2t loss=3.34x10^-2, Val s2t loss=6.50x10^-2, Best val s2t loss=6.44x10^-2, Current muon LR=0.0020][A[A
+
+Training:  74%|███████▍  | 37/50 [02:26<00:49,  3.83s/epoch, Train s2t loss=3.31x10^-2, Val s2t loss=6.25x10^-2, Best val s2t loss=6.25x10^-2, Current muon LR=0.0020][A[A
+
+Training:  76%|███████▌  | 38/50 [02:26<00:46,  3.84s/epoch, Train s2t loss=3.31x10^-2, Val s2t loss=6.25x10^-2, Best val s2t loss=6.25x10^-2, Current muon LR=0.0020][A[A
+
+Training:  76%|███████▌  | 38/50 [02:30<00:46,  3.84s/epoch, Train s2t loss=3.18x10^-2, Val s2t loss=6.51x10^-2, Best val s2t loss=6.25x10^-2, Current muon LR=0.0020][A[A
+
+Training:  78%|███████▊  | 39/50 [02:30<00:43,  3.95s/epoch, Train s2t loss=3.18x10^-2, Val s2t loss=6.51x10^-2, Best val s2t loss=6.25x10^-2, Current muon LR=0.0020][A[A
+
+Training:  78%|███████▊  | 39/50 [02:34<00:43,  3.95s/epoch, Train s2t loss=3.16x10^-2, Val s2t loss=6.46x10^-2, Best val s2t loss=6.25x10^-2, Current muon LR=0.0020][A[A
+
+Training:  80%|████████  | 40/50 [02:34<00:39,  3.99s/epoch, Train s2t loss=3.16x10^-2, Val s2t loss=6.46x10^-2, Best val s2t loss=6.25x10^-2, Current muon LR=0.0020][A[A
+
+Training:  80%|████████  | 40/50 [02:38<00:39,  3.99s/epoch, Train s2t loss=3.16x10^-2, Val s2t loss=6.29x10^-2, Best val s2t loss=6.25x10^-2, Current muon LR=0.0020][A[A
+
+Training:  82%|████████▏ | 41/50 [02:38<00:35,  3.93s/epoch, Train s2t loss=3.16x10^-2, Val s2t loss=6.29x10^-2, Best val s2t loss=6.25x10^-2, Current muon LR=0.0020][A[A
+
+Training:  82%|████████▏ | 41/50 [02:42<00:35,  3.93s/epoch, Train s2t loss=3.12x10^-2, Val s2t loss=6.46x10^-2, Best val s2t loss=6.25x10^-2, Current muon LR=0.0020][A[A
+
+Training:  84%|████████▍ | 42/50 [02:42<00:31,  3.89s/epoch, Train s2t loss=3.12x10^-2, Val s2t loss=6.46x10^-2, Best val s2t loss=6.25x10^-2, Current muon LR=0.0020][A[A
+
+Training:  84%|████████▍ | 42/50 [02:46<00:31,  3.89s/epoch, Train s2t loss=3.09x10^-2, Val s2t loss=6.32x10^-2, Best val s2t loss=6.25x10^-2, Current muon LR=0.0020][A[A
+
+Training:  86%|████████▌ | 43/50 [02:46<00:27,  3.86s/epoch, Train s2t loss=3.09x10^-2, Val s2t loss=6.32x10^-2, Best val s2t loss=6.25x10^-2, Current muon LR=0.0020][A[A
+
+Training:  86%|████████▌ | 43/50 [02:49<00:27,  3.86s/epoch, Train s2t loss=2.98x10^-2, Val s2t loss=6.30x10^-2, Best val s2t loss=6.25x10^-2, Current muon LR=0.0020][A[A
+
+Training:  88%|████████▊ | 44/50 [02:49<00:23,  3.84s/epoch, Train s2t loss=2.98x10^-2, Val s2t loss=6.30x10^-2, Best val s2t loss=6.25x10^-2, Current muon LR=0.0020][A[A
+
+Training:  88%|████████▊ | 44/50 [02:53<00:23,  3.84s/epoch, Train s2t loss=2.95x10^-2, Val s2t loss=6.38x10^-2, Best val s2t loss=6.25x10^-2, Current muon LR=0.0020][A[A
+
+Training:  90%|█████████ | 45/50 [02:53<00:19,  3.84s/epoch, Train s2t loss=2.95x10^-2, Val s2t loss=6.38x10^-2, Best val s2t loss=6.25x10^-2, Current muon LR=0.0020][A[A
+
+Training:  90%|█████████ | 45/50 [02:57<00:19,  3.84s/epoch, Train s2t loss=2.86x10^-2, Val s2t loss=6.31x10^-2, Best val s2t loss=6.25x10^-2, Current muon LR=0.0020][A[A
+
+Training:  92%|█████████▏| 46/50 [02:57<00:15,  3.84s/epoch, Train s2t loss=2.86x10^-2, Val s2t loss=6.31x10^-2, Best val s2t loss=6.25x10^-2, Current muon LR=0.0020][A[A
+
+Training:  92%|█████████▏| 46/50 [03:01<00:15,  3.84s/epoch, Train s2t loss=2.88x10^-2, Val s2t loss=6.38x10^-2, Best val s2t loss=6.25x10^-2, Current muon LR=0.0020][A[A
+
+Training:  94%|█████████▍| 47/50 [03:01<00:11,  3.86s/epoch, Train s2t loss=2.88x10^-2, Val s2t loss=6.38x10^-2, Best val s2t loss=6.25x10^-2, Current muon LR=0.0020][A[A
+
+Training:  94%|█████████▍| 47/50 [03:05<00:11,  3.86s/epoch, Train s2t loss=2.82x10^-2, Val s2t loss=6.45x10^-2, Best val s2t loss=6.25x10^-2, Current muon LR=0.0020][A[A
+
+Training:  96%|█████████▌| 48/50 [03:05<00:07,  3.85s/epoch, Train s2t loss=2.82x10^-2, Val s2t loss=6.45x10^-2, Best val s2t loss=6.25x10^-2, Current muon LR=0.0020][A[A
+
+Training:  96%|█████████▌| 48/50 [03:09<00:07,  3.85s/epoch, Train s2t loss=2.76x10^-2, Val s2t loss=6.19x10^-2, Best val s2t loss=6.19x10^-2, Current muon LR=0.0020][A[A
+
+Training:  98%|█████████▊| 49/50 [03:09<00:03,  3.84s/epoch, Train s2t loss=2.76x10^-2, Val s2t loss=6.19x10^-2, Best val s2t loss=6.19x10^-2, Current muon LR=0.0020][A[A
+
+Training:  98%|█████████▊| 49/50 [03:12<00:03,  3.84s/epoch, Train s2t loss=2.77x10^-2, Val s2t loss=6.15x10^-2, Best val s2t loss=6.15x10^-2, Current muon LR=0.0020][A[A
+
+Training: 100%|██████████| 50/50 [03:12<00:00,  3.84s/epoch, Train s2t loss=2.77x10^-2, Val s2t loss=6.15x10^-2, Best val s2t loss=6.15x10^-2, Current muon LR=0.0020][A[A
+
+                                                                                                                                                                      [A[A
+Run 3/3: 100%|██████████| 3/3 [10:29<00:00, 206.92s/run][A
+                                                        [A/home/luke/ATOM/src/atom/training/create_config.py:151: UserWarning: Train and validation molecule sets overlap: tropane1, cyclobutane, cyclopentanone, 1.3-cyclohexadiene, cyclohexanone, tetrahydrofuran, 1.4-dioxane, uracil1, cyclohexanol, tropane3, cyclohexane, cyclopentadiene, cyclopropane
+  warnings.warn(f"Train and validation molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(val_set))}")
+/home/luke/ATOM/src/atom/training/create_config.py:153: UserWarning: Train and test molecule sets overlap: tropane1, cyclobutane, cyclopentanone, 1.3-cyclohexadiene, cyclohexanone, tetrahydrofuran, 1.4-dioxane, uracil1, cyclohexanol, tropane3, cyclohexane, cyclopentadiene, cyclopropane.
+  warnings.warn(f"Train and test molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(test_set))}.")
+/home/luke/ATOM/src/atom/training/create_config.py:155: UserWarning: Validation and test molecule sets overlap: tropane1, cyclobutane, cyclopentanone, 1.3-cyclohexadiene, cyclohexanone, tetrahydrofuran, 1.4-dioxane, uracil1, cyclohexanol, tropane3, cyclohexane, cyclopentadiene, cyclopropane
+  warnings.warn(f"Validation and test molecule sets overlap: {', '.join(str(mol) for mol in val_set.intersection(test_set))}")
+
+Saved benchmark results to /home/luke/ATOM/benchmark_runs/s4_tg80_dt_sweep_09-Nov-2026_05-20-33/dt_atom_09-Nov-2026_05-20-33/results.json
+Benchmark Results (3 runs, 50 epochs/run):
+  Average S2S Test Loss: 10.17x10^-2 ± 0.55x10^-2
+  Average S2T Test Loss: 6.06x10^-2 ± 0.21x10^-2
+  Average Time per Run: 202.1s
+  Average Time per Epoch: 4.2s
+  Average Best Val Loss Epoch: 48.0
+
+  0%|          | 0/3 [00:00<?, ?run/s][A
+Run 1/3:   0%|          | 0/3 [00:00<?, ?run/s][A
+                                               [A
+Run 1/3:   0%|          | 0/3 [00:02<?, ?run/s][A
+                                               [A
+Run 1/3:   0%|          | 0/3 [00:02<?, ?run/s][AInferred max_nodes across all molecules as: 9
+Inferred max_edges across all molecules as: 18
+
+
+Training:   0%|          | 0/50 [00:00<?, ?epoch/s][A[A/home/luke/ATOM/.venv/lib/python3.13/site-packages/torch/_inductor/lowering.py:1917: UserWarning: Torchinductor does not support code generation for complex operators. Performance may be worse than eager.
+  warnings.warn(
+
+
+Training:   0%|          | 0/50 [00:13<?, ?epoch/s, Train s2t loss=112.54x10^-2, Val s2t loss=86.70x10^-2, Best val s2t loss=86.70x10^-2, Current muon LR=0.0020][A[A
+
+Training:   2%|▏         | 1/50 [00:13<10:47, 13.21s/epoch, Train s2t loss=112.54x10^-2, Val s2t loss=86.70x10^-2, Best val s2t loss=86.70x10^-2, Current muon LR=0.0020][A[A
+
+Training:   2%|▏         | 1/50 [00:16<10:47, 13.21s/epoch, Train s2t loss=77.84x10^-2, Val s2t loss=74.54x10^-2, Best val s2t loss=74.54x10^-2, Current muon LR=0.0020] [A[A
+
+Training:   4%|▍         | 2/50 [00:16<05:56,  7.43s/epoch, Train s2t loss=77.84x10^-2, Val s2t loss=74.54x10^-2, Best val s2t loss=74.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:   4%|▍         | 2/50 [00:19<05:56,  7.43s/epoch, Train s2t loss=73.11x10^-2, Val s2t loss=73.07x10^-2, Best val s2t loss=73.07x10^-2, Current muon LR=0.0020][A[A
+
+Training:   6%|▌         | 3/50 [00:19<04:21,  5.57s/epoch, Train s2t loss=73.11x10^-2, Val s2t loss=73.07x10^-2, Best val s2t loss=73.07x10^-2, Current muon LR=0.0020][A[A
+
+Training:   6%|▌         | 3/50 [00:23<04:21,  5.57s/epoch, Train s2t loss=73.03x10^-2, Val s2t loss=72.77x10^-2, Best val s2t loss=72.77x10^-2, Current muon LR=0.0020][A[A
+
+Training:   8%|▊         | 4/50 [00:23<03:35,  4.69s/epoch, Train s2t loss=73.03x10^-2, Val s2t loss=72.77x10^-2, Best val s2t loss=72.77x10^-2, Current muon LR=0.0020][A[A
+
+Training:   8%|▊         | 4/50 [00:26<03:35,  4.69s/epoch, Train s2t loss=72.77x10^-2, Val s2t loss=72.50x10^-2, Best val s2t loss=72.50x10^-2, Current muon LR=0.0020][A[A
+
+Training:  10%|█         | 5/50 [00:26<03:09,  4.22s/epoch, Train s2t loss=72.77x10^-2, Val s2t loss=72.50x10^-2, Best val s2t loss=72.50x10^-2, Current muon LR=0.0020][A[A
+
+Training:  10%|█         | 5/50 [00:30<03:09,  4.22s/epoch, Train s2t loss=72.48x10^-2, Val s2t loss=71.78x10^-2, Best val s2t loss=71.78x10^-2, Current muon LR=0.0020][A[A
+
+Training:  12%|█▏        | 6/50 [00:30<02:53,  3.94s/epoch, Train s2t loss=72.48x10^-2, Val s2t loss=71.78x10^-2, Best val s2t loss=71.78x10^-2, Current muon LR=0.0020][A[A
+
+Training:  12%|█▏        | 6/50 [00:33<02:53,  3.94s/epoch, Train s2t loss=72.07x10^-2, Val s2t loss=70.94x10^-2, Best val s2t loss=70.94x10^-2, Current muon LR=0.0020][A[A
+
+Training:  14%|█▍        | 7/50 [00:33<02:41,  3.76s/epoch, Train s2t loss=72.07x10^-2, Val s2t loss=70.94x10^-2, Best val s2t loss=70.94x10^-2, Current muon LR=0.0020][A[A
+
+Training:  14%|█▍        | 7/50 [00:36<02:41,  3.76s/epoch, Train s2t loss=71.40x10^-2, Val s2t loss=70.72x10^-2, Best val s2t loss=70.72x10^-2, Current muon LR=0.0020][A[A
+
+Training:  16%|█▌        | 8/50 [00:36<02:33,  3.65s/epoch, Train s2t loss=71.40x10^-2, Val s2t loss=70.72x10^-2, Best val s2t loss=70.72x10^-2, Current muon LR=0.0020][A[A
+
+Training:  16%|█▌        | 8/50 [00:40<02:33,  3.65s/epoch, Train s2t loss=71.22x10^-2, Val s2t loss=70.77x10^-2, Best val s2t loss=70.72x10^-2, Current muon LR=0.0020][A[A
+
+Training:  18%|█▊        | 9/50 [00:40<02:27,  3.59s/epoch, Train s2t loss=71.22x10^-2, Val s2t loss=70.77x10^-2, Best val s2t loss=70.72x10^-2, Current muon LR=0.0020][A[A
+
+Training:  18%|█▊        | 9/50 [00:43<02:27,  3.59s/epoch, Train s2t loss=71.01x10^-2, Val s2t loss=71.14x10^-2, Best val s2t loss=70.72x10^-2, Current muon LR=0.0020][A[A
+
+Training:  20%|██        | 10/50 [00:43<02:20,  3.52s/epoch, Train s2t loss=71.01x10^-2, Val s2t loss=71.14x10^-2, Best val s2t loss=70.72x10^-2, Current muon LR=0.0020][A[A
+
+Training:  20%|██        | 10/50 [00:47<02:20,  3.52s/epoch, Train s2t loss=70.65x10^-2, Val s2t loss=70.73x10^-2, Best val s2t loss=70.72x10^-2, Current muon LR=0.0020][A[A
+
+Training:  22%|██▏       | 11/50 [00:47<02:14,  3.46s/epoch, Train s2t loss=70.65x10^-2, Val s2t loss=70.73x10^-2, Best val s2t loss=70.72x10^-2, Current muon LR=0.0020][A[A
+
+Training:  22%|██▏       | 11/50 [00:50<02:14,  3.46s/epoch, Train s2t loss=70.12x10^-2, Val s2t loss=69.83x10^-2, Best val s2t loss=69.83x10^-2, Current muon LR=0.0020][A[A
+
+Training:  24%|██▍       | 12/50 [00:50<02:10,  3.43s/epoch, Train s2t loss=70.12x10^-2, Val s2t loss=69.83x10^-2, Best val s2t loss=69.83x10^-2, Current muon LR=0.0020][A[A
+
+Training:  24%|██▍       | 12/50 [00:53<02:10,  3.43s/epoch, Train s2t loss=69.26x10^-2, Val s2t loss=69.55x10^-2, Best val s2t loss=69.55x10^-2, Current muon LR=0.0020][A[A
+
+Training:  26%|██▌       | 13/50 [00:53<02:06,  3.41s/epoch, Train s2t loss=69.26x10^-2, Val s2t loss=69.55x10^-2, Best val s2t loss=69.55x10^-2, Current muon LR=0.0020][A[A
+
+Training:  26%|██▌       | 13/50 [00:57<02:06,  3.41s/epoch, Train s2t loss=68.75x10^-2, Val s2t loss=69.60x10^-2, Best val s2t loss=69.55x10^-2, Current muon LR=0.0020][A[A
+
+Training:  28%|██▊       | 14/50 [00:57<02:02,  3.40s/epoch, Train s2t loss=68.75x10^-2, Val s2t loss=69.60x10^-2, Best val s2t loss=69.55x10^-2, Current muon LR=0.0020][A[A
+
+Training:  28%|██▊       | 14/50 [01:00<02:02,  3.40s/epoch, Train s2t loss=68.28x10^-2, Val s2t loss=69.01x10^-2, Best val s2t loss=69.01x10^-2, Current muon LR=0.0020][A[A
+
+Training:  30%|███       | 15/50 [01:00<01:58,  3.40s/epoch, Train s2t loss=68.28x10^-2, Val s2t loss=69.01x10^-2, Best val s2t loss=69.01x10^-2, Current muon LR=0.0020][A[A
+
+Training:  30%|███       | 15/50 [01:03<01:58,  3.40s/epoch, Train s2t loss=67.82x10^-2, Val s2t loss=69.62x10^-2, Best val s2t loss=69.01x10^-2, Current muon LR=0.0020][A[A
+
+Training:  32%|███▏      | 16/50 [01:03<01:55,  3.38s/epoch, Train s2t loss=67.82x10^-2, Val s2t loss=69.62x10^-2, Best val s2t loss=69.01x10^-2, Current muon LR=0.0020][A[A
+
+Training:  32%|███▏      | 16/50 [01:07<01:55,  3.38s/epoch, Train s2t loss=67.34x10^-2, Val s2t loss=68.69x10^-2, Best val s2t loss=68.69x10^-2, Current muon LR=0.0020][A[A
+
+Training:  34%|███▍      | 17/50 [01:07<01:52,  3.40s/epoch, Train s2t loss=67.34x10^-2, Val s2t loss=68.69x10^-2, Best val s2t loss=68.69x10^-2, Current muon LR=0.0020][A[A
+
+Training:  34%|███▍      | 17/50 [01:10<01:52,  3.40s/epoch, Train s2t loss=66.81x10^-2, Val s2t loss=68.79x10^-2, Best val s2t loss=68.69x10^-2, Current muon LR=0.0020][A[A
+
+Training:  36%|███▌      | 18/50 [01:10<01:49,  3.42s/epoch, Train s2t loss=66.81x10^-2, Val s2t loss=68.79x10^-2, Best val s2t loss=68.69x10^-2, Current muon LR=0.0020][A[A
+
+Training:  36%|███▌      | 18/50 [01:14<01:49,  3.42s/epoch, Train s2t loss=66.34x10^-2, Val s2t loss=68.45x10^-2, Best val s2t loss=68.45x10^-2, Current muon LR=0.0020][A[A
+
+Training:  38%|███▊      | 19/50 [01:14<01:45,  3.40s/epoch, Train s2t loss=66.34x10^-2, Val s2t loss=68.45x10^-2, Best val s2t loss=68.45x10^-2, Current muon LR=0.0020][A[A
+
+Training:  38%|███▊      | 19/50 [01:17<01:45,  3.40s/epoch, Train s2t loss=65.81x10^-2, Val s2t loss=67.75x10^-2, Best val s2t loss=67.75x10^-2, Current muon LR=0.0020][A[A
+
+Training:  40%|████      | 20/50 [01:17<01:45,  3.53s/epoch, Train s2t loss=65.81x10^-2, Val s2t loss=67.75x10^-2, Best val s2t loss=67.75x10^-2, Current muon LR=0.0020][A[A
+
+Training:  40%|████      | 20/50 [01:21<01:45,  3.53s/epoch, Train s2t loss=65.17x10^-2, Val s2t loss=67.29x10^-2, Best val s2t loss=67.29x10^-2, Current muon LR=0.0020][A[A
+
+Training:  42%|████▏     | 21/50 [01:21<01:44,  3.62s/epoch, Train s2t loss=65.17x10^-2, Val s2t loss=67.29x10^-2, Best val s2t loss=67.29x10^-2, Current muon LR=0.0020][A[A
+
+Training:  42%|████▏     | 21/50 [01:25<01:44,  3.62s/epoch, Train s2t loss=64.66x10^-2, Val s2t loss=66.99x10^-2, Best val s2t loss=66.99x10^-2, Current muon LR=0.0020][A[A
+
+Training:  44%|████▍     | 22/50 [01:25<01:39,  3.54s/epoch, Train s2t loss=64.66x10^-2, Val s2t loss=66.99x10^-2, Best val s2t loss=66.99x10^-2, Current muon LR=0.0020][A[A
+
+Training:  44%|████▍     | 22/50 [01:28<01:39,  3.54s/epoch, Train s2t loss=64.22x10^-2, Val s2t loss=66.95x10^-2, Best val s2t loss=66.95x10^-2, Current muon LR=0.0020][A[A
+
+Training:  46%|████▌     | 23/50 [01:28<01:34,  3.49s/epoch, Train s2t loss=64.22x10^-2, Val s2t loss=66.95x10^-2, Best val s2t loss=66.95x10^-2, Current muon LR=0.0020][A[A
+
+Training:  46%|████▌     | 23/50 [01:31<01:34,  3.49s/epoch, Train s2t loss=63.98x10^-2, Val s2t loss=66.13x10^-2, Best val s2t loss=66.13x10^-2, Current muon LR=0.0020][A[A
+
+Training:  48%|████▊     | 24/50 [01:31<01:29,  3.46s/epoch, Train s2t loss=63.98x10^-2, Val s2t loss=66.13x10^-2, Best val s2t loss=66.13x10^-2, Current muon LR=0.0020][A[A
+
+Training:  48%|████▊     | 24/50 [01:35<01:29,  3.46s/epoch, Train s2t loss=63.58x10^-2, Val s2t loss=66.37x10^-2, Best val s2t loss=66.13x10^-2, Current muon LR=0.0020][A[A
+
+Training:  50%|█████     | 25/50 [01:35<01:25,  3.42s/epoch, Train s2t loss=63.58x10^-2, Val s2t loss=66.37x10^-2, Best val s2t loss=66.13x10^-2, Current muon LR=0.0020][A[A
+
+Training:  50%|█████     | 25/50 [01:38<01:25,  3.42s/epoch, Train s2t loss=63.45x10^-2, Val s2t loss=66.67x10^-2, Best val s2t loss=66.13x10^-2, Current muon LR=0.0020][A[A
+
+Training:  52%|█████▏    | 26/50 [01:38<01:23,  3.46s/epoch, Train s2t loss=63.45x10^-2, Val s2t loss=66.67x10^-2, Best val s2t loss=66.13x10^-2, Current muon LR=0.0020][A[A
+
+Training:  52%|█████▏    | 26/50 [01:42<01:23,  3.46s/epoch, Train s2t loss=63.05x10^-2, Val s2t loss=65.62x10^-2, Best val s2t loss=65.62x10^-2, Current muon LR=0.0020][A[A
+
+Training:  54%|█████▍    | 27/50 [01:42<01:18,  3.43s/epoch, Train s2t loss=63.05x10^-2, Val s2t loss=65.62x10^-2, Best val s2t loss=65.62x10^-2, Current muon LR=0.0020][A[A
+
+Training:  54%|█████▍    | 27/50 [01:45<01:18,  3.43s/epoch, Train s2t loss=62.83x10^-2, Val s2t loss=65.98x10^-2, Best val s2t loss=65.62x10^-2, Current muon LR=0.0020][A[A
+
+Training:  56%|█████▌    | 28/50 [01:45<01:15,  3.41s/epoch, Train s2t loss=62.83x10^-2, Val s2t loss=65.98x10^-2, Best val s2t loss=65.62x10^-2, Current muon LR=0.0020][A[A
+
+Training:  56%|█████▌    | 28/50 [01:48<01:15,  3.41s/epoch, Train s2t loss=62.57x10^-2, Val s2t loss=66.23x10^-2, Best val s2t loss=65.62x10^-2, Current muon LR=0.0020][A[A
+
+Training:  58%|█████▊    | 29/50 [01:48<01:11,  3.40s/epoch, Train s2t loss=62.57x10^-2, Val s2t loss=66.23x10^-2, Best val s2t loss=65.62x10^-2, Current muon LR=0.0020][A[A
+
+Training:  58%|█████▊    | 29/50 [01:52<01:11,  3.40s/epoch, Train s2t loss=62.31x10^-2, Val s2t loss=66.52x10^-2, Best val s2t loss=65.62x10^-2, Current muon LR=0.0020][A[A
+
+Training:  60%|██████    | 30/50 [01:52<01:07,  3.39s/epoch, Train s2t loss=62.31x10^-2, Val s2t loss=66.52x10^-2, Best val s2t loss=65.62x10^-2, Current muon LR=0.0020][A[A
+
+Training:  60%|██████    | 30/50 [01:55<01:07,  3.39s/epoch, Train s2t loss=62.04x10^-2, Val s2t loss=65.34x10^-2, Best val s2t loss=65.34x10^-2, Current muon LR=0.0020][A[A
+
+Training:  62%|██████▏   | 31/50 [01:55<01:04,  3.39s/epoch, Train s2t loss=62.04x10^-2, Val s2t loss=65.34x10^-2, Best val s2t loss=65.34x10^-2, Current muon LR=0.0020][A[A
+
+Training:  62%|██████▏   | 31/50 [01:59<01:04,  3.39s/epoch, Train s2t loss=61.74x10^-2, Val s2t loss=65.56x10^-2, Best val s2t loss=65.34x10^-2, Current muon LR=0.0020][A[A
+
+Training:  64%|██████▍   | 32/50 [01:59<01:02,  3.45s/epoch, Train s2t loss=61.74x10^-2, Val s2t loss=65.56x10^-2, Best val s2t loss=65.34x10^-2, Current muon LR=0.0020][A[A
+
+Training:  64%|██████▍   | 32/50 [02:02<01:02,  3.45s/epoch, Train s2t loss=61.54x10^-2, Val s2t loss=66.08x10^-2, Best val s2t loss=65.34x10^-2, Current muon LR=0.0020][A[A
+
+Training:  66%|██████▌   | 33/50 [02:02<00:58,  3.42s/epoch, Train s2t loss=61.54x10^-2, Val s2t loss=66.08x10^-2, Best val s2t loss=65.34x10^-2, Current muon LR=0.0020][A[A
+
+Training:  66%|██████▌   | 33/50 [02:05<00:58,  3.42s/epoch, Train s2t loss=61.21x10^-2, Val s2t loss=65.30x10^-2, Best val s2t loss=65.30x10^-2, Current muon LR=0.0020][A[A
+
+Training:  68%|██████▊   | 34/50 [02:05<00:54,  3.41s/epoch, Train s2t loss=61.21x10^-2, Val s2t loss=65.30x10^-2, Best val s2t loss=65.30x10^-2, Current muon LR=0.0020][A[A
+
+Training:  68%|██████▊   | 34/50 [02:09<00:54,  3.41s/epoch, Train s2t loss=60.94x10^-2, Val s2t loss=65.72x10^-2, Best val s2t loss=65.30x10^-2, Current muon LR=0.0020][A[A
+
+Training:  70%|███████   | 35/50 [02:09<00:51,  3.43s/epoch, Train s2t loss=60.94x10^-2, Val s2t loss=65.72x10^-2, Best val s2t loss=65.30x10^-2, Current muon LR=0.0020][A[A
+
+Training:  70%|███████   | 35/50 [02:12<00:51,  3.43s/epoch, Train s2t loss=60.70x10^-2, Val s2t loss=64.92x10^-2, Best val s2t loss=64.92x10^-2, Current muon LR=0.0020][A[A
+
+Training:  72%|███████▏  | 36/50 [02:12<00:47,  3.41s/epoch, Train s2t loss=60.70x10^-2, Val s2t loss=64.92x10^-2, Best val s2t loss=64.92x10^-2, Current muon LR=0.0020][A[A
+
+Training:  72%|███████▏  | 36/50 [02:16<00:47,  3.41s/epoch, Train s2t loss=60.40x10^-2, Val s2t loss=65.23x10^-2, Best val s2t loss=64.92x10^-2, Current muon LR=0.0020][A[A
+
+Training:  74%|███████▍  | 37/50 [02:16<00:44,  3.39s/epoch, Train s2t loss=60.40x10^-2, Val s2t loss=65.23x10^-2, Best val s2t loss=64.92x10^-2, Current muon LR=0.0020][A[A
+
+Training:  74%|███████▍  | 37/50 [02:19<00:44,  3.39s/epoch, Train s2t loss=60.31x10^-2, Val s2t loss=65.49x10^-2, Best val s2t loss=64.92x10^-2, Current muon LR=0.0020][A[A
+
+Training:  76%|███████▌  | 38/50 [02:19<00:40,  3.38s/epoch, Train s2t loss=60.31x10^-2, Val s2t loss=65.49x10^-2, Best val s2t loss=64.92x10^-2, Current muon LR=0.0020][A[A
+
+Training:  76%|███████▌  | 38/50 [02:22<00:40,  3.38s/epoch, Train s2t loss=60.03x10^-2, Val s2t loss=64.74x10^-2, Best val s2t loss=64.74x10^-2, Current muon LR=0.0020][A[A
+
+Training:  78%|███████▊  | 39/50 [02:22<00:37,  3.37s/epoch, Train s2t loss=60.03x10^-2, Val s2t loss=64.74x10^-2, Best val s2t loss=64.74x10^-2, Current muon LR=0.0020][A[A
+
+Training:  78%|███████▊  | 39/50 [02:26<00:37,  3.37s/epoch, Train s2t loss=59.86x10^-2, Val s2t loss=64.70x10^-2, Best val s2t loss=64.70x10^-2, Current muon LR=0.0020][A[A
+
+Training:  80%|████████  | 40/50 [02:26<00:33,  3.36s/epoch, Train s2t loss=59.86x10^-2, Val s2t loss=64.70x10^-2, Best val s2t loss=64.70x10^-2, Current muon LR=0.0020][A[A
+
+Training:  80%|████████  | 40/50 [02:29<00:33,  3.36s/epoch, Train s2t loss=59.69x10^-2, Val s2t loss=65.13x10^-2, Best val s2t loss=64.70x10^-2, Current muon LR=0.0020][A[A
+
+Training:  82%|████████▏ | 41/50 [02:29<00:30,  3.36s/epoch, Train s2t loss=59.69x10^-2, Val s2t loss=65.13x10^-2, Best val s2t loss=64.70x10^-2, Current muon LR=0.0020][A[A
+
+Training:  82%|████████▏ | 41/50 [02:32<00:30,  3.36s/epoch, Train s2t loss=59.47x10^-2, Val s2t loss=66.02x10^-2, Best val s2t loss=64.70x10^-2, Current muon LR=0.0020][A[A
+
+Training:  84%|████████▍ | 42/50 [02:32<00:26,  3.36s/epoch, Train s2t loss=59.47x10^-2, Val s2t loss=66.02x10^-2, Best val s2t loss=64.70x10^-2, Current muon LR=0.0020][A[A
+
+Training:  84%|████████▍ | 42/50 [02:36<00:26,  3.36s/epoch, Train s2t loss=59.41x10^-2, Val s2t loss=64.69x10^-2, Best val s2t loss=64.69x10^-2, Current muon LR=0.0020][A[A
+
+Training:  86%|████████▌ | 43/50 [02:36<00:23,  3.38s/epoch, Train s2t loss=59.41x10^-2, Val s2t loss=64.69x10^-2, Best val s2t loss=64.69x10^-2, Current muon LR=0.0020][A[A
+
+Training:  86%|████████▌ | 43/50 [02:39<00:23,  3.38s/epoch, Train s2t loss=59.12x10^-2, Val s2t loss=64.69x10^-2, Best val s2t loss=64.69x10^-2, Current muon LR=0.0020][A[A
+
+Training:  88%|████████▊ | 44/50 [02:39<00:20,  3.42s/epoch, Train s2t loss=59.12x10^-2, Val s2t loss=64.69x10^-2, Best val s2t loss=64.69x10^-2, Current muon LR=0.0020][A[A
+
+Training:  88%|████████▊ | 44/50 [02:43<00:20,  3.42s/epoch, Train s2t loss=59.00x10^-2, Val s2t loss=64.88x10^-2, Best val s2t loss=64.69x10^-2, Current muon LR=0.0020][A[A
+
+Training:  90%|█████████ | 45/50 [02:43<00:17,  3.44s/epoch, Train s2t loss=59.00x10^-2, Val s2t loss=64.88x10^-2, Best val s2t loss=64.69x10^-2, Current muon LR=0.0020][A[A
+
+Training:  90%|█████████ | 45/50 [02:46<00:17,  3.44s/epoch, Train s2t loss=58.87x10^-2, Val s2t loss=64.80x10^-2, Best val s2t loss=64.69x10^-2, Current muon LR=0.0020][A[A
+
+Training:  92%|█████████▏| 46/50 [02:46<00:13,  3.41s/epoch, Train s2t loss=58.87x10^-2, Val s2t loss=64.80x10^-2, Best val s2t loss=64.69x10^-2, Current muon LR=0.0020][A[A
+
+Training:  92%|█████████▏| 46/50 [02:50<00:13,  3.41s/epoch, Train s2t loss=58.67x10^-2, Val s2t loss=64.44x10^-2, Best val s2t loss=64.44x10^-2, Current muon LR=0.0020][A[A
+
+Training:  94%|█████████▍| 47/50 [02:50<00:10,  3.39s/epoch, Train s2t loss=58.67x10^-2, Val s2t loss=64.44x10^-2, Best val s2t loss=64.44x10^-2, Current muon LR=0.0020][A[A
+
+Training:  94%|█████████▍| 47/50 [02:53<00:10,  3.39s/epoch, Train s2t loss=58.66x10^-2, Val s2t loss=64.49x10^-2, Best val s2t loss=64.44x10^-2, Current muon LR=0.0020][A[A
+
+Training:  96%|█████████▌| 48/50 [02:53<00:06,  3.38s/epoch, Train s2t loss=58.66x10^-2, Val s2t loss=64.49x10^-2, Best val s2t loss=64.44x10^-2, Current muon LR=0.0020][A[A
+
+Training:  96%|█████████▌| 48/50 [02:56<00:06,  3.38s/epoch, Train s2t loss=58.47x10^-2, Val s2t loss=64.22x10^-2, Best val s2t loss=64.22x10^-2, Current muon LR=0.0020][A[A
+
+Training:  98%|█████████▊| 49/50 [02:56<00:03,  3.38s/epoch, Train s2t loss=58.47x10^-2, Val s2t loss=64.22x10^-2, Best val s2t loss=64.22x10^-2, Current muon LR=0.0020][A[A
+
+Training:  98%|█████████▊| 49/50 [03:00<00:03,  3.38s/epoch, Train s2t loss=58.39x10^-2, Val s2t loss=64.40x10^-2, Best val s2t loss=64.22x10^-2, Current muon LR=0.0020][A[A
+
+Training: 100%|██████████| 50/50 [03:00<00:00,  3.37s/epoch, Train s2t loss=58.39x10^-2, Val s2t loss=64.40x10^-2, Best val s2t loss=64.22x10^-2, Current muon LR=0.0020][A[A
+
+                                                                                                                                                                         [A[A
+                                               [A
+Run 1/3:   0%|          | 0/3 [03:07<?, ?run/s][A
+                                               [A
+Run 1/3:   0%|          | 0/3 [03:07<?, ?run/s][A
+Run 1/3:  33%|███▎      | 1/3 [03:07<06:14, 187.30s/run][A
+Run 2/3:  33%|███▎      | 1/3 [03:07<06:14, 187.30s/run][A
+                                                        [A
+Run 2/3:  33%|███▎      | 1/3 [03:09<06:14, 187.30s/run][A
+                                                        [A
+Run 2/3:  33%|███▎      | 1/3 [03:09<06:14, 187.30s/run][ATotal params: 335,770
+Total trainable params: 335,770
+Inferred max_nodes across all molecules as: 9
+Inferred max_edges across all molecules as: 18
+
+
+Training:   0%|          | 0/50 [00:00<?, ?epoch/s][A[A
+
+Training:   0%|          | 0/50 [00:03<?, ?epoch/s, Train s2t loss=111.98x10^-2, Val s2t loss=87.29x10^-2, Best val s2t loss=87.29x10^-2, Current muon LR=0.0020][A[A
+
+Training:   2%|▏         | 1/50 [00:03<03:14,  3.97s/epoch, Train s2t loss=111.98x10^-2, Val s2t loss=87.29x10^-2, Best val s2t loss=87.29x10^-2, Current muon LR=0.0020][A[A
+
+Training:   2%|▏         | 1/50 [00:07<03:14,  3.97s/epoch, Train s2t loss=78.17x10^-2, Val s2t loss=73.55x10^-2, Best val s2t loss=73.55x10^-2, Current muon LR=0.0020] [A[A
+
+Training:   4%|▍         | 2/50 [00:07<02:55,  3.65s/epoch, Train s2t loss=78.17x10^-2, Val s2t loss=73.55x10^-2, Best val s2t loss=73.55x10^-2, Current muon LR=0.0020][A[A
+
+Training:   4%|▍         | 2/50 [00:10<02:55,  3.65s/epoch, Train s2t loss=73.07x10^-2, Val s2t loss=72.91x10^-2, Best val s2t loss=72.91x10^-2, Current muon LR=0.0020][A[A
+
+Training:   6%|▌         | 3/50 [00:10<02:45,  3.52s/epoch, Train s2t loss=73.07x10^-2, Val s2t loss=72.91x10^-2, Best val s2t loss=72.91x10^-2, Current muon LR=0.0020][A[A
+
+Training:   6%|▌         | 3/50 [00:14<02:45,  3.52s/epoch, Train s2t loss=72.98x10^-2, Val s2t loss=72.63x10^-2, Best val s2t loss=72.63x10^-2, Current muon LR=0.0020][A[A
+
+Training:   8%|▊         | 4/50 [00:14<02:38,  3.45s/epoch, Train s2t loss=72.98x10^-2, Val s2t loss=72.63x10^-2, Best val s2t loss=72.63x10^-2, Current muon LR=0.0020][A[A
+
+Training:   8%|▊         | 4/50 [00:17<02:38,  3.45s/epoch, Train s2t loss=72.65x10^-2, Val s2t loss=72.25x10^-2, Best val s2t loss=72.25x10^-2, Current muon LR=0.0020][A[A
+
+Training:  10%|█         | 5/50 [00:17<02:33,  3.41s/epoch, Train s2t loss=72.65x10^-2, Val s2t loss=72.25x10^-2, Best val s2t loss=72.25x10^-2, Current muon LR=0.0020][A[A
+
+Training:  10%|█         | 5/50 [00:20<02:33,  3.41s/epoch, Train s2t loss=72.36x10^-2, Val s2t loss=71.64x10^-2, Best val s2t loss=71.64x10^-2, Current muon LR=0.0020][A[A
+
+Training:  12%|█▏        | 6/50 [00:20<02:29,  3.40s/epoch, Train s2t loss=72.36x10^-2, Val s2t loss=71.64x10^-2, Best val s2t loss=71.64x10^-2, Current muon LR=0.0020][A[A
+
+Training:  12%|█▏        | 6/50 [00:24<02:29,  3.40s/epoch, Train s2t loss=71.72x10^-2, Val s2t loss=70.65x10^-2, Best val s2t loss=70.65x10^-2, Current muon LR=0.0020][A[A
+
+Training:  14%|█▍        | 7/50 [00:24<02:25,  3.38s/epoch, Train s2t loss=71.72x10^-2, Val s2t loss=70.65x10^-2, Best val s2t loss=70.65x10^-2, Current muon LR=0.0020][A[A
+
+Training:  14%|█▍        | 7/50 [00:28<02:25,  3.38s/epoch, Train s2t loss=71.37x10^-2, Val s2t loss=70.81x10^-2, Best val s2t loss=70.65x10^-2, Current muon LR=0.0020][A[A
+
+Training:  16%|█▌        | 8/50 [00:28<02:33,  3.65s/epoch, Train s2t loss=71.37x10^-2, Val s2t loss=70.81x10^-2, Best val s2t loss=70.65x10^-2, Current muon LR=0.0020][A[A
+
+Training:  16%|█▌        | 8/50 [00:31<02:33,  3.65s/epoch, Train s2t loss=71.16x10^-2, Val s2t loss=70.44x10^-2, Best val s2t loss=70.44x10^-2, Current muon LR=0.0020][A[A
+
+Training:  18%|█▊        | 9/50 [00:31<02:27,  3.61s/epoch, Train s2t loss=71.16x10^-2, Val s2t loss=70.44x10^-2, Best val s2t loss=70.44x10^-2, Current muon LR=0.0020][A[A
+
+Training:  18%|█▊        | 9/50 [00:35<02:27,  3.61s/epoch, Train s2t loss=70.68x10^-2, Val s2t loss=70.61x10^-2, Best val s2t loss=70.44x10^-2, Current muon LR=0.0020][A[A
+
+Training:  20%|██        | 10/50 [00:35<02:21,  3.53s/epoch, Train s2t loss=70.68x10^-2, Val s2t loss=70.61x10^-2, Best val s2t loss=70.44x10^-2, Current muon LR=0.0020][A[A
+
+Training:  20%|██        | 10/50 [00:38<02:21,  3.53s/epoch, Train s2t loss=70.31x10^-2, Val s2t loss=70.41x10^-2, Best val s2t loss=70.41x10^-2, Current muon LR=0.0020][A[A
+
+Training:  22%|██▏       | 11/50 [00:38<02:15,  3.47s/epoch, Train s2t loss=70.31x10^-2, Val s2t loss=70.41x10^-2, Best val s2t loss=70.41x10^-2, Current muon LR=0.0020][A[A
+
+Training:  22%|██▏       | 11/50 [00:41<02:15,  3.47s/epoch, Train s2t loss=69.97x10^-2, Val s2t loss=70.19x10^-2, Best val s2t loss=70.19x10^-2, Current muon LR=0.0020][A[A
+
+Training:  24%|██▍       | 12/50 [00:41<02:10,  3.43s/epoch, Train s2t loss=69.97x10^-2, Val s2t loss=70.19x10^-2, Best val s2t loss=70.19x10^-2, Current muon LR=0.0020][A[A
+
+Training:  24%|██▍       | 12/50 [00:45<02:10,  3.43s/epoch, Train s2t loss=69.46x10^-2, Val s2t loss=69.65x10^-2, Best val s2t loss=69.65x10^-2, Current muon LR=0.0020][A[A
+
+Training:  26%|██▌       | 13/50 [00:45<02:05,  3.40s/epoch, Train s2t loss=69.46x10^-2, Val s2t loss=69.65x10^-2, Best val s2t loss=69.65x10^-2, Current muon LR=0.0020][A[A
+
+Training:  26%|██▌       | 13/50 [00:48<02:05,  3.40s/epoch, Train s2t loss=69.09x10^-2, Val s2t loss=69.71x10^-2, Best val s2t loss=69.65x10^-2, Current muon LR=0.0020][A[A
+
+Training:  28%|██▊       | 14/50 [00:48<02:02,  3.39s/epoch, Train s2t loss=69.09x10^-2, Val s2t loss=69.71x10^-2, Best val s2t loss=69.65x10^-2, Current muon LR=0.0020][A[A
+
+Training:  28%|██▊       | 14/50 [00:52<02:02,  3.39s/epoch, Train s2t loss=68.56x10^-2, Val s2t loss=69.29x10^-2, Best val s2t loss=69.29x10^-2, Current muon LR=0.0020][A[A
+
+Training:  30%|███       | 15/50 [00:52<01:58,  3.40s/epoch, Train s2t loss=68.56x10^-2, Val s2t loss=69.29x10^-2, Best val s2t loss=69.29x10^-2, Current muon LR=0.0020][A[A
+
+Training:  30%|███       | 15/50 [00:55<01:58,  3.40s/epoch, Train s2t loss=68.08x10^-2, Val s2t loss=68.74x10^-2, Best val s2t loss=68.74x10^-2, Current muon LR=0.0020][A[A
+
+Training:  32%|███▏      | 16/50 [00:55<01:57,  3.45s/epoch, Train s2t loss=68.08x10^-2, Val s2t loss=68.74x10^-2, Best val s2t loss=68.74x10^-2, Current muon LR=0.0020][A[A
+
+Training:  32%|███▏      | 16/50 [00:59<01:57,  3.45s/epoch, Train s2t loss=67.66x10^-2, Val s2t loss=69.33x10^-2, Best val s2t loss=68.74x10^-2, Current muon LR=0.0020][A[A
+
+Training:  34%|███▍      | 17/50 [00:59<01:53,  3.43s/epoch, Train s2t loss=67.66x10^-2, Val s2t loss=69.33x10^-2, Best val s2t loss=68.74x10^-2, Current muon LR=0.0020][A[A
+
+Training:  34%|███▍      | 17/50 [01:02<01:53,  3.43s/epoch, Train s2t loss=67.17x10^-2, Val s2t loss=69.77x10^-2, Best val s2t loss=68.74x10^-2, Current muon LR=0.0020][A[A
+
+Training:  36%|███▌      | 18/50 [01:02<01:50,  3.45s/epoch, Train s2t loss=67.17x10^-2, Val s2t loss=69.77x10^-2, Best val s2t loss=68.74x10^-2, Current muon LR=0.0020][A[A
+
+Training:  36%|███▌      | 18/50 [01:05<01:50,  3.45s/epoch, Train s2t loss=66.80x10^-2, Val s2t loss=69.52x10^-2, Best val s2t loss=68.74x10^-2, Current muon LR=0.0020][A[A
+
+Training:  38%|███▊      | 19/50 [01:05<01:45,  3.42s/epoch, Train s2t loss=66.80x10^-2, Val s2t loss=69.52x10^-2, Best val s2t loss=68.74x10^-2, Current muon LR=0.0020][A[A
+
+Training:  38%|███▊      | 19/50 [01:09<01:45,  3.42s/epoch, Train s2t loss=66.53x10^-2, Val s2t loss=68.91x10^-2, Best val s2t loss=68.74x10^-2, Current muon LR=0.0020][A[A
+
+Training:  40%|████      | 20/50 [01:09<01:41,  3.40s/epoch, Train s2t loss=66.53x10^-2, Val s2t loss=68.91x10^-2, Best val s2t loss=68.74x10^-2, Current muon LR=0.0020][A[A
+
+Training:  40%|████      | 20/50 [01:12<01:41,  3.40s/epoch, Train s2t loss=66.18x10^-2, Val s2t loss=68.40x10^-2, Best val s2t loss=68.40x10^-2, Current muon LR=0.0020][A[A
+
+Training:  42%|████▏     | 21/50 [01:12<01:38,  3.38s/epoch, Train s2t loss=66.18x10^-2, Val s2t loss=68.40x10^-2, Best val s2t loss=68.40x10^-2, Current muon LR=0.0020][A[A
+
+Training:  42%|████▏     | 21/50 [01:15<01:38,  3.38s/epoch, Train s2t loss=65.99x10^-2, Val s2t loss=68.27x10^-2, Best val s2t loss=68.27x10^-2, Current muon LR=0.0020][A[A
+
+Training:  44%|████▍     | 22/50 [01:15<01:34,  3.38s/epoch, Train s2t loss=65.99x10^-2, Val s2t loss=68.27x10^-2, Best val s2t loss=68.27x10^-2, Current muon LR=0.0020][A[A
+
+Training:  44%|████▍     | 22/50 [01:19<01:34,  3.38s/epoch, Train s2t loss=65.69x10^-2, Val s2t loss=68.17x10^-2, Best val s2t loss=68.17x10^-2, Current muon LR=0.0020][A[A
+
+Training:  46%|████▌     | 23/50 [01:19<01:30,  3.37s/epoch, Train s2t loss=65.69x10^-2, Val s2t loss=68.17x10^-2, Best val s2t loss=68.17x10^-2, Current muon LR=0.0020][A[A
+
+Training:  46%|████▌     | 23/50 [01:22<01:30,  3.37s/epoch, Train s2t loss=65.31x10^-2, Val s2t loss=67.90x10^-2, Best val s2t loss=67.90x10^-2, Current muon LR=0.0020][A[A
+
+Training:  48%|████▊     | 24/50 [01:22<01:27,  3.37s/epoch, Train s2t loss=65.31x10^-2, Val s2t loss=67.90x10^-2, Best val s2t loss=67.90x10^-2, Current muon LR=0.0020][A[A
+
+Training:  48%|████▊     | 24/50 [01:26<01:27,  3.37s/epoch, Train s2t loss=64.91x10^-2, Val s2t loss=67.81x10^-2, Best val s2t loss=67.81x10^-2, Current muon LR=0.0020][A[A
+
+Training:  50%|█████     | 25/50 [01:26<01:24,  3.37s/epoch, Train s2t loss=64.91x10^-2, Val s2t loss=67.81x10^-2, Best val s2t loss=67.81x10^-2, Current muon LR=0.0020][A[A
+
+Training:  50%|█████     | 25/50 [01:29<01:24,  3.37s/epoch, Train s2t loss=64.37x10^-2, Val s2t loss=67.88x10^-2, Best val s2t loss=67.81x10^-2, Current muon LR=0.0020][A[A
+
+Training:  52%|█████▏    | 26/50 [01:29<01:21,  3.38s/epoch, Train s2t loss=64.37x10^-2, Val s2t loss=67.88x10^-2, Best val s2t loss=67.81x10^-2, Current muon LR=0.0020][A[A
+
+Training:  52%|█████▏    | 26/50 [01:32<01:21,  3.38s/epoch, Train s2t loss=63.88x10^-2, Val s2t loss=67.16x10^-2, Best val s2t loss=67.16x10^-2, Current muon LR=0.0020][A[A
+
+Training:  54%|█████▍    | 27/50 [01:32<01:18,  3.41s/epoch, Train s2t loss=63.88x10^-2, Val s2t loss=67.16x10^-2, Best val s2t loss=67.16x10^-2, Current muon LR=0.0020][A[A
+
+Training:  54%|█████▍    | 27/50 [01:36<01:18,  3.41s/epoch, Train s2t loss=63.32x10^-2, Val s2t loss=66.99x10^-2, Best val s2t loss=66.99x10^-2, Current muon LR=0.0020][A[A
+
+Training:  56%|█████▌    | 28/50 [01:36<01:14,  3.39s/epoch, Train s2t loss=63.32x10^-2, Val s2t loss=66.99x10^-2, Best val s2t loss=66.99x10^-2, Current muon LR=0.0020][A[A
+
+Training:  56%|█████▌    | 28/50 [01:39<01:14,  3.39s/epoch, Train s2t loss=63.02x10^-2, Val s2t loss=67.27x10^-2, Best val s2t loss=66.99x10^-2, Current muon LR=0.0020][A[A
+
+Training:  58%|█████▊    | 29/50 [01:39<01:12,  3.46s/epoch, Train s2t loss=63.02x10^-2, Val s2t loss=67.27x10^-2, Best val s2t loss=66.99x10^-2, Current muon LR=0.0020][A[A
+
+Training:  58%|█████▊    | 29/50 [01:43<01:12,  3.46s/epoch, Train s2t loss=62.60x10^-2, Val s2t loss=66.83x10^-2, Best val s2t loss=66.83x10^-2, Current muon LR=0.0020][A[A
+
+Training:  60%|██████    | 30/50 [01:43<01:08,  3.43s/epoch, Train s2t loss=62.60x10^-2, Val s2t loss=66.83x10^-2, Best val s2t loss=66.83x10^-2, Current muon LR=0.0020][A[A
+
+Training:  60%|██████    | 30/50 [01:46<01:08,  3.43s/epoch, Train s2t loss=62.41x10^-2, Val s2t loss=66.81x10^-2, Best val s2t loss=66.81x10^-2, Current muon LR=0.0020][A[A
+
+Training:  62%|██████▏   | 31/50 [01:46<01:04,  3.41s/epoch, Train s2t loss=62.41x10^-2, Val s2t loss=66.81x10^-2, Best val s2t loss=66.81x10^-2, Current muon LR=0.0020][A[A
+
+Training:  62%|██████▏   | 31/50 [01:49<01:04,  3.41s/epoch, Train s2t loss=62.18x10^-2, Val s2t loss=66.44x10^-2, Best val s2t loss=66.44x10^-2, Current muon LR=0.0020][A[A
+
+Training:  64%|██████▍   | 32/50 [01:49<01:00,  3.39s/epoch, Train s2t loss=62.18x10^-2, Val s2t loss=66.44x10^-2, Best val s2t loss=66.44x10^-2, Current muon LR=0.0020][A[A
+
+Training:  64%|██████▍   | 32/50 [01:53<01:00,  3.39s/epoch, Train s2t loss=61.74x10^-2, Val s2t loss=66.30x10^-2, Best val s2t loss=66.30x10^-2, Current muon LR=0.0020][A[A
+
+Training:  66%|██████▌   | 33/50 [01:53<00:57,  3.39s/epoch, Train s2t loss=61.74x10^-2, Val s2t loss=66.30x10^-2, Best val s2t loss=66.30x10^-2, Current muon LR=0.0020][A[A
+
+Training:  66%|██████▌   | 33/50 [01:56<00:57,  3.39s/epoch, Train s2t loss=61.52x10^-2, Val s2t loss=66.94x10^-2, Best val s2t loss=66.30x10^-2, Current muon LR=0.0020][A[A
+
+Training:  68%|██████▊   | 34/50 [01:56<00:53,  3.37s/epoch, Train s2t loss=61.52x10^-2, Val s2t loss=66.94x10^-2, Best val s2t loss=66.30x10^-2, Current muon LR=0.0020][A[A
+
+Training:  68%|██████▊   | 34/50 [02:00<00:53,  3.37s/epoch, Train s2t loss=61.14x10^-2, Val s2t loss=66.80x10^-2, Best val s2t loss=66.30x10^-2, Current muon LR=0.0020][A[A
+
+Training:  70%|███████   | 35/50 [02:00<00:51,  3.42s/epoch, Train s2t loss=61.14x10^-2, Val s2t loss=66.80x10^-2, Best val s2t loss=66.30x10^-2, Current muon LR=0.0020][A[A
+
+Training:  70%|███████   | 35/50 [02:03<00:51,  3.42s/epoch, Train s2t loss=60.95x10^-2, Val s2t loss=66.41x10^-2, Best val s2t loss=66.30x10^-2, Current muon LR=0.0020][A[A
+
+Training:  72%|███████▏  | 36/50 [02:03<00:47,  3.41s/epoch, Train s2t loss=60.95x10^-2, Val s2t loss=66.41x10^-2, Best val s2t loss=66.30x10^-2, Current muon LR=0.0020][A[A
+
+Training:  72%|███████▏  | 36/50 [02:06<00:47,  3.41s/epoch, Train s2t loss=60.69x10^-2, Val s2t loss=65.89x10^-2, Best val s2t loss=65.89x10^-2, Current muon LR=0.0020][A[A
+
+Training:  74%|███████▍  | 37/50 [02:06<00:44,  3.39s/epoch, Train s2t loss=60.69x10^-2, Val s2t loss=65.89x10^-2, Best val s2t loss=65.89x10^-2, Current muon LR=0.0020][A[A
+
+Training:  74%|███████▍  | 37/50 [02:10<00:44,  3.39s/epoch, Train s2t loss=60.55x10^-2, Val s2t loss=67.21x10^-2, Best val s2t loss=65.89x10^-2, Current muon LR=0.0020][A[A
+
+Training:  76%|███████▌  | 38/50 [02:10<00:40,  3.38s/epoch, Train s2t loss=60.55x10^-2, Val s2t loss=67.21x10^-2, Best val s2t loss=65.89x10^-2, Current muon LR=0.0020][A[A
+
+Training:  76%|███████▌  | 38/50 [02:13<00:40,  3.38s/epoch, Train s2t loss=60.44x10^-2, Val s2t loss=67.83x10^-2, Best val s2t loss=65.89x10^-2, Current muon LR=0.0020][A[A
+
+Training:  78%|███████▊  | 39/50 [02:13<00:37,  3.37s/epoch, Train s2t loss=60.44x10^-2, Val s2t loss=67.83x10^-2, Best val s2t loss=65.89x10^-2, Current muon LR=0.0020][A[A
+
+Training:  78%|███████▊  | 39/50 [02:16<00:37,  3.37s/epoch, Train s2t loss=60.14x10^-2, Val s2t loss=68.67x10^-2, Best val s2t loss=65.89x10^-2, Current muon LR=0.0020][A[A
+
+Training:  80%|████████  | 40/50 [02:16<00:33,  3.36s/epoch, Train s2t loss=60.14x10^-2, Val s2t loss=68.67x10^-2, Best val s2t loss=65.89x10^-2, Current muon LR=0.0020][A[A
+
+Training:  80%|████████  | 40/50 [02:20<00:33,  3.36s/epoch, Train s2t loss=59.91x10^-2, Val s2t loss=66.96x10^-2, Best val s2t loss=65.89x10^-2, Current muon LR=0.0020][A[A
+
+Training:  82%|████████▏ | 41/50 [02:20<00:30,  3.35s/epoch, Train s2t loss=59.91x10^-2, Val s2t loss=66.96x10^-2, Best val s2t loss=65.89x10^-2, Current muon LR=0.0020][A[A
+
+Training:  82%|████████▏ | 41/50 [02:23<00:30,  3.35s/epoch, Train s2t loss=59.81x10^-2, Val s2t loss=66.52x10^-2, Best val s2t loss=65.89x10^-2, Current muon LR=0.0020][A[A
+
+Training:  84%|████████▍ | 42/50 [02:23<00:26,  3.35s/epoch, Train s2t loss=59.81x10^-2, Val s2t loss=66.52x10^-2, Best val s2t loss=65.89x10^-2, Current muon LR=0.0020][A[A
+
+Training:  84%|████████▍ | 42/50 [02:26<00:26,  3.35s/epoch, Train s2t loss=59.68x10^-2, Val s2t loss=65.54x10^-2, Best val s2t loss=65.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  86%|████████▌ | 43/50 [02:26<00:23,  3.35s/epoch, Train s2t loss=59.68x10^-2, Val s2t loss=65.54x10^-2, Best val s2t loss=65.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  86%|████████▌ | 43/50 [02:30<00:23,  3.35s/epoch, Train s2t loss=59.47x10^-2, Val s2t loss=66.17x10^-2, Best val s2t loss=65.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  88%|████████▊ | 44/50 [02:30<00:20,  3.39s/epoch, Train s2t loss=59.47x10^-2, Val s2t loss=66.17x10^-2, Best val s2t loss=65.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  88%|████████▊ | 44/50 [02:33<00:20,  3.39s/epoch, Train s2t loss=59.44x10^-2, Val s2t loss=66.11x10^-2, Best val s2t loss=65.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  90%|█████████ | 45/50 [02:33<00:16,  3.39s/epoch, Train s2t loss=59.44x10^-2, Val s2t loss=66.11x10^-2, Best val s2t loss=65.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  90%|█████████ | 45/50 [02:37<00:16,  3.39s/epoch, Train s2t loss=59.16x10^-2, Val s2t loss=65.84x10^-2, Best val s2t loss=65.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  92%|█████████▏| 46/50 [02:37<00:13,  3.37s/epoch, Train s2t loss=59.16x10^-2, Val s2t loss=65.84x10^-2, Best val s2t loss=65.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  92%|█████████▏| 46/50 [02:40<00:13,  3.37s/epoch, Train s2t loss=59.02x10^-2, Val s2t loss=66.06x10^-2, Best val s2t loss=65.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  94%|█████████▍| 47/50 [02:40<00:10,  3.36s/epoch, Train s2t loss=59.02x10^-2, Val s2t loss=66.06x10^-2, Best val s2t loss=65.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  94%|█████████▍| 47/50 [02:43<00:10,  3.36s/epoch, Train s2t loss=59.06x10^-2, Val s2t loss=65.84x10^-2, Best val s2t loss=65.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  96%|█████████▌| 48/50 [02:43<00:06,  3.35s/epoch, Train s2t loss=59.06x10^-2, Val s2t loss=65.84x10^-2, Best val s2t loss=65.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  96%|█████████▌| 48/50 [02:47<00:06,  3.35s/epoch, Train s2t loss=58.77x10^-2, Val s2t loss=66.20x10^-2, Best val s2t loss=65.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  98%|█████████▊| 49/50 [02:47<00:03,  3.34s/epoch, Train s2t loss=58.77x10^-2, Val s2t loss=66.20x10^-2, Best val s2t loss=65.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  98%|█████████▊| 49/50 [02:50<00:03,  3.34s/epoch, Train s2t loss=58.78x10^-2, Val s2t loss=65.30x10^-2, Best val s2t loss=65.30x10^-2, Current muon LR=0.0020][A[A
+
+Training: 100%|██████████| 50/50 [02:50<00:00,  3.34s/epoch, Train s2t loss=58.78x10^-2, Val s2t loss=65.30x10^-2, Best val s2t loss=65.30x10^-2, Current muon LR=0.0020][A[A
+
+                                                                                                                                                                         [A[A
+Run 2/3:  67%|██████▋   | 2/3 [06:04<03:01, 181.54s/run][A
+Run 3/3:  67%|██████▋   | 2/3 [06:04<03:01, 181.54s/run][A
+                                                        [A
+Run 3/3:  67%|██████▋   | 2/3 [06:07<03:01, 181.54s/run][A
+                                                        [A
+Run 3/3:  67%|██████▋   | 2/3 [06:07<03:01, 181.54s/run][AInferred max_nodes across all molecules as: 9
+Inferred max_edges across all molecules as: 18
+
+
+Training:   0%|          | 0/50 [00:00<?, ?epoch/s][A[A
+
+Training:   0%|          | 0/50 [00:04<?, ?epoch/s, Train s2t loss=109.16x10^-2, Val s2t loss=85.03x10^-2, Best val s2t loss=85.03x10^-2, Current muon LR=0.0020][A[A
+
+Training:   2%|▏         | 1/50 [00:04<03:16,  4.01s/epoch, Train s2t loss=109.16x10^-2, Val s2t loss=85.03x10^-2, Best val s2t loss=85.03x10^-2, Current muon LR=0.0020][A[A
+
+Training:   2%|▏         | 1/50 [00:07<03:16,  4.01s/epoch, Train s2t loss=77.58x10^-2, Val s2t loss=73.84x10^-2, Best val s2t loss=73.84x10^-2, Current muon LR=0.0020] [A[A
+
+Training:   4%|▍         | 2/50 [00:07<02:55,  3.66s/epoch, Train s2t loss=77.58x10^-2, Val s2t loss=73.84x10^-2, Best val s2t loss=73.84x10^-2, Current muon LR=0.0020][A[A
+
+Training:   4%|▍         | 2/50 [00:10<02:55,  3.66s/epoch, Train s2t loss=73.03x10^-2, Val s2t loss=72.95x10^-2, Best val s2t loss=72.95x10^-2, Current muon LR=0.0020][A[A
+
+Training:   6%|▌         | 3/50 [00:10<02:46,  3.55s/epoch, Train s2t loss=73.03x10^-2, Val s2t loss=72.95x10^-2, Best val s2t loss=72.95x10^-2, Current muon LR=0.0020][A[A
+
+Training:   6%|▌         | 3/50 [00:14<02:46,  3.55s/epoch, Train s2t loss=72.93x10^-2, Val s2t loss=72.82x10^-2, Best val s2t loss=72.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:   8%|▊         | 4/50 [00:14<02:40,  3.48s/epoch, Train s2t loss=72.93x10^-2, Val s2t loss=72.82x10^-2, Best val s2t loss=72.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:   8%|▊         | 4/50 [00:17<02:40,  3.48s/epoch, Train s2t loss=72.69x10^-2, Val s2t loss=72.76x10^-2, Best val s2t loss=72.76x10^-2, Current muon LR=0.0020][A[A
+
+Training:  10%|█         | 5/50 [00:17<02:35,  3.45s/epoch, Train s2t loss=72.69x10^-2, Val s2t loss=72.76x10^-2, Best val s2t loss=72.76x10^-2, Current muon LR=0.0020][A[A
+
+Training:  10%|█         | 5/50 [00:20<02:35,  3.45s/epoch, Train s2t loss=72.55x10^-2, Val s2t loss=72.02x10^-2, Best val s2t loss=72.02x10^-2, Current muon LR=0.0020][A[A
+
+Training:  12%|█▏        | 6/50 [00:20<02:30,  3.42s/epoch, Train s2t loss=72.55x10^-2, Val s2t loss=72.02x10^-2, Best val s2t loss=72.02x10^-2, Current muon LR=0.0020][A[A
+
+Training:  12%|█▏        | 6/50 [00:24<02:30,  3.42s/epoch, Train s2t loss=72.17x10^-2, Val s2t loss=71.14x10^-2, Best val s2t loss=71.14x10^-2, Current muon LR=0.0020][A[A
+
+Training:  14%|█▍        | 7/50 [00:24<02:26,  3.40s/epoch, Train s2t loss=72.17x10^-2, Val s2t loss=71.14x10^-2, Best val s2t loss=71.14x10^-2, Current muon LR=0.0020][A[A
+
+Training:  14%|█▍        | 7/50 [00:28<02:26,  3.40s/epoch, Train s2t loss=71.56x10^-2, Val s2t loss=70.74x10^-2, Best val s2t loss=70.74x10^-2, Current muon LR=0.0020][A[A
+
+Training:  16%|█▌        | 8/50 [00:28<02:36,  3.73s/epoch, Train s2t loss=71.56x10^-2, Val s2t loss=70.74x10^-2, Best val s2t loss=70.74x10^-2, Current muon LR=0.0020][A[A
+
+Training:  16%|█▌        | 8/50 [00:32<02:36,  3.73s/epoch, Train s2t loss=71.15x10^-2, Val s2t loss=70.54x10^-2, Best val s2t loss=70.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  18%|█▊        | 9/50 [00:32<02:29,  3.64s/epoch, Train s2t loss=71.15x10^-2, Val s2t loss=70.54x10^-2, Best val s2t loss=70.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  18%|█▊        | 9/50 [00:35<02:29,  3.64s/epoch, Train s2t loss=70.73x10^-2, Val s2t loss=70.81x10^-2, Best val s2t loss=70.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  20%|██        | 10/50 [00:35<02:23,  3.60s/epoch, Train s2t loss=70.73x10^-2, Val s2t loss=70.81x10^-2, Best val s2t loss=70.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  20%|██        | 10/50 [00:39<02:23,  3.60s/epoch, Train s2t loss=70.43x10^-2, Val s2t loss=70.39x10^-2, Best val s2t loss=70.39x10^-2, Current muon LR=0.0020][A[A
+
+Training:  22%|██▏       | 11/50 [00:39<02:18,  3.55s/epoch, Train s2t loss=70.43x10^-2, Val s2t loss=70.39x10^-2, Best val s2t loss=70.39x10^-2, Current muon LR=0.0020][A[A
+
+Training:  22%|██▏       | 11/50 [00:42<02:18,  3.55s/epoch, Train s2t loss=69.98x10^-2, Val s2t loss=70.03x10^-2, Best val s2t loss=70.03x10^-2, Current muon LR=0.0020][A[A
+
+Training:  24%|██▍       | 12/50 [00:42<02:13,  3.50s/epoch, Train s2t loss=69.98x10^-2, Val s2t loss=70.03x10^-2, Best val s2t loss=70.03x10^-2, Current muon LR=0.0020][A[A
+
+Training:  24%|██▍       | 12/50 [00:45<02:13,  3.50s/epoch, Train s2t loss=69.64x10^-2, Val s2t loss=69.93x10^-2, Best val s2t loss=69.93x10^-2, Current muon LR=0.0020][A[A
+
+Training:  26%|██▌       | 13/50 [00:45<02:07,  3.45s/epoch, Train s2t loss=69.64x10^-2, Val s2t loss=69.93x10^-2, Best val s2t loss=69.93x10^-2, Current muon LR=0.0020][A[A
+
+Training:  26%|██▌       | 13/50 [00:49<02:07,  3.45s/epoch, Train s2t loss=69.30x10^-2, Val s2t loss=69.47x10^-2, Best val s2t loss=69.47x10^-2, Current muon LR=0.0020][A[A
+
+Training:  28%|██▊       | 14/50 [00:49<02:03,  3.43s/epoch, Train s2t loss=69.30x10^-2, Val s2t loss=69.47x10^-2, Best val s2t loss=69.47x10^-2, Current muon LR=0.0020][A[A
+
+Training:  28%|██▊       | 14/50 [00:52<02:03,  3.43s/epoch, Train s2t loss=68.94x10^-2, Val s2t loss=69.24x10^-2, Best val s2t loss=69.24x10^-2, Current muon LR=0.0020][A[A
+
+Training:  30%|███       | 15/50 [00:52<01:59,  3.40s/epoch, Train s2t loss=68.94x10^-2, Val s2t loss=69.24x10^-2, Best val s2t loss=69.24x10^-2, Current muon LR=0.0020][A[A
+
+Training:  30%|███       | 15/50 [00:55<01:59,  3.40s/epoch, Train s2t loss=68.54x10^-2, Val s2t loss=69.10x10^-2, Best val s2t loss=69.10x10^-2, Current muon LR=0.0020][A[A
+
+Training:  32%|███▏      | 16/50 [00:55<01:55,  3.39s/epoch, Train s2t loss=68.54x10^-2, Val s2t loss=69.10x10^-2, Best val s2t loss=69.10x10^-2, Current muon LR=0.0020][A[A
+
+Training:  32%|███▏      | 16/50 [00:59<01:55,  3.39s/epoch, Train s2t loss=67.99x10^-2, Val s2t loss=69.27x10^-2, Best val s2t loss=69.10x10^-2, Current muon LR=0.0020][A[A
+
+Training:  34%|███▍      | 17/50 [00:59<01:51,  3.38s/epoch, Train s2t loss=67.99x10^-2, Val s2t loss=69.27x10^-2, Best val s2t loss=69.10x10^-2, Current muon LR=0.0020][A[A
+
+Training:  34%|███▍      | 17/50 [01:02<01:51,  3.38s/epoch, Train s2t loss=67.50x10^-2, Val s2t loss=69.66x10^-2, Best val s2t loss=69.10x10^-2, Current muon LR=0.0020][A[A
+
+Training:  36%|███▌      | 18/50 [01:02<01:48,  3.39s/epoch, Train s2t loss=67.50x10^-2, Val s2t loss=69.66x10^-2, Best val s2t loss=69.10x10^-2, Current muon LR=0.0020][A[A
+
+Training:  36%|███▌      | 18/50 [01:06<01:48,  3.39s/epoch, Train s2t loss=67.24x10^-2, Val s2t loss=69.57x10^-2, Best val s2t loss=69.10x10^-2, Current muon LR=0.0020][A[A
+
+Training:  38%|███▊      | 19/50 [01:06<01:46,  3.43s/epoch, Train s2t loss=67.24x10^-2, Val s2t loss=69.57x10^-2, Best val s2t loss=69.10x10^-2, Current muon LR=0.0020][A[A
+
+Training:  38%|███▊      | 19/50 [01:09<01:46,  3.43s/epoch, Train s2t loss=66.80x10^-2, Val s2t loss=68.52x10^-2, Best val s2t loss=68.52x10^-2, Current muon LR=0.0020][A[A
+
+Training:  40%|████      | 20/50 [01:09<01:42,  3.42s/epoch, Train s2t loss=66.80x10^-2, Val s2t loss=68.52x10^-2, Best val s2t loss=68.52x10^-2, Current muon LR=0.0020][A[A
+
+Training:  40%|████      | 20/50 [01:12<01:42,  3.42s/epoch, Train s2t loss=66.55x10^-2, Val s2t loss=68.42x10^-2, Best val s2t loss=68.42x10^-2, Current muon LR=0.0020][A[A
+
+Training:  42%|████▏     | 21/50 [01:12<01:38,  3.40s/epoch, Train s2t loss=66.55x10^-2, Val s2t loss=68.42x10^-2, Best val s2t loss=68.42x10^-2, Current muon LR=0.0020][A[A
+
+Training:  42%|████▏     | 21/50 [01:16<01:38,  3.40s/epoch, Train s2t loss=66.19x10^-2, Val s2t loss=68.18x10^-2, Best val s2t loss=68.18x10^-2, Current muon LR=0.0020][A[A
+
+Training:  44%|████▍     | 22/50 [01:16<01:34,  3.38s/epoch, Train s2t loss=66.19x10^-2, Val s2t loss=68.18x10^-2, Best val s2t loss=68.18x10^-2, Current muon LR=0.0020][A[A
+
+Training:  44%|████▍     | 22/50 [01:19<01:34,  3.38s/epoch, Train s2t loss=65.82x10^-2, Val s2t loss=67.55x10^-2, Best val s2t loss=67.55x10^-2, Current muon LR=0.0020][A[A
+
+Training:  46%|████▌     | 23/50 [01:19<01:31,  3.38s/epoch, Train s2t loss=65.82x10^-2, Val s2t loss=67.55x10^-2, Best val s2t loss=67.55x10^-2, Current muon LR=0.0020][A[A
+
+Training:  46%|████▌     | 23/50 [01:23<01:31,  3.38s/epoch, Train s2t loss=65.59x10^-2, Val s2t loss=67.96x10^-2, Best val s2t loss=67.55x10^-2, Current muon LR=0.0020][A[A
+
+Training:  48%|████▊     | 24/50 [01:23<01:27,  3.38s/epoch, Train s2t loss=65.59x10^-2, Val s2t loss=67.96x10^-2, Best val s2t loss=67.55x10^-2, Current muon LR=0.0020][A[A
+
+Training:  48%|████▊     | 24/50 [01:26<01:27,  3.38s/epoch, Train s2t loss=65.16x10^-2, Val s2t loss=67.63x10^-2, Best val s2t loss=67.55x10^-2, Current muon LR=0.0020][A[A
+
+Training:  50%|█████     | 25/50 [01:26<01:24,  3.37s/epoch, Train s2t loss=65.16x10^-2, Val s2t loss=67.63x10^-2, Best val s2t loss=67.55x10^-2, Current muon LR=0.0020][A[A
+
+Training:  50%|█████     | 25/50 [01:29<01:24,  3.37s/epoch, Train s2t loss=64.63x10^-2, Val s2t loss=66.61x10^-2, Best val s2t loss=66.61x10^-2, Current muon LR=0.0020][A[A
+
+Training:  52%|█████▏    | 26/50 [01:29<01:20,  3.36s/epoch, Train s2t loss=64.63x10^-2, Val s2t loss=66.61x10^-2, Best val s2t loss=66.61x10^-2, Current muon LR=0.0020][A[A
+
+Training:  52%|█████▏    | 26/50 [01:33<01:20,  3.36s/epoch, Train s2t loss=64.02x10^-2, Val s2t loss=66.87x10^-2, Best val s2t loss=66.61x10^-2, Current muon LR=0.0020][A[A
+
+Training:  54%|█████▍    | 27/50 [01:33<01:17,  3.37s/epoch, Train s2t loss=64.02x10^-2, Val s2t loss=66.87x10^-2, Best val s2t loss=66.61x10^-2, Current muon LR=0.0020][A[A
+
+Training:  54%|█████▍    | 27/50 [01:36<01:17,  3.37s/epoch, Train s2t loss=63.55x10^-2, Val s2t loss=66.58x10^-2, Best val s2t loss=66.58x10^-2, Current muon LR=0.0020][A[A
+
+Training:  56%|█████▌    | 28/50 [01:36<01:14,  3.39s/epoch, Train s2t loss=63.55x10^-2, Val s2t loss=66.58x10^-2, Best val s2t loss=66.58x10^-2, Current muon LR=0.0020][A[A
+
+Training:  56%|█████▌    | 28/50 [01:39<01:14,  3.39s/epoch, Train s2t loss=63.26x10^-2, Val s2t loss=66.54x10^-2, Best val s2t loss=66.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  58%|█████▊    | 29/50 [01:39<01:10,  3.37s/epoch, Train s2t loss=63.26x10^-2, Val s2t loss=66.54x10^-2, Best val s2t loss=66.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  58%|█████▊    | 29/50 [01:43<01:10,  3.37s/epoch, Train s2t loss=62.95x10^-2, Val s2t loss=67.03x10^-2, Best val s2t loss=66.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  60%|██████    | 30/50 [01:43<01:08,  3.43s/epoch, Train s2t loss=62.95x10^-2, Val s2t loss=67.03x10^-2, Best val s2t loss=66.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  60%|██████    | 30/50 [01:46<01:08,  3.43s/epoch, Train s2t loss=62.75x10^-2, Val s2t loss=66.62x10^-2, Best val s2t loss=66.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  62%|██████▏   | 31/50 [01:46<01:04,  3.40s/epoch, Train s2t loss=62.75x10^-2, Val s2t loss=66.62x10^-2, Best val s2t loss=66.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  62%|██████▏   | 31/50 [01:50<01:04,  3.40s/epoch, Train s2t loss=62.41x10^-2, Val s2t loss=66.96x10^-2, Best val s2t loss=66.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  64%|██████▍   | 32/50 [01:50<01:01,  3.39s/epoch, Train s2t loss=62.41x10^-2, Val s2t loss=66.96x10^-2, Best val s2t loss=66.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  64%|██████▍   | 32/50 [01:53<01:01,  3.39s/epoch, Train s2t loss=62.22x10^-2, Val s2t loss=66.63x10^-2, Best val s2t loss=66.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  66%|██████▌   | 33/50 [01:53<00:57,  3.38s/epoch, Train s2t loss=62.22x10^-2, Val s2t loss=66.63x10^-2, Best val s2t loss=66.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  66%|██████▌   | 33/50 [01:56<00:57,  3.38s/epoch, Train s2t loss=62.03x10^-2, Val s2t loss=66.41x10^-2, Best val s2t loss=66.41x10^-2, Current muon LR=0.0020][A[A
+
+Training:  68%|██████▊   | 34/50 [01:56<00:53,  3.37s/epoch, Train s2t loss=62.03x10^-2, Val s2t loss=66.41x10^-2, Best val s2t loss=66.41x10^-2, Current muon LR=0.0020][A[A
+
+Training:  68%|██████▊   | 34/50 [02:00<00:53,  3.37s/epoch, Train s2t loss=61.94x10^-2, Val s2t loss=66.75x10^-2, Best val s2t loss=66.41x10^-2, Current muon LR=0.0020][A[A
+
+Training:  70%|███████   | 35/50 [02:00<00:51,  3.42s/epoch, Train s2t loss=61.94x10^-2, Val s2t loss=66.75x10^-2, Best val s2t loss=66.41x10^-2, Current muon LR=0.0020][A[A
+
+Training:  70%|███████   | 35/50 [02:03<00:51,  3.42s/epoch, Train s2t loss=61.62x10^-2, Val s2t loss=67.28x10^-2, Best val s2t loss=66.41x10^-2, Current muon LR=0.0020][A[A
+
+Training:  72%|███████▏  | 36/50 [02:03<00:48,  3.46s/epoch, Train s2t loss=61.62x10^-2, Val s2t loss=67.28x10^-2, Best val s2t loss=66.41x10^-2, Current muon LR=0.0020][A[A
+
+Training:  72%|███████▏  | 36/50 [02:07<00:48,  3.46s/epoch, Train s2t loss=61.48x10^-2, Val s2t loss=67.04x10^-2, Best val s2t loss=66.41x10^-2, Current muon LR=0.0020][A[A
+
+Training:  74%|███████▍  | 37/50 [02:07<00:44,  3.43s/epoch, Train s2t loss=61.48x10^-2, Val s2t loss=67.04x10^-2, Best val s2t loss=66.41x10^-2, Current muon LR=0.0020][A[A
+
+Training:  74%|███████▍  | 37/50 [02:10<00:44,  3.43s/epoch, Train s2t loss=61.29x10^-2, Val s2t loss=67.23x10^-2, Best val s2t loss=66.41x10^-2, Current muon LR=0.0020][A[A
+
+Training:  76%|███████▌  | 38/50 [02:10<00:40,  3.41s/epoch, Train s2t loss=61.29x10^-2, Val s2t loss=67.23x10^-2, Best val s2t loss=66.41x10^-2, Current muon LR=0.0020][A[A
+
+Training:  76%|███████▌  | 38/50 [02:14<00:40,  3.41s/epoch, Train s2t loss=61.07x10^-2, Val s2t loss=67.05x10^-2, Best val s2t loss=66.41x10^-2, Current muon LR=0.0020][A[A
+
+Training:  78%|███████▊  | 39/50 [02:14<00:37,  3.38s/epoch, Train s2t loss=61.07x10^-2, Val s2t loss=67.05x10^-2, Best val s2t loss=66.41x10^-2, Current muon LR=0.0020][A[A
+
+Training:  78%|███████▊  | 39/50 [02:17<00:37,  3.38s/epoch, Train s2t loss=60.87x10^-2, Val s2t loss=65.97x10^-2, Best val s2t loss=65.97x10^-2, Current muon LR=0.0020][A[A
+
+Training:  80%|████████  | 40/50 [02:17<00:33,  3.37s/epoch, Train s2t loss=60.87x10^-2, Val s2t loss=65.97x10^-2, Best val s2t loss=65.97x10^-2, Current muon LR=0.0020][A[A
+
+Training:  80%|████████  | 40/50 [02:20<00:33,  3.37s/epoch, Train s2t loss=60.77x10^-2, Val s2t loss=66.05x10^-2, Best val s2t loss=65.97x10^-2, Current muon LR=0.0020][A[A
+
+Training:  82%|████████▏ | 41/50 [02:20<00:30,  3.36s/epoch, Train s2t loss=60.77x10^-2, Val s2t loss=66.05x10^-2, Best val s2t loss=65.97x10^-2, Current muon LR=0.0020][A[A
+
+Training:  82%|████████▏ | 41/50 [02:24<00:30,  3.36s/epoch, Train s2t loss=60.54x10^-2, Val s2t loss=65.93x10^-2, Best val s2t loss=65.93x10^-2, Current muon LR=0.0020][A[A
+
+Training:  84%|████████▍ | 42/50 [02:24<00:26,  3.35s/epoch, Train s2t loss=60.54x10^-2, Val s2t loss=65.93x10^-2, Best val s2t loss=65.93x10^-2, Current muon LR=0.0020][A[A
+
+Training:  84%|████████▍ | 42/50 [02:27<00:26,  3.35s/epoch, Train s2t loss=60.41x10^-2, Val s2t loss=66.19x10^-2, Best val s2t loss=65.93x10^-2, Current muon LR=0.0020][A[A
+
+Training:  86%|████████▌ | 43/50 [02:27<00:23,  3.34s/epoch, Train s2t loss=60.41x10^-2, Val s2t loss=66.19x10^-2, Best val s2t loss=65.93x10^-2, Current muon LR=0.0020][A[A
+
+Training:  86%|████████▌ | 43/50 [02:30<00:23,  3.34s/epoch, Train s2t loss=60.14x10^-2, Val s2t loss=66.94x10^-2, Best val s2t loss=65.93x10^-2, Current muon LR=0.0020][A[A
+
+Training:  88%|████████▊ | 44/50 [02:30<00:20,  3.34s/epoch, Train s2t loss=60.14x10^-2, Val s2t loss=66.94x10^-2, Best val s2t loss=65.93x10^-2, Current muon LR=0.0020][A[A
+
+Training:  88%|████████▊ | 44/50 [02:34<00:20,  3.34s/epoch, Train s2t loss=60.02x10^-2, Val s2t loss=66.73x10^-2, Best val s2t loss=65.93x10^-2, Current muon LR=0.0020][A[A
+
+Training:  90%|█████████ | 45/50 [02:34<00:16,  3.39s/epoch, Train s2t loss=60.02x10^-2, Val s2t loss=66.73x10^-2, Best val s2t loss=65.93x10^-2, Current muon LR=0.0020][A[A
+
+Training:  90%|█████████ | 45/50 [02:37<00:16,  3.39s/epoch, Train s2t loss=59.78x10^-2, Val s2t loss=66.43x10^-2, Best val s2t loss=65.93x10^-2, Current muon LR=0.0020][A[A
+
+Training:  92%|█████████▏| 46/50 [02:37<00:13,  3.37s/epoch, Train s2t loss=59.78x10^-2, Val s2t loss=66.43x10^-2, Best val s2t loss=65.93x10^-2, Current muon LR=0.0020][A[A
+
+Training:  92%|█████████▏| 46/50 [02:40<00:13,  3.37s/epoch, Train s2t loss=59.55x10^-2, Val s2t loss=65.81x10^-2, Best val s2t loss=65.81x10^-2, Current muon LR=0.0020][A[A
+
+Training:  94%|█████████▍| 47/50 [02:40<00:10,  3.36s/epoch, Train s2t loss=59.55x10^-2, Val s2t loss=65.81x10^-2, Best val s2t loss=65.81x10^-2, Current muon LR=0.0020][A[A
+
+Training:  94%|█████████▍| 47/50 [02:44<00:10,  3.36s/epoch, Train s2t loss=59.56x10^-2, Val s2t loss=65.30x10^-2, Best val s2t loss=65.30x10^-2, Current muon LR=0.0020][A[A
+
+Training:  96%|█████████▌| 48/50 [02:44<00:06,  3.35s/epoch, Train s2t loss=59.56x10^-2, Val s2t loss=65.30x10^-2, Best val s2t loss=65.30x10^-2, Current muon LR=0.0020][A[A
+
+Training:  96%|█████████▌| 48/50 [02:47<00:06,  3.35s/epoch, Train s2t loss=59.28x10^-2, Val s2t loss=65.52x10^-2, Best val s2t loss=65.30x10^-2, Current muon LR=0.0020][A[A
+
+Training:  98%|█████████▊| 49/50 [02:47<00:03,  3.35s/epoch, Train s2t loss=59.28x10^-2, Val s2t loss=65.52x10^-2, Best val s2t loss=65.30x10^-2, Current muon LR=0.0020][A[A
+
+Training:  98%|█████████▊| 49/50 [02:50<00:03,  3.35s/epoch, Train s2t loss=59.16x10^-2, Val s2t loss=66.59x10^-2, Best val s2t loss=65.30x10^-2, Current muon LR=0.0020][A[A
+
+Training: 100%|██████████| 50/50 [02:50<00:00,  3.35s/epoch, Train s2t loss=59.16x10^-2, Val s2t loss=66.59x10^-2, Best val s2t loss=65.30x10^-2, Current muon LR=0.0020][A[A
+
+                                                                                                                                                                         [A[A
+Run 3/3: 100%|██████████| 3/3 [09:02<00:00, 179.96s/run][A
+                                                        [A/home/luke/ATOM/src/atom/training/create_config.py:151: UserWarning: Train and validation molecule sets overlap: tropane1, cyclobutane, cyclopentanone, 1.3-cyclohexadiene, cyclohexanone, tetrahydrofuran, 1.4-dioxane, uracil1, cyclohexanol, tropane3, cyclohexane, cyclopentadiene, cyclopropane
+  warnings.warn(f"Train and validation molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(val_set))}")
+/home/luke/ATOM/src/atom/training/create_config.py:153: UserWarning: Train and test molecule sets overlap: tropane1, cyclobutane, cyclopentanone, 1.3-cyclohexadiene, cyclohexanone, tetrahydrofuran, 1.4-dioxane, uracil1, cyclohexanol, tropane3, cyclohexane, cyclopentadiene, cyclopropane.
+  warnings.warn(f"Train and test molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(test_set))}.")
+/home/luke/ATOM/src/atom/training/create_config.py:155: UserWarning: Validation and test molecule sets overlap: tropane1, cyclobutane, cyclopentanone, 1.3-cyclohexadiene, cyclohexanone, tetrahydrofuran, 1.4-dioxane, uracil1, cyclohexanol, tropane3, cyclohexane, cyclopentadiene, cyclopropane
+  warnings.warn(f"Validation and test molecule sets overlap: {', '.join(str(mol) for mol in val_set.intersection(test_set))}")
+
+Saved benchmark results to /home/luke/ATOM/benchmark_runs/s4_tg80_dt_sweep_09-Nov-2026_05-20-33/dt_egno_09-Nov-2026_05-20-33/results.json
+Benchmark Results (3 runs, 50 epochs/run):
+  Average S2S Test Loss: 69.56x10^-2 ± 1.05x10^-2
+  Average S2T Test Loss: 65.11x10^-2 ± 0.59x10^-2
+  Average Time per Run: 173.8s
+  Average Time per Epoch: 3.6s
+  Average Best Val Loss Epoch: 48.0
+
+  0%|          | 0/3 [00:00<?, ?run/s][A
+Run 1/3:   0%|          | 0/3 [00:00<?, ?run/s][A
+                                               [A
+Run 1/3:   0%|          | 0/3 [00:02<?, ?run/s][A
+                                               [A
+Run 1/3:   0%|          | 0/3 [00:02<?, ?run/s][AInferred max_nodes across all molecules as: 9
+Inferred max_edges across all molecules as: 18
+
+
+Training:   0%|          | 0/50 [00:00<?, ?epoch/s][A[A/home/luke/ATOM/.venv/lib/python3.13/site-packages/torch/_inductor/lowering.py:7007: UserWarning: 
+Online softmax is disabled on the fly since Inductor decides to
+split the reduction. Cut an issue to PyTorch if this is an
+important use case and you want to speed it up with online
+softmax.
+
+  warnings.warn(
+In file included from /home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/Python.h:14,
+                 from /tmp/tmpi1xmucaa/main.c:4:
+/home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/pyconfig.h:1967:9: warning: ‘_POSIX_C_SOURCE’ redefined
+ 1967 | #define _POSIX_C_SOURCE 200809L
+      |         ^~~~~~~~~~~~~~~
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdlib.h:26,
+                 from /home/luke/ATOM/.venv/lib/python3.13/site-packages/triton/backends/nvidia/include/cuda.h:56,
+                 from /tmp/tmpi1xmucaa/main.c:2:
+/usr/include/features.h:319:10: note: this is the location of the previous definition
+  319 | # define _POSIX_C_SOURCE        202405L
+      |          ^~~~~~~~~~~~~~~
+/home/luke/ATOM/.venv/lib/python3.13/site-packages/torch/_inductor/lowering.py:7007: UserWarning: 
+Online softmax is disabled on the fly since Inductor decides to
+split the reduction. Cut an issue to PyTorch if this is an
+important use case and you want to speed it up with online
+softmax.
+
+  warnings.warn(
+/home/luke/ATOM/.venv/lib/python3.13/site-packages/torch/_inductor/lowering.py:7007: UserWarning: 
+Online softmax is disabled on the fly since Inductor decides to
+split the reduction. Cut an issue to PyTorch if this is an
+important use case and you want to speed it up with online
+softmax.
+
+  warnings.warn(
+
+
+Training:   0%|          | 0/50 [00:37<?, ?epoch/s, Train s2t loss=108.81x10^-2, Val s2t loss=60.44x10^-2, Best val s2t loss=60.44x10^-2, Current muon LR=0.0020][A[A
+
+Training:   2%|▏         | 1/50 [00:37<30:40, 37.56s/epoch, Train s2t loss=108.81x10^-2, Val s2t loss=60.44x10^-2, Best val s2t loss=60.44x10^-2, Current muon LR=0.0020][A[A
+
+Training:   2%|▏         | 1/50 [00:41<30:40, 37.56s/epoch, Train s2t loss=57.82x10^-2, Val s2t loss=55.84x10^-2, Best val s2t loss=55.84x10^-2, Current muon LR=0.0020] [A[A
+
+Training:   4%|▍         | 2/50 [00:41<14:04, 17.60s/epoch, Train s2t loss=57.82x10^-2, Val s2t loss=55.84x10^-2, Best val s2t loss=55.84x10^-2, Current muon LR=0.0020][A[A
+
+Training:   4%|▍         | 2/50 [00:44<14:04, 17.60s/epoch, Train s2t loss=54.68x10^-2, Val s2t loss=54.13x10^-2, Best val s2t loss=54.13x10^-2, Current muon LR=0.0020][A[A
+
+Training:   6%|▌         | 3/50 [00:44<08:45, 11.18s/epoch, Train s2t loss=54.68x10^-2, Val s2t loss=54.13x10^-2, Best val s2t loss=54.13x10^-2, Current muon LR=0.0020][A[A
+
+Training:   6%|▌         | 3/50 [00:48<08:45, 11.18s/epoch, Train s2t loss=53.54x10^-2, Val s2t loss=53.25x10^-2, Best val s2t loss=53.25x10^-2, Current muon LR=0.0020][A[A
+
+Training:   8%|▊         | 4/50 [00:48<06:15,  8.16s/epoch, Train s2t loss=53.54x10^-2, Val s2t loss=53.25x10^-2, Best val s2t loss=53.25x10^-2, Current muon LR=0.0020][A[A
+
+Training:   8%|▊         | 4/50 [00:51<06:15,  8.16s/epoch, Train s2t loss=52.90x10^-2, Val s2t loss=52.84x10^-2, Best val s2t loss=52.84x10^-2, Current muon LR=0.0020][A[A
+
+Training:  10%|█         | 5/50 [00:51<04:52,  6.49s/epoch, Train s2t loss=52.90x10^-2, Val s2t loss=52.84x10^-2, Best val s2t loss=52.84x10^-2, Current muon LR=0.0020][A[A
+
+Training:  10%|█         | 5/50 [00:55<04:52,  6.49s/epoch, Train s2t loss=52.60x10^-2, Val s2t loss=52.66x10^-2, Best val s2t loss=52.66x10^-2, Current muon LR=0.0020][A[A
+
+Training:  12%|█▏        | 6/50 [00:55<04:01,  5.49s/epoch, Train s2t loss=52.60x10^-2, Val s2t loss=52.66x10^-2, Best val s2t loss=52.66x10^-2, Current muon LR=0.0020][A[A
+
+Training:  12%|█▏        | 6/50 [00:58<04:01,  5.49s/epoch, Train s2t loss=52.37x10^-2, Val s2t loss=52.52x10^-2, Best val s2t loss=52.52x10^-2, Current muon LR=0.0020][A[A
+
+Training:  14%|█▍        | 7/50 [00:58<03:28,  4.86s/epoch, Train s2t loss=52.37x10^-2, Val s2t loss=52.52x10^-2, Best val s2t loss=52.52x10^-2, Current muon LR=0.0020][A[A
+
+Training:  14%|█▍        | 7/50 [01:02<03:28,  4.86s/epoch, Train s2t loss=52.21x10^-2, Val s2t loss=52.37x10^-2, Best val s2t loss=52.37x10^-2, Current muon LR=0.0020][A[A
+
+Training:  16%|█▌        | 8/50 [01:02<03:06,  4.44s/epoch, Train s2t loss=52.21x10^-2, Val s2t loss=52.37x10^-2, Best val s2t loss=52.37x10^-2, Current muon LR=0.0020][A[A
+
+Training:  16%|█▌        | 8/50 [01:06<03:06,  4.44s/epoch, Train s2t loss=52.15x10^-2, Val s2t loss=52.24x10^-2, Best val s2t loss=52.24x10^-2, Current muon LR=0.0020][A[A
+
+Training:  18%|█▊        | 9/50 [01:06<02:52,  4.22s/epoch, Train s2t loss=52.15x10^-2, Val s2t loss=52.24x10^-2, Best val s2t loss=52.24x10^-2, Current muon LR=0.0020][A[A
+
+Training:  18%|█▊        | 9/50 [01:09<02:52,  4.22s/epoch, Train s2t loss=51.97x10^-2, Val s2t loss=52.08x10^-2, Best val s2t loss=52.08x10^-2, Current muon LR=0.0020][A[A
+
+Training:  20%|██        | 10/50 [01:09<02:40,  4.01s/epoch, Train s2t loss=51.97x10^-2, Val s2t loss=52.08x10^-2, Best val s2t loss=52.08x10^-2, Current muon LR=0.0020][A[A
+
+Training:  20%|██        | 10/50 [01:13<02:40,  4.01s/epoch, Train s2t loss=51.89x10^-2, Val s2t loss=51.98x10^-2, Best val s2t loss=51.98x10^-2, Current muon LR=0.0020][A[A
+
+Training:  22%|██▏       | 11/50 [01:13<02:30,  3.86s/epoch, Train s2t loss=51.89x10^-2, Val s2t loss=51.98x10^-2, Best val s2t loss=51.98x10^-2, Current muon LR=0.0020][A[A
+
+Training:  22%|██▏       | 11/50 [01:16<02:30,  3.86s/epoch, Train s2t loss=51.80x10^-2, Val s2t loss=51.94x10^-2, Best val s2t loss=51.94x10^-2, Current muon LR=0.0020][A[A
+
+Training:  24%|██▍       | 12/50 [01:16<02:22,  3.74s/epoch, Train s2t loss=51.80x10^-2, Val s2t loss=51.94x10^-2, Best val s2t loss=51.94x10^-2, Current muon LR=0.0020][A[A
+
+Training:  24%|██▍       | 12/50 [01:20<02:22,  3.74s/epoch, Train s2t loss=51.71x10^-2, Val s2t loss=51.87x10^-2, Best val s2t loss=51.87x10^-2, Current muon LR=0.0020][A[A
+
+Training:  26%|██▌       | 13/50 [01:20<02:15,  3.66s/epoch, Train s2t loss=51.71x10^-2, Val s2t loss=51.87x10^-2, Best val s2t loss=51.87x10^-2, Current muon LR=0.0020][A[A
+
+Training:  26%|██▌       | 13/50 [01:23<02:15,  3.66s/epoch, Train s2t loss=51.62x10^-2, Val s2t loss=51.85x10^-2, Best val s2t loss=51.85x10^-2, Current muon LR=0.0020][A[A
+
+Training:  28%|██▊       | 14/50 [01:23<02:10,  3.63s/epoch, Train s2t loss=51.62x10^-2, Val s2t loss=51.85x10^-2, Best val s2t loss=51.85x10^-2, Current muon LR=0.0020][A[A
+
+Training:  28%|██▊       | 14/50 [01:27<02:10,  3.63s/epoch, Train s2t loss=51.58x10^-2, Val s2t loss=51.84x10^-2, Best val s2t loss=51.84x10^-2, Current muon LR=0.0020][A[A
+
+Training:  30%|███       | 15/50 [01:27<02:06,  3.60s/epoch, Train s2t loss=51.58x10^-2, Val s2t loss=51.84x10^-2, Best val s2t loss=51.84x10^-2, Current muon LR=0.0020][A[A
+
+Training:  30%|███       | 15/50 [01:30<02:06,  3.60s/epoch, Train s2t loss=51.54x10^-2, Val s2t loss=51.76x10^-2, Best val s2t loss=51.76x10^-2, Current muon LR=0.0020][A[A
+
+Training:  32%|███▏      | 16/50 [01:30<02:02,  3.59s/epoch, Train s2t loss=51.54x10^-2, Val s2t loss=51.76x10^-2, Best val s2t loss=51.76x10^-2, Current muon LR=0.0020][A[A
+
+Training:  32%|███▏      | 16/50 [01:34<02:02,  3.59s/epoch, Train s2t loss=51.48x10^-2, Val s2t loss=51.70x10^-2, Best val s2t loss=51.70x10^-2, Current muon LR=0.0020][A[A
+
+Training:  34%|███▍      | 17/50 [01:34<01:58,  3.58s/epoch, Train s2t loss=51.48x10^-2, Val s2t loss=51.70x10^-2, Best val s2t loss=51.70x10^-2, Current muon LR=0.0020][A[A
+
+Training:  34%|███▍      | 17/50 [01:37<01:58,  3.58s/epoch, Train s2t loss=51.48x10^-2, Val s2t loss=51.70x10^-2, Best val s2t loss=51.70x10^-2, Current muon LR=0.0020][A[A
+
+Training:  36%|███▌      | 18/50 [01:37<01:54,  3.57s/epoch, Train s2t loss=51.48x10^-2, Val s2t loss=51.70x10^-2, Best val s2t loss=51.70x10^-2, Current muon LR=0.0020][A[A
+
+Training:  36%|███▌      | 18/50 [01:41<01:54,  3.57s/epoch, Train s2t loss=51.45x10^-2, Val s2t loss=51.65x10^-2, Best val s2t loss=51.65x10^-2, Current muon LR=0.0020][A[A
+
+Training:  38%|███▊      | 19/50 [01:41<01:50,  3.58s/epoch, Train s2t loss=51.45x10^-2, Val s2t loss=51.65x10^-2, Best val s2t loss=51.65x10^-2, Current muon LR=0.0020][A[A
+
+Training:  38%|███▊      | 19/50 [01:45<01:50,  3.58s/epoch, Train s2t loss=51.42x10^-2, Val s2t loss=51.66x10^-2, Best val s2t loss=51.65x10^-2, Current muon LR=0.0020][A[A
+
+Training:  40%|████      | 20/50 [01:45<01:46,  3.56s/epoch, Train s2t loss=51.42x10^-2, Val s2t loss=51.66x10^-2, Best val s2t loss=51.65x10^-2, Current muon LR=0.0020][A[A
+
+Training:  40%|████      | 20/50 [01:48<01:46,  3.56s/epoch, Train s2t loss=51.38x10^-2, Val s2t loss=51.62x10^-2, Best val s2t loss=51.62x10^-2, Current muon LR=0.0020][A[A
+
+Training:  42%|████▏     | 21/50 [01:48<01:43,  3.55s/epoch, Train s2t loss=51.38x10^-2, Val s2t loss=51.62x10^-2, Best val s2t loss=51.62x10^-2, Current muon LR=0.0020][A[A
+
+Training:  42%|████▏     | 21/50 [01:52<01:43,  3.55s/epoch, Train s2t loss=51.39x10^-2, Val s2t loss=51.60x10^-2, Best val s2t loss=51.60x10^-2, Current muon LR=0.0020][A[A
+
+Training:  44%|████▍     | 22/50 [01:52<01:39,  3.55s/epoch, Train s2t loss=51.39x10^-2, Val s2t loss=51.60x10^-2, Best val s2t loss=51.60x10^-2, Current muon LR=0.0020][A[A
+
+Training:  44%|████▍     | 22/50 [01:55<01:39,  3.55s/epoch, Train s2t loss=51.35x10^-2, Val s2t loss=51.63x10^-2, Best val s2t loss=51.60x10^-2, Current muon LR=0.0020][A[A
+
+Training:  46%|████▌     | 23/50 [01:55<01:35,  3.54s/epoch, Train s2t loss=51.35x10^-2, Val s2t loss=51.63x10^-2, Best val s2t loss=51.60x10^-2, Current muon LR=0.0020][A[A
+
+Training:  46%|████▌     | 23/50 [01:59<01:35,  3.54s/epoch, Train s2t loss=51.32x10^-2, Val s2t loss=51.59x10^-2, Best val s2t loss=51.59x10^-2, Current muon LR=0.0020][A[A
+
+Training:  48%|████▊     | 24/50 [01:59<01:31,  3.53s/epoch, Train s2t loss=51.32x10^-2, Val s2t loss=51.59x10^-2, Best val s2t loss=51.59x10^-2, Current muon LR=0.0020][A[A
+
+Training:  48%|████▊     | 24/50 [02:02<01:31,  3.53s/epoch, Train s2t loss=51.31x10^-2, Val s2t loss=51.59x10^-2, Best val s2t loss=51.59x10^-2, Current muon LR=0.0020][A[A
+
+Training:  50%|█████     | 25/50 [02:02<01:28,  3.52s/epoch, Train s2t loss=51.31x10^-2, Val s2t loss=51.59x10^-2, Best val s2t loss=51.59x10^-2, Current muon LR=0.0020][A[A
+
+Training:  50%|█████     | 25/50 [02:06<01:28,  3.52s/epoch, Train s2t loss=51.29x10^-2, Val s2t loss=51.58x10^-2, Best val s2t loss=51.58x10^-2, Current muon LR=0.0020][A[A
+
+Training:  52%|█████▏    | 26/50 [02:06<01:25,  3.56s/epoch, Train s2t loss=51.29x10^-2, Val s2t loss=51.58x10^-2, Best val s2t loss=51.58x10^-2, Current muon LR=0.0020][A[A
+
+Training:  52%|█████▏    | 26/50 [02:09<01:25,  3.56s/epoch, Train s2t loss=51.35x10^-2, Val s2t loss=51.65x10^-2, Best val s2t loss=51.58x10^-2, Current muon LR=0.0020][A[A
+
+Training:  54%|█████▍    | 27/50 [02:09<01:21,  3.56s/epoch, Train s2t loss=51.35x10^-2, Val s2t loss=51.65x10^-2, Best val s2t loss=51.58x10^-2, Current muon LR=0.0020][A[A
+
+Training:  54%|█████▍    | 27/50 [02:13<01:21,  3.56s/epoch, Train s2t loss=51.37x10^-2, Val s2t loss=51.61x10^-2, Best val s2t loss=51.58x10^-2, Current muon LR=0.0020][A[A
+
+Training:  56%|█████▌    | 28/50 [02:13<01:18,  3.55s/epoch, Train s2t loss=51.37x10^-2, Val s2t loss=51.61x10^-2, Best val s2t loss=51.58x10^-2, Current muon LR=0.0020][A[A
+
+Training:  56%|█████▌    | 28/50 [02:16<01:18,  3.55s/epoch, Train s2t loss=51.31x10^-2, Val s2t loss=51.58x10^-2, Best val s2t loss=51.58x10^-2, Current muon LR=0.0020][A[A
+
+Training:  58%|█████▊    | 29/50 [02:16<01:14,  3.55s/epoch, Train s2t loss=51.31x10^-2, Val s2t loss=51.58x10^-2, Best val s2t loss=51.58x10^-2, Current muon LR=0.0020][A[A
+
+Training:  58%|█████▊    | 29/50 [02:20<01:14,  3.55s/epoch, Train s2t loss=51.30x10^-2, Val s2t loss=51.58x10^-2, Best val s2t loss=51.58x10^-2, Current muon LR=0.0020][A[A
+
+Training:  60%|██████    | 30/50 [02:20<01:10,  3.54s/epoch, Train s2t loss=51.30x10^-2, Val s2t loss=51.58x10^-2, Best val s2t loss=51.58x10^-2, Current muon LR=0.0020][A[A
+
+Training:  60%|██████    | 30/50 [02:24<01:10,  3.54s/epoch, Train s2t loss=51.30x10^-2, Val s2t loss=51.64x10^-2, Best val s2t loss=51.58x10^-2, Current muon LR=0.0020][A[A
+
+Training:  62%|██████▏   | 31/50 [02:24<01:07,  3.55s/epoch, Train s2t loss=51.30x10^-2, Val s2t loss=51.64x10^-2, Best val s2t loss=51.58x10^-2, Current muon LR=0.0020][A[A
+
+Training:  62%|██████▏   | 31/50 [02:27<01:07,  3.55s/epoch, Train s2t loss=51.26x10^-2, Val s2t loss=51.55x10^-2, Best val s2t loss=51.55x10^-2, Current muon LR=0.0020][A[A
+
+Training:  64%|██████▍   | 32/50 [02:27<01:03,  3.53s/epoch, Train s2t loss=51.26x10^-2, Val s2t loss=51.55x10^-2, Best val s2t loss=51.55x10^-2, Current muon LR=0.0020][A[A
+
+Training:  64%|██████▍   | 32/50 [02:31<01:03,  3.53s/epoch, Train s2t loss=51.25x10^-2, Val s2t loss=51.52x10^-2, Best val s2t loss=51.52x10^-2, Current muon LR=0.0020][A[A
+
+Training:  66%|██████▌   | 33/50 [02:31<00:59,  3.52s/epoch, Train s2t loss=51.25x10^-2, Val s2t loss=51.52x10^-2, Best val s2t loss=51.52x10^-2, Current muon LR=0.0020][A[A
+
+Training:  66%|██████▌   | 33/50 [02:34<00:59,  3.52s/epoch, Train s2t loss=51.24x10^-2, Val s2t loss=51.51x10^-2, Best val s2t loss=51.51x10^-2, Current muon LR=0.0020][A[A
+
+Training:  68%|██████▊   | 34/50 [02:34<00:56,  3.52s/epoch, Train s2t loss=51.24x10^-2, Val s2t loss=51.51x10^-2, Best val s2t loss=51.51x10^-2, Current muon LR=0.0020][A[A
+
+Training:  68%|██████▊   | 34/50 [02:38<00:56,  3.52s/epoch, Train s2t loss=51.21x10^-2, Val s2t loss=51.55x10^-2, Best val s2t loss=51.51x10^-2, Current muon LR=0.0020][A[A
+
+Training:  70%|███████   | 35/50 [02:38<00:53,  3.54s/epoch, Train s2t loss=51.21x10^-2, Val s2t loss=51.55x10^-2, Best val s2t loss=51.51x10^-2, Current muon LR=0.0020][A[A
+
+Training:  70%|███████   | 35/50 [02:41<00:53,  3.54s/epoch, Train s2t loss=51.22x10^-2, Val s2t loss=51.53x10^-2, Best val s2t loss=51.51x10^-2, Current muon LR=0.0020][A[A
+
+Training:  72%|███████▏  | 36/50 [02:41<00:49,  3.54s/epoch, Train s2t loss=51.22x10^-2, Val s2t loss=51.53x10^-2, Best val s2t loss=51.51x10^-2, Current muon LR=0.0020][A[A
+
+Training:  72%|███████▏  | 36/50 [02:45<00:49,  3.54s/epoch, Train s2t loss=51.21x10^-2, Val s2t loss=51.52x10^-2, Best val s2t loss=51.51x10^-2, Current muon LR=0.0020][A[A
+
+Training:  74%|███████▍  | 37/50 [02:45<00:45,  3.53s/epoch, Train s2t loss=51.21x10^-2, Val s2t loss=51.52x10^-2, Best val s2t loss=51.51x10^-2, Current muon LR=0.0020][A[A
+
+Training:  74%|███████▍  | 37/50 [02:48<00:45,  3.53s/epoch, Train s2t loss=51.20x10^-2, Val s2t loss=51.52x10^-2, Best val s2t loss=51.51x10^-2, Current muon LR=0.0020][A[A
+
+Training:  76%|███████▌  | 38/50 [02:48<00:42,  3.53s/epoch, Train s2t loss=51.20x10^-2, Val s2t loss=51.52x10^-2, Best val s2t loss=51.51x10^-2, Current muon LR=0.0020][A[A
+
+Training:  76%|███████▌  | 38/50 [02:52<00:42,  3.53s/epoch, Train s2t loss=51.20x10^-2, Val s2t loss=51.51x10^-2, Best val s2t loss=51.51x10^-2, Current muon LR=0.0020][A[A
+
+Training:  78%|███████▊  | 39/50 [02:52<00:38,  3.53s/epoch, Train s2t loss=51.20x10^-2, Val s2t loss=51.51x10^-2, Best val s2t loss=51.51x10^-2, Current muon LR=0.0020][A[A
+
+Training:  78%|███████▊  | 39/50 [02:57<00:38,  3.53s/epoch, Train s2t loss=51.16x10^-2, Val s2t loss=51.49x10^-2, Best val s2t loss=51.49x10^-2, Current muon LR=0.0020][A[A
+
+Training:  80%|████████  | 40/50 [02:57<00:39,  3.90s/epoch, Train s2t loss=51.16x10^-2, Val s2t loss=51.49x10^-2, Best val s2t loss=51.49x10^-2, Current muon LR=0.0020][A[A
+
+Training:  80%|████████  | 40/50 [03:01<00:39,  3.90s/epoch, Train s2t loss=51.19x10^-2, Val s2t loss=51.48x10^-2, Best val s2t loss=51.48x10^-2, Current muon LR=0.0020][A[A
+
+Training:  82%|████████▏ | 41/50 [03:01<00:35,  3.96s/epoch, Train s2t loss=51.19x10^-2, Val s2t loss=51.48x10^-2, Best val s2t loss=51.48x10^-2, Current muon LR=0.0020][A[A
+
+Training:  82%|████████▏ | 41/50 [03:05<00:35,  3.96s/epoch, Train s2t loss=51.17x10^-2, Val s2t loss=51.47x10^-2, Best val s2t loss=51.47x10^-2, Current muon LR=0.0020][A[A
+
+Training:  84%|████████▍ | 42/50 [03:05<00:33,  4.16s/epoch, Train s2t loss=51.17x10^-2, Val s2t loss=51.47x10^-2, Best val s2t loss=51.47x10^-2, Current muon LR=0.0020][A[A
+
+Training:  84%|████████▍ | 42/50 [03:09<00:33,  4.16s/epoch, Train s2t loss=51.17x10^-2, Val s2t loss=51.50x10^-2, Best val s2t loss=51.47x10^-2, Current muon LR=0.0020][A[A
+
+Training:  86%|████████▌ | 43/50 [03:09<00:27,  3.97s/epoch, Train s2t loss=51.17x10^-2, Val s2t loss=51.50x10^-2, Best val s2t loss=51.47x10^-2, Current muon LR=0.0020][A[A
+
+Training:  86%|████████▌ | 43/50 [03:12<00:27,  3.97s/epoch, Train s2t loss=51.17x10^-2, Val s2t loss=51.48x10^-2, Best val s2t loss=51.47x10^-2, Current muon LR=0.0020][A[A
+
+Training:  88%|████████▊ | 44/50 [03:12<00:23,  3.84s/epoch, Train s2t loss=51.17x10^-2, Val s2t loss=51.48x10^-2, Best val s2t loss=51.47x10^-2, Current muon LR=0.0020][A[A
+
+Training:  88%|████████▊ | 44/50 [03:16<00:23,  3.84s/epoch, Train s2t loss=51.21x10^-2, Val s2t loss=51.54x10^-2, Best val s2t loss=51.47x10^-2, Current muon LR=0.0020][A[A
+
+Training:  90%|█████████ | 45/50 [03:16<00:18,  3.76s/epoch, Train s2t loss=51.21x10^-2, Val s2t loss=51.54x10^-2, Best val s2t loss=51.47x10^-2, Current muon LR=0.0020][A[A
+
+Training:  90%|█████████ | 45/50 [03:19<00:18,  3.76s/epoch, Train s2t loss=51.19x10^-2, Val s2t loss=51.51x10^-2, Best val s2t loss=51.47x10^-2, Current muon LR=0.0020][A[A
+
+Training:  92%|█████████▏| 46/50 [03:19<00:14,  3.69s/epoch, Train s2t loss=51.19x10^-2, Val s2t loss=51.51x10^-2, Best val s2t loss=51.47x10^-2, Current muon LR=0.0020][A[A
+
+Training:  92%|█████████▏| 46/50 [03:23<00:14,  3.69s/epoch, Train s2t loss=51.19x10^-2, Val s2t loss=51.50x10^-2, Best val s2t loss=51.47x10^-2, Current muon LR=0.0020][A[A
+
+Training:  94%|█████████▍| 47/50 [03:23<00:10,  3.63s/epoch, Train s2t loss=51.19x10^-2, Val s2t loss=51.50x10^-2, Best val s2t loss=51.47x10^-2, Current muon LR=0.0020][A[A
+
+Training:  94%|█████████▍| 47/50 [03:26<00:10,  3.63s/epoch, Train s2t loss=51.16x10^-2, Val s2t loss=51.49x10^-2, Best val s2t loss=51.47x10^-2, Current muon LR=0.0020][A[A
+
+Training:  96%|█████████▌| 48/50 [03:26<00:07,  3.60s/epoch, Train s2t loss=51.16x10^-2, Val s2t loss=51.49x10^-2, Best val s2t loss=51.47x10^-2, Current muon LR=0.0020][A[A
+
+Training:  96%|█████████▌| 48/50 [03:30<00:07,  3.60s/epoch, Train s2t loss=51.16x10^-2, Val s2t loss=51.47x10^-2, Best val s2t loss=51.47x10^-2, Current muon LR=0.0020][A[A
+
+Training:  98%|█████████▊| 49/50 [03:30<00:03,  3.58s/epoch, Train s2t loss=51.16x10^-2, Val s2t loss=51.47x10^-2, Best val s2t loss=51.47x10^-2, Current muon LR=0.0020][A[A
+
+Training:  98%|█████████▊| 49/50 [03:34<00:03,  3.58s/epoch, Train s2t loss=51.13x10^-2, Val s2t loss=51.49x10^-2, Best val s2t loss=51.47x10^-2, Current muon LR=0.0020][A[A
+
+Training: 100%|██████████| 50/50 [03:34<00:00,  3.57s/epoch, Train s2t loss=51.13x10^-2, Val s2t loss=51.49x10^-2, Best val s2t loss=51.47x10^-2, Current muon LR=0.0020][A[A
+
+                                                                                                                                                                         [A[A
+                                               [A
+Run 1/3:   0%|          | 0/3 [03:40<?, ?run/s][A
+                                               [A
+Run 1/3:   0%|          | 0/3 [03:40<?, ?run/s][A
+Run 1/3:  33%|███▎      | 1/3 [03:40<07:21, 220.99s/run][A
+Run 2/3:  33%|███▎      | 1/3 [03:40<07:21, 220.99s/run][A
+                                                        [A
+Run 2/3:  33%|███▎      | 1/3 [03:43<07:21, 220.99s/run][A
+                                                        [A
+Run 2/3:  33%|███▎      | 1/3 [03:43<07:21, 220.99s/run][ATotal params: 4,347,428
+Total trainable params: 4,347,428
+Inferred max_nodes across all molecules as: 9
+Inferred max_edges across all molecules as: 18
+
+
+Training:   0%|          | 0/50 [00:00<?, ?epoch/s][A[A
+
+Training:   0%|          | 0/50 [00:04<?, ?epoch/s, Train s2t loss=89.52x10^-2, Val s2t loss=60.70x10^-2, Best val s2t loss=60.70x10^-2, Current muon LR=0.0020][A[A
+
+Training:   2%|▏         | 1/50 [00:04<03:27,  4.23s/epoch, Train s2t loss=89.52x10^-2, Val s2t loss=60.70x10^-2, Best val s2t loss=60.70x10^-2, Current muon LR=0.0020][A[A
+
+Training:   2%|▏         | 1/50 [00:07<03:27,  4.23s/epoch, Train s2t loss=58.36x10^-2, Val s2t loss=56.51x10^-2, Best val s2t loss=56.51x10^-2, Current muon LR=0.0020][A[A
+
+Training:   4%|▍         | 2/50 [00:07<03:09,  3.95s/epoch, Train s2t loss=58.36x10^-2, Val s2t loss=56.51x10^-2, Best val s2t loss=56.51x10^-2, Current muon LR=0.0020][A[A
+
+Training:   4%|▍         | 2/50 [00:11<03:09,  3.95s/epoch, Train s2t loss=55.06x10^-2, Val s2t loss=54.61x10^-2, Best val s2t loss=54.61x10^-2, Current muon LR=0.0020][A[A
+
+Training:   6%|▌         | 3/50 [00:11<02:57,  3.77s/epoch, Train s2t loss=55.06x10^-2, Val s2t loss=54.61x10^-2, Best val s2t loss=54.61x10^-2, Current muon LR=0.0020][A[A
+
+Training:   6%|▌         | 3/50 [00:15<02:57,  3.77s/epoch, Train s2t loss=53.71x10^-2, Val s2t loss=53.69x10^-2, Best val s2t loss=53.69x10^-2, Current muon LR=0.0020][A[A
+
+Training:   8%|▊         | 4/50 [00:15<02:49,  3.69s/epoch, Train s2t loss=53.71x10^-2, Val s2t loss=53.69x10^-2, Best val s2t loss=53.69x10^-2, Current muon LR=0.0020][A[A
+
+Training:   8%|▊         | 4/50 [00:18<02:49,  3.69s/epoch, Train s2t loss=53.12x10^-2, Val s2t loss=53.08x10^-2, Best val s2t loss=53.08x10^-2, Current muon LR=0.0020][A[A
+
+Training:  10%|█         | 5/50 [00:18<02:44,  3.65s/epoch, Train s2t loss=53.12x10^-2, Val s2t loss=53.08x10^-2, Best val s2t loss=53.08x10^-2, Current muon LR=0.0020][A[A
+
+Training:  10%|█         | 5/50 [00:22<02:44,  3.65s/epoch, Train s2t loss=52.66x10^-2, Val s2t loss=52.83x10^-2, Best val s2t loss=52.83x10^-2, Current muon LR=0.0020][A[A
+
+Training:  12%|█▏        | 6/50 [00:22<02:38,  3.60s/epoch, Train s2t loss=52.66x10^-2, Val s2t loss=52.83x10^-2, Best val s2t loss=52.83x10^-2, Current muon LR=0.0020][A[A
+
+Training:  12%|█▏        | 6/50 [00:25<02:38,  3.60s/epoch, Train s2t loss=52.44x10^-2, Val s2t loss=52.56x10^-2, Best val s2t loss=52.56x10^-2, Current muon LR=0.0020][A[A
+
+Training:  14%|█▍        | 7/50 [00:25<02:35,  3.62s/epoch, Train s2t loss=52.44x10^-2, Val s2t loss=52.56x10^-2, Best val s2t loss=52.56x10^-2, Current muon LR=0.0020][A[A
+
+Training:  14%|█▍        | 7/50 [00:29<02:35,  3.62s/epoch, Train s2t loss=52.19x10^-2, Val s2t loss=52.36x10^-2, Best val s2t loss=52.36x10^-2, Current muon LR=0.0020][A[A
+
+Training:  16%|█▌        | 8/50 [00:29<02:30,  3.58s/epoch, Train s2t loss=52.19x10^-2, Val s2t loss=52.36x10^-2, Best val s2t loss=52.36x10^-2, Current muon LR=0.0020][A[A
+
+Training:  16%|█▌        | 8/50 [00:32<02:30,  3.58s/epoch, Train s2t loss=52.05x10^-2, Val s2t loss=52.20x10^-2, Best val s2t loss=52.20x10^-2, Current muon LR=0.0020][A[A
+
+Training:  18%|█▊        | 9/50 [00:32<02:26,  3.57s/epoch, Train s2t loss=52.05x10^-2, Val s2t loss=52.20x10^-2, Best val s2t loss=52.20x10^-2, Current muon LR=0.0020][A[A
+
+Training:  18%|█▊        | 9/50 [00:36<02:26,  3.57s/epoch, Train s2t loss=51.95x10^-2, Val s2t loss=52.11x10^-2, Best val s2t loss=52.11x10^-2, Current muon LR=0.0020][A[A
+
+Training:  20%|██        | 10/50 [00:36<02:22,  3.57s/epoch, Train s2t loss=51.95x10^-2, Val s2t loss=52.11x10^-2, Best val s2t loss=52.11x10^-2, Current muon LR=0.0020][A[A
+
+Training:  20%|██        | 10/50 [00:39<02:22,  3.57s/epoch, Train s2t loss=51.80x10^-2, Val s2t loss=52.00x10^-2, Best val s2t loss=52.00x10^-2, Current muon LR=0.0020][A[A
+
+Training:  22%|██▏       | 11/50 [00:39<02:18,  3.55s/epoch, Train s2t loss=51.80x10^-2, Val s2t loss=52.00x10^-2, Best val s2t loss=52.00x10^-2, Current muon LR=0.0020][A[A
+
+Training:  22%|██▏       | 11/50 [00:43<02:18,  3.55s/epoch, Train s2t loss=51.69x10^-2, Val s2t loss=52.00x10^-2, Best val s2t loss=52.00x10^-2, Current muon LR=0.0020][A[A
+
+Training:  24%|██▍       | 12/50 [00:43<02:14,  3.55s/epoch, Train s2t loss=51.69x10^-2, Val s2t loss=52.00x10^-2, Best val s2t loss=52.00x10^-2, Current muon LR=0.0020][A[A
+
+Training:  24%|██▍       | 12/50 [00:47<02:14,  3.55s/epoch, Train s2t loss=51.66x10^-2, Val s2t loss=51.92x10^-2, Best val s2t loss=51.92x10^-2, Current muon LR=0.0020][A[A
+
+Training:  26%|██▌       | 13/50 [00:47<02:10,  3.54s/epoch, Train s2t loss=51.66x10^-2, Val s2t loss=51.92x10^-2, Best val s2t loss=51.92x10^-2, Current muon LR=0.0020][A[A
+
+Training:  26%|██▌       | 13/50 [00:50<02:10,  3.54s/epoch, Train s2t loss=51.65x10^-2, Val s2t loss=51.84x10^-2, Best val s2t loss=51.84x10^-2, Current muon LR=0.0020][A[A
+
+Training:  28%|██▊       | 14/50 [00:50<02:07,  3.54s/epoch, Train s2t loss=51.65x10^-2, Val s2t loss=51.84x10^-2, Best val s2t loss=51.84x10^-2, Current muon LR=0.0020][A[A
+
+Training:  28%|██▊       | 14/50 [00:54<02:07,  3.54s/epoch, Train s2t loss=51.61x10^-2, Val s2t loss=51.88x10^-2, Best val s2t loss=51.84x10^-2, Current muon LR=0.0020][A[A
+
+Training:  30%|███       | 15/50 [00:54<02:04,  3.55s/epoch, Train s2t loss=51.61x10^-2, Val s2t loss=51.88x10^-2, Best val s2t loss=51.84x10^-2, Current muon LR=0.0020][A[A
+
+Training:  30%|███       | 15/50 [00:57<02:04,  3.55s/epoch, Train s2t loss=51.57x10^-2, Val s2t loss=51.81x10^-2, Best val s2t loss=51.81x10^-2, Current muon LR=0.0020][A[A
+
+Training:  32%|███▏      | 16/50 [00:57<02:01,  3.56s/epoch, Train s2t loss=51.57x10^-2, Val s2t loss=51.81x10^-2, Best val s2t loss=51.81x10^-2, Current muon LR=0.0020][A[A
+
+Training:  32%|███▏      | 16/50 [01:01<02:01,  3.56s/epoch, Train s2t loss=51.51x10^-2, Val s2t loss=51.77x10^-2, Best val s2t loss=51.77x10^-2, Current muon LR=0.0020][A[A
+
+Training:  34%|███▍      | 17/50 [01:01<01:57,  3.56s/epoch, Train s2t loss=51.51x10^-2, Val s2t loss=51.77x10^-2, Best val s2t loss=51.77x10^-2, Current muon LR=0.0020][A[A
+
+Training:  34%|███▍      | 17/50 [01:04<01:57,  3.56s/epoch, Train s2t loss=51.48x10^-2, Val s2t loss=51.78x10^-2, Best val s2t loss=51.77x10^-2, Current muon LR=0.0020][A[A
+
+Training:  36%|███▌      | 18/50 [01:04<01:53,  3.56s/epoch, Train s2t loss=51.48x10^-2, Val s2t loss=51.78x10^-2, Best val s2t loss=51.77x10^-2, Current muon LR=0.0020][A[A
+
+Training:  36%|███▌      | 18/50 [01:08<01:53,  3.56s/epoch, Train s2t loss=51.48x10^-2, Val s2t loss=51.75x10^-2, Best val s2t loss=51.75x10^-2, Current muon LR=0.0020][A[A
+
+Training:  38%|███▊      | 19/50 [01:08<01:50,  3.56s/epoch, Train s2t loss=51.48x10^-2, Val s2t loss=51.75x10^-2, Best val s2t loss=51.75x10^-2, Current muon LR=0.0020][A[A
+
+Training:  38%|███▊      | 19/50 [01:11<01:50,  3.56s/epoch, Train s2t loss=51.41x10^-2, Val s2t loss=51.71x10^-2, Best val s2t loss=51.71x10^-2, Current muon LR=0.0020][A[A
+
+Training:  40%|████      | 20/50 [01:11<01:46,  3.55s/epoch, Train s2t loss=51.41x10^-2, Val s2t loss=51.71x10^-2, Best val s2t loss=51.71x10^-2, Current muon LR=0.0020][A[A
+
+Training:  40%|████      | 20/50 [01:15<01:46,  3.55s/epoch, Train s2t loss=51.42x10^-2, Val s2t loss=51.70x10^-2, Best val s2t loss=51.70x10^-2, Current muon LR=0.0020][A[A
+
+Training:  42%|████▏     | 21/50 [01:15<01:43,  3.55s/epoch, Train s2t loss=51.42x10^-2, Val s2t loss=51.70x10^-2, Best val s2t loss=51.70x10^-2, Current muon LR=0.0020][A[A
+
+Training:  42%|████▏     | 21/50 [01:19<01:43,  3.55s/epoch, Train s2t loss=51.39x10^-2, Val s2t loss=51.67x10^-2, Best val s2t loss=51.67x10^-2, Current muon LR=0.0020][A[A
+
+Training:  44%|████▍     | 22/50 [01:19<01:39,  3.56s/epoch, Train s2t loss=51.39x10^-2, Val s2t loss=51.67x10^-2, Best val s2t loss=51.67x10^-2, Current muon LR=0.0020][A[A
+
+Training:  44%|████▍     | 22/50 [01:22<01:39,  3.56s/epoch, Train s2t loss=51.34x10^-2, Val s2t loss=51.65x10^-2, Best val s2t loss=51.65x10^-2, Current muon LR=0.0020][A[A
+
+Training:  46%|████▌     | 23/50 [01:22<01:36,  3.56s/epoch, Train s2t loss=51.34x10^-2, Val s2t loss=51.65x10^-2, Best val s2t loss=51.65x10^-2, Current muon LR=0.0020][A[A
+
+Training:  46%|████▌     | 23/50 [01:26<01:36,  3.56s/epoch, Train s2t loss=51.37x10^-2, Val s2t loss=51.66x10^-2, Best val s2t loss=51.65x10^-2, Current muon LR=0.0020][A[A
+
+Training:  48%|████▊     | 24/50 [01:26<01:34,  3.63s/epoch, Train s2t loss=51.37x10^-2, Val s2t loss=51.66x10^-2, Best val s2t loss=51.65x10^-2, Current muon LR=0.0020][A[A
+
+Training:  48%|████▊     | 24/50 [01:29<01:34,  3.63s/epoch, Train s2t loss=51.34x10^-2, Val s2t loss=51.65x10^-2, Best val s2t loss=51.65x10^-2, Current muon LR=0.0020][A[A
+
+Training:  50%|█████     | 25/50 [01:29<01:29,  3.60s/epoch, Train s2t loss=51.34x10^-2, Val s2t loss=51.65x10^-2, Best val s2t loss=51.65x10^-2, Current muon LR=0.0020][A[A
+
+Training:  50%|█████     | 25/50 [01:33<01:29,  3.60s/epoch, Train s2t loss=51.28x10^-2, Val s2t loss=51.64x10^-2, Best val s2t loss=51.64x10^-2, Current muon LR=0.0020][A[A
+
+Training:  52%|█████▏    | 26/50 [01:33<01:26,  3.59s/epoch, Train s2t loss=51.28x10^-2, Val s2t loss=51.64x10^-2, Best val s2t loss=51.64x10^-2, Current muon LR=0.0020][A[A
+
+Training:  52%|█████▏    | 26/50 [01:37<01:26,  3.59s/epoch, Train s2t loss=51.32x10^-2, Val s2t loss=51.59x10^-2, Best val s2t loss=51.59x10^-2, Current muon LR=0.0020][A[A
+
+Training:  54%|█████▍    | 27/50 [01:37<01:22,  3.58s/epoch, Train s2t loss=51.32x10^-2, Val s2t loss=51.59x10^-2, Best val s2t loss=51.59x10^-2, Current muon LR=0.0020][A[A
+
+Training:  54%|█████▍    | 27/50 [01:40<01:22,  3.58s/epoch, Train s2t loss=51.27x10^-2, Val s2t loss=51.58x10^-2, Best val s2t loss=51.58x10^-2, Current muon LR=0.0020][A[A
+
+Training:  56%|█████▌    | 28/50 [01:40<01:18,  3.55s/epoch, Train s2t loss=51.27x10^-2, Val s2t loss=51.58x10^-2, Best val s2t loss=51.58x10^-2, Current muon LR=0.0020][A[A
+
+Training:  56%|█████▌    | 28/50 [01:44<01:18,  3.55s/epoch, Train s2t loss=51.26x10^-2, Val s2t loss=51.59x10^-2, Best val s2t loss=51.58x10^-2, Current muon LR=0.0020][A[A
+
+Training:  58%|█████▊    | 29/50 [01:44<01:14,  3.55s/epoch, Train s2t loss=51.26x10^-2, Val s2t loss=51.59x10^-2, Best val s2t loss=51.58x10^-2, Current muon LR=0.0020][A[A
+
+Training:  58%|█████▊    | 29/50 [01:47<01:14,  3.55s/epoch, Train s2t loss=51.25x10^-2, Val s2t loss=51.56x10^-2, Best val s2t loss=51.56x10^-2, Current muon LR=0.0020][A[A
+
+Training:  60%|██████    | 30/50 [01:47<01:11,  3.56s/epoch, Train s2t loss=51.25x10^-2, Val s2t loss=51.56x10^-2, Best val s2t loss=51.56x10^-2, Current muon LR=0.0020][A[A
+
+Training:  60%|██████    | 30/50 [01:51<01:11,  3.56s/epoch, Train s2t loss=51.25x10^-2, Val s2t loss=51.57x10^-2, Best val s2t loss=51.56x10^-2, Current muon LR=0.0020][A[A
+
+Training:  62%|██████▏   | 31/50 [01:51<01:11,  3.75s/epoch, Train s2t loss=51.25x10^-2, Val s2t loss=51.57x10^-2, Best val s2t loss=51.56x10^-2, Current muon LR=0.0020][A[A
+
+Training:  62%|██████▏   | 31/50 [01:55<01:11,  3.75s/epoch, Train s2t loss=51.24x10^-2, Val s2t loss=51.56x10^-2, Best val s2t loss=51.56x10^-2, Current muon LR=0.0020][A[A
+
+Training:  64%|██████▍   | 32/50 [01:55<01:06,  3.71s/epoch, Train s2t loss=51.24x10^-2, Val s2t loss=51.56x10^-2, Best val s2t loss=51.56x10^-2, Current muon LR=0.0020][A[A
+
+Training:  64%|██████▍   | 32/50 [01:59<01:06,  3.71s/epoch, Train s2t loss=51.23x10^-2, Val s2t loss=51.57x10^-2, Best val s2t loss=51.56x10^-2, Current muon LR=0.0020][A[A
+
+Training:  66%|██████▌   | 33/50 [01:59<01:06,  3.90s/epoch, Train s2t loss=51.23x10^-2, Val s2t loss=51.57x10^-2, Best val s2t loss=51.56x10^-2, Current muon LR=0.0020][A[A
+
+Training:  66%|██████▌   | 33/50 [02:03<01:06,  3.90s/epoch, Train s2t loss=51.18x10^-2, Val s2t loss=51.57x10^-2, Best val s2t loss=51.56x10^-2, Current muon LR=0.0020][A[A
+
+Training:  68%|██████▊   | 34/50 [02:03<01:00,  3.80s/epoch, Train s2t loss=51.18x10^-2, Val s2t loss=51.57x10^-2, Best val s2t loss=51.56x10^-2, Current muon LR=0.0020][A[A
+
+Training:  68%|██████▊   | 34/50 [02:06<01:00,  3.80s/epoch, Train s2t loss=51.20x10^-2, Val s2t loss=51.54x10^-2, Best val s2t loss=51.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  70%|███████   | 35/50 [02:06<00:55,  3.71s/epoch, Train s2t loss=51.20x10^-2, Val s2t loss=51.54x10^-2, Best val s2t loss=51.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  70%|███████   | 35/50 [02:10<00:55,  3.71s/epoch, Train s2t loss=51.19x10^-2, Val s2t loss=51.57x10^-2, Best val s2t loss=51.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  72%|███████▏  | 36/50 [02:10<00:51,  3.66s/epoch, Train s2t loss=51.19x10^-2, Val s2t loss=51.57x10^-2, Best val s2t loss=51.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  72%|███████▏  | 36/50 [02:13<00:51,  3.66s/epoch, Train s2t loss=51.20x10^-2, Val s2t loss=51.55x10^-2, Best val s2t loss=51.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  74%|███████▍  | 37/50 [02:13<00:46,  3.61s/epoch, Train s2t loss=51.20x10^-2, Val s2t loss=51.55x10^-2, Best val s2t loss=51.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  74%|███████▍  | 37/50 [02:17<00:46,  3.61s/epoch, Train s2t loss=51.16x10^-2, Val s2t loss=51.55x10^-2, Best val s2t loss=51.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  76%|███████▌  | 38/50 [02:17<00:42,  3.58s/epoch, Train s2t loss=51.16x10^-2, Val s2t loss=51.55x10^-2, Best val s2t loss=51.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  76%|███████▌  | 38/50 [02:20<00:42,  3.58s/epoch, Train s2t loss=51.18x10^-2, Val s2t loss=51.55x10^-2, Best val s2t loss=51.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  78%|███████▊  | 39/50 [02:20<00:39,  3.57s/epoch, Train s2t loss=51.18x10^-2, Val s2t loss=51.55x10^-2, Best val s2t loss=51.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  78%|███████▊  | 39/50 [02:24<00:39,  3.57s/epoch, Train s2t loss=51.17x10^-2, Val s2t loss=51.54x10^-2, Best val s2t loss=51.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  80%|████████  | 40/50 [02:24<00:35,  3.56s/epoch, Train s2t loss=51.17x10^-2, Val s2t loss=51.54x10^-2, Best val s2t loss=51.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  80%|████████  | 40/50 [02:28<00:35,  3.56s/epoch, Train s2t loss=51.16x10^-2, Val s2t loss=51.55x10^-2, Best val s2t loss=51.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  82%|████████▏ | 41/50 [02:28<00:32,  3.58s/epoch, Train s2t loss=51.16x10^-2, Val s2t loss=51.55x10^-2, Best val s2t loss=51.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  82%|████████▏ | 41/50 [02:31<00:32,  3.58s/epoch, Train s2t loss=51.18x10^-2, Val s2t loss=51.56x10^-2, Best val s2t loss=51.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  84%|████████▍ | 42/50 [02:31<00:28,  3.56s/epoch, Train s2t loss=51.18x10^-2, Val s2t loss=51.56x10^-2, Best val s2t loss=51.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  84%|████████▍ | 42/50 [02:35<00:28,  3.56s/epoch, Train s2t loss=51.20x10^-2, Val s2t loss=51.71x10^-2, Best val s2t loss=51.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  86%|████████▌ | 43/50 [02:35<00:24,  3.56s/epoch, Train s2t loss=51.20x10^-2, Val s2t loss=51.71x10^-2, Best val s2t loss=51.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  86%|████████▌ | 43/50 [02:38<00:24,  3.56s/epoch, Train s2t loss=51.26x10^-2, Val s2t loss=51.62x10^-2, Best val s2t loss=51.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  88%|████████▊ | 44/50 [02:38<00:21,  3.54s/epoch, Train s2t loss=51.26x10^-2, Val s2t loss=51.62x10^-2, Best val s2t loss=51.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  88%|████████▊ | 44/50 [02:42<00:21,  3.54s/epoch, Train s2t loss=51.21x10^-2, Val s2t loss=51.56x10^-2, Best val s2t loss=51.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  90%|█████████ | 45/50 [02:42<00:17,  3.54s/epoch, Train s2t loss=51.21x10^-2, Val s2t loss=51.56x10^-2, Best val s2t loss=51.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  90%|█████████ | 45/50 [02:45<00:17,  3.54s/epoch, Train s2t loss=51.20x10^-2, Val s2t loss=51.59x10^-2, Best val s2t loss=51.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  92%|█████████▏| 46/50 [02:45<00:14,  3.55s/epoch, Train s2t loss=51.20x10^-2, Val s2t loss=51.59x10^-2, Best val s2t loss=51.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  92%|█████████▏| 46/50 [02:49<00:14,  3.55s/epoch, Train s2t loss=51.19x10^-2, Val s2t loss=51.57x10^-2, Best val s2t loss=51.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  94%|█████████▍| 47/50 [02:49<00:10,  3.55s/epoch, Train s2t loss=51.19x10^-2, Val s2t loss=51.57x10^-2, Best val s2t loss=51.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  94%|█████████▍| 47/50 [02:52<00:10,  3.55s/epoch, Train s2t loss=51.19x10^-2, Val s2t loss=51.55x10^-2, Best val s2t loss=51.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  96%|█████████▌| 48/50 [02:52<00:07,  3.55s/epoch, Train s2t loss=51.19x10^-2, Val s2t loss=51.55x10^-2, Best val s2t loss=51.54x10^-2, Current muon LR=0.0020][A[A
+
+Training:  96%|█████████▌| 48/50 [02:56<00:07,  3.55s/epoch, Train s2t loss=51.16x10^-2, Val s2t loss=51.53x10^-2, Best val s2t loss=51.53x10^-2, Current muon LR=0.0020][A[A
+
+Training:  98%|█████████▊| 49/50 [02:56<00:03,  3.57s/epoch, Train s2t loss=51.16x10^-2, Val s2t loss=51.53x10^-2, Best val s2t loss=51.53x10^-2, Current muon LR=0.0020][A[A
+
+Training:  98%|█████████▊| 49/50 [03:00<00:03,  3.57s/epoch, Train s2t loss=51.15x10^-2, Val s2t loss=51.52x10^-2, Best val s2t loss=51.52x10^-2, Current muon LR=0.0020][A[A
+
+Training: 100%|██████████| 50/50 [03:00<00:00,  3.56s/epoch, Train s2t loss=51.15x10^-2, Val s2t loss=51.52x10^-2, Best val s2t loss=51.52x10^-2, Current muon LR=0.0020][A[A
+
+                                                                                                                                                                         [A[A
+Run 2/3:  67%|██████▋   | 2/3 [06:47<03:20, 200.98s/run][A
+Run 3/3:  67%|██████▋   | 2/3 [06:47<03:20, 200.98s/run][A
+                                                        [A
+Run 3/3:  67%|██████▋   | 2/3 [06:50<03:20, 200.98s/run][A
+                                                        [A
+Run 3/3:  67%|██████▋   | 2/3 [06:50<03:20, 200.98s/run][AInferred max_nodes across all molecules as: 9
+Inferred max_edges across all molecules as: 18
+
+
+Training:   0%|          | 0/50 [00:00<?, ?epoch/s][A[A
+
+Training:   0%|          | 0/50 [00:04<?, ?epoch/s, Train s2t loss=103.92x10^-2, Val s2t loss=62.51x10^-2, Best val s2t loss=62.51x10^-2, Current muon LR=0.0020][A[A
+
+Training:   2%|▏         | 1/50 [00:04<03:32,  4.34s/epoch, Train s2t loss=103.92x10^-2, Val s2t loss=62.51x10^-2, Best val s2t loss=62.51x10^-2, Current muon LR=0.0020][A[A
+
+Training:   2%|▏         | 1/50 [00:08<03:32,  4.34s/epoch, Train s2t loss=59.31x10^-2, Val s2t loss=56.75x10^-2, Best val s2t loss=56.75x10^-2, Current muon LR=0.0020] [A[A
+
+Training:   4%|▍         | 2/50 [00:08<03:09,  3.95s/epoch, Train s2t loss=59.31x10^-2, Val s2t loss=56.75x10^-2, Best val s2t loss=56.75x10^-2, Current muon LR=0.0020][A[A
+
+Training:   4%|▍         | 2/50 [00:11<03:09,  3.95s/epoch, Train s2t loss=55.42x10^-2, Val s2t loss=54.65x10^-2, Best val s2t loss=54.65x10^-2, Current muon LR=0.0020][A[A
+
+Training:   6%|▌         | 3/50 [00:11<02:56,  3.76s/epoch, Train s2t loss=55.42x10^-2, Val s2t loss=54.65x10^-2, Best val s2t loss=54.65x10^-2, Current muon LR=0.0020][A[A
+
+Training:   6%|▌         | 3/50 [00:15<02:56,  3.76s/epoch, Train s2t loss=53.99x10^-2, Val s2t loss=53.90x10^-2, Best val s2t loss=53.90x10^-2, Current muon LR=0.0020][A[A
+
+Training:   8%|▊         | 4/50 [00:15<02:48,  3.66s/epoch, Train s2t loss=53.99x10^-2, Val s2t loss=53.90x10^-2, Best val s2t loss=53.90x10^-2, Current muon LR=0.0020][A[A
+
+Training:   8%|▊         | 4/50 [00:18<02:48,  3.66s/epoch, Train s2t loss=53.20x10^-2, Val s2t loss=53.01x10^-2, Best val s2t loss=53.01x10^-2, Current muon LR=0.0020][A[A
+
+Training:  10%|█         | 5/50 [00:18<02:43,  3.63s/epoch, Train s2t loss=53.20x10^-2, Val s2t loss=53.01x10^-2, Best val s2t loss=53.01x10^-2, Current muon LR=0.0020][A[A
+
+Training:  10%|█         | 5/50 [00:22<02:43,  3.63s/epoch, Train s2t loss=52.70x10^-2, Val s2t loss=52.77x10^-2, Best val s2t loss=52.77x10^-2, Current muon LR=0.0020][A[A
+
+Training:  12%|█▏        | 6/50 [00:22<02:42,  3.70s/epoch, Train s2t loss=52.70x10^-2, Val s2t loss=52.77x10^-2, Best val s2t loss=52.77x10^-2, Current muon LR=0.0020][A[A
+
+Training:  12%|█▏        | 6/50 [00:26<02:42,  3.70s/epoch, Train s2t loss=52.38x10^-2, Val s2t loss=52.52x10^-2, Best val s2t loss=52.52x10^-2, Current muon LR=0.0020][A[A
+
+Training:  14%|█▍        | 7/50 [00:26<02:37,  3.66s/epoch, Train s2t loss=52.38x10^-2, Val s2t loss=52.52x10^-2, Best val s2t loss=52.52x10^-2, Current muon LR=0.0020][A[A
+
+Training:  14%|█▍        | 7/50 [00:29<02:37,  3.66s/epoch, Train s2t loss=52.17x10^-2, Val s2t loss=52.31x10^-2, Best val s2t loss=52.31x10^-2, Current muon LR=0.0020][A[A
+
+Training:  16%|█▌        | 8/50 [00:29<02:32,  3.63s/epoch, Train s2t loss=52.17x10^-2, Val s2t loss=52.31x10^-2, Best val s2t loss=52.31x10^-2, Current muon LR=0.0020][A[A
+
+Training:  16%|█▌        | 8/50 [00:33<02:32,  3.63s/epoch, Train s2t loss=52.09x10^-2, Val s2t loss=52.21x10^-2, Best val s2t loss=52.21x10^-2, Current muon LR=0.0020][A[A
+
+Training:  18%|█▊        | 9/50 [00:33<02:27,  3.60s/epoch, Train s2t loss=52.09x10^-2, Val s2t loss=52.21x10^-2, Best val s2t loss=52.21x10^-2, Current muon LR=0.0020][A[A
+
+Training:  18%|█▊        | 9/50 [00:36<02:27,  3.60s/epoch, Train s2t loss=51.93x10^-2, Val s2t loss=52.10x10^-2, Best val s2t loss=52.10x10^-2, Current muon LR=0.0020][A[A
+
+Training:  20%|██        | 10/50 [00:36<02:23,  3.59s/epoch, Train s2t loss=51.93x10^-2, Val s2t loss=52.10x10^-2, Best val s2t loss=52.10x10^-2, Current muon LR=0.0020][A[A
+
+Training:  20%|██        | 10/50 [00:40<02:23,  3.59s/epoch, Train s2t loss=51.85x10^-2, Val s2t loss=52.03x10^-2, Best val s2t loss=52.03x10^-2, Current muon LR=0.0020][A[A
+
+Training:  22%|██▏       | 11/50 [00:40<02:19,  3.58s/epoch, Train s2t loss=51.85x10^-2, Val s2t loss=52.03x10^-2, Best val s2t loss=52.03x10^-2, Current muon LR=0.0020][A[A
+
+Training:  22%|██▏       | 11/50 [00:43<02:19,  3.58s/epoch, Train s2t loss=51.75x10^-2, Val s2t loss=51.94x10^-2, Best val s2t loss=51.94x10^-2, Current muon LR=0.0020][A[A
+
+Training:  24%|██▍       | 12/50 [00:43<02:15,  3.56s/epoch, Train s2t loss=51.75x10^-2, Val s2t loss=51.94x10^-2, Best val s2t loss=51.94x10^-2, Current muon LR=0.0020][A[A
+
+Training:  24%|██▍       | 12/50 [00:47<02:15,  3.56s/epoch, Train s2t loss=51.68x10^-2, Val s2t loss=51.91x10^-2, Best val s2t loss=51.91x10^-2, Current muon LR=0.0020][A[A
+
+Training:  26%|██▌       | 13/50 [00:47<02:11,  3.55s/epoch, Train s2t loss=51.68x10^-2, Val s2t loss=51.91x10^-2, Best val s2t loss=51.91x10^-2, Current muon LR=0.0020][A[A
+
+Training:  26%|██▌       | 13/50 [00:50<02:11,  3.55s/epoch, Train s2t loss=51.64x10^-2, Val s2t loss=51.82x10^-2, Best val s2t loss=51.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:  28%|██▊       | 14/50 [00:50<02:08,  3.57s/epoch, Train s2t loss=51.64x10^-2, Val s2t loss=51.82x10^-2, Best val s2t loss=51.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:  28%|██▊       | 14/50 [00:54<02:08,  3.57s/epoch, Train s2t loss=51.61x10^-2, Val s2t loss=51.82x10^-2, Best val s2t loss=51.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:  30%|███       | 15/50 [00:54<02:05,  3.58s/epoch, Train s2t loss=51.61x10^-2, Val s2t loss=51.82x10^-2, Best val s2t loss=51.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:  30%|███       | 15/50 [00:58<02:05,  3.58s/epoch, Train s2t loss=51.57x10^-2, Val s2t loss=51.79x10^-2, Best val s2t loss=51.79x10^-2, Current muon LR=0.0020][A[A
+
+Training:  32%|███▏      | 16/50 [00:58<02:01,  3.58s/epoch, Train s2t loss=51.57x10^-2, Val s2t loss=51.79x10^-2, Best val s2t loss=51.79x10^-2, Current muon LR=0.0020][A[A
+
+Training:  32%|███▏      | 16/50 [01:01<02:01,  3.58s/epoch, Train s2t loss=51.52x10^-2, Val s2t loss=51.73x10^-2, Best val s2t loss=51.73x10^-2, Current muon LR=0.0020][A[A
+
+Training:  34%|███▍      | 17/50 [01:01<01:57,  3.57s/epoch, Train s2t loss=51.52x10^-2, Val s2t loss=51.73x10^-2, Best val s2t loss=51.73x10^-2, Current muon LR=0.0020][A[A
+
+Training:  34%|███▍      | 17/50 [01:05<01:57,  3.57s/epoch, Train s2t loss=51.45x10^-2, Val s2t loss=51.71x10^-2, Best val s2t loss=51.71x10^-2, Current muon LR=0.0020][A[A
+
+Training:  36%|███▌      | 18/50 [01:05<01:54,  3.57s/epoch, Train s2t loss=51.45x10^-2, Val s2t loss=51.71x10^-2, Best val s2t loss=51.71x10^-2, Current muon LR=0.0020][A[A
+
+Training:  36%|███▌      | 18/50 [01:08<01:54,  3.57s/epoch, Train s2t loss=51.52x10^-2, Val s2t loss=51.76x10^-2, Best val s2t loss=51.71x10^-2, Current muon LR=0.0020][A[A
+
+Training:  38%|███▊      | 19/50 [01:08<01:49,  3.55s/epoch, Train s2t loss=51.52x10^-2, Val s2t loss=51.76x10^-2, Best val s2t loss=51.71x10^-2, Current muon LR=0.0020][A[A
+
+Training:  38%|███▊      | 19/50 [01:12<01:49,  3.55s/epoch, Train s2t loss=51.47x10^-2, Val s2t loss=51.71x10^-2, Best val s2t loss=51.71x10^-2, Current muon LR=0.0020][A[A
+
+Training:  40%|████      | 20/50 [01:12<01:45,  3.53s/epoch, Train s2t loss=51.47x10^-2, Val s2t loss=51.71x10^-2, Best val s2t loss=51.71x10^-2, Current muon LR=0.0020][A[A
+
+Training:  40%|████      | 20/50 [01:15<01:45,  3.53s/epoch, Train s2t loss=51.40x10^-2, Val s2t loss=51.71x10^-2, Best val s2t loss=51.71x10^-2, Current muon LR=0.0020][A[A
+
+Training:  42%|████▏     | 21/50 [01:15<01:42,  3.53s/epoch, Train s2t loss=51.40x10^-2, Val s2t loss=51.71x10^-2, Best val s2t loss=51.71x10^-2, Current muon LR=0.0020][A[A
+
+Training:  42%|████▏     | 21/50 [01:19<01:42,  3.53s/epoch, Train s2t loss=51.43x10^-2, Val s2t loss=51.73x10^-2, Best val s2t loss=51.71x10^-2, Current muon LR=0.0020][A[A
+
+Training:  44%|████▍     | 22/50 [01:19<01:39,  3.56s/epoch, Train s2t loss=51.43x10^-2, Val s2t loss=51.73x10^-2, Best val s2t loss=51.71x10^-2, Current muon LR=0.0020][A[A
+
+Training:  44%|████▍     | 22/50 [01:22<01:39,  3.56s/epoch, Train s2t loss=51.39x10^-2, Val s2t loss=51.70x10^-2, Best val s2t loss=51.70x10^-2, Current muon LR=0.0020][A[A
+
+Training:  46%|████▌     | 23/50 [01:22<01:36,  3.57s/epoch, Train s2t loss=51.39x10^-2, Val s2t loss=51.70x10^-2, Best val s2t loss=51.70x10^-2, Current muon LR=0.0020][A[A
+
+Training:  46%|████▌     | 23/50 [01:26<01:36,  3.57s/epoch, Train s2t loss=51.39x10^-2, Val s2t loss=51.66x10^-2, Best val s2t loss=51.66x10^-2, Current muon LR=0.0020][A[A
+
+Training:  48%|████▊     | 24/50 [01:26<01:32,  3.56s/epoch, Train s2t loss=51.39x10^-2, Val s2t loss=51.66x10^-2, Best val s2t loss=51.66x10^-2, Current muon LR=0.0020][A[A
+
+Training:  48%|████▊     | 24/50 [01:29<01:32,  3.56s/epoch, Train s2t loss=51.36x10^-2, Val s2t loss=51.64x10^-2, Best val s2t loss=51.64x10^-2, Current muon LR=0.0020][A[A
+
+Training:  50%|█████     | 25/50 [01:29<01:28,  3.54s/epoch, Train s2t loss=51.36x10^-2, Val s2t loss=51.64x10^-2, Best val s2t loss=51.64x10^-2, Current muon LR=0.0020][A[A
+
+Training:  50%|█████     | 25/50 [01:33<01:28,  3.54s/epoch, Train s2t loss=51.32x10^-2, Val s2t loss=51.63x10^-2, Best val s2t loss=51.63x10^-2, Current muon LR=0.0020][A[A
+
+Training:  52%|█████▏    | 26/50 [01:33<01:25,  3.55s/epoch, Train s2t loss=51.32x10^-2, Val s2t loss=51.63x10^-2, Best val s2t loss=51.63x10^-2, Current muon LR=0.0020][A[A
+
+Training:  52%|█████▏    | 26/50 [01:37<01:25,  3.55s/epoch, Train s2t loss=51.31x10^-2, Val s2t loss=51.62x10^-2, Best val s2t loss=51.62x10^-2, Current muon LR=0.0020][A[A
+
+Training:  54%|█████▍    | 27/50 [01:37<01:21,  3.53s/epoch, Train s2t loss=51.31x10^-2, Val s2t loss=51.62x10^-2, Best val s2t loss=51.62x10^-2, Current muon LR=0.0020][A[A
+
+Training:  54%|█████▍    | 27/50 [01:40<01:21,  3.53s/epoch, Train s2t loss=51.28x10^-2, Val s2t loss=51.60x10^-2, Best val s2t loss=51.60x10^-2, Current muon LR=0.0020][A[A
+
+Training:  56%|█████▌    | 28/50 [01:40<01:18,  3.55s/epoch, Train s2t loss=51.28x10^-2, Val s2t loss=51.60x10^-2, Best val s2t loss=51.60x10^-2, Current muon LR=0.0020][A[A
+
+Training:  56%|█████▌    | 28/50 [01:44<01:18,  3.55s/epoch, Train s2t loss=51.35x10^-2, Val s2t loss=51.69x10^-2, Best val s2t loss=51.60x10^-2, Current muon LR=0.0020][A[A
+
+Training:  58%|█████▊    | 29/50 [01:44<01:14,  3.52s/epoch, Train s2t loss=51.35x10^-2, Val s2t loss=51.69x10^-2, Best val s2t loss=51.60x10^-2, Current muon LR=0.0020][A[A
+
+Training:  58%|█████▊    | 29/50 [01:48<01:14,  3.52s/epoch, Train s2t loss=51.37x10^-2, Val s2t loss=51.65x10^-2, Best val s2t loss=51.60x10^-2, Current muon LR=0.0020][A[A
+
+Training:  60%|██████    | 30/50 [01:48<01:15,  3.77s/epoch, Train s2t loss=51.37x10^-2, Val s2t loss=51.65x10^-2, Best val s2t loss=51.60x10^-2, Current muon LR=0.0020][A[A
+
+Training:  60%|██████    | 30/50 [01:52<01:15,  3.77s/epoch, Train s2t loss=51.30x10^-2, Val s2t loss=51.61x10^-2, Best val s2t loss=51.60x10^-2, Current muon LR=0.0020][A[A
+
+Training:  62%|██████▏   | 31/50 [01:52<01:14,  3.94s/epoch, Train s2t loss=51.30x10^-2, Val s2t loss=51.61x10^-2, Best val s2t loss=51.60x10^-2, Current muon LR=0.0020][A[A
+
+Training:  62%|██████▏   | 31/50 [01:56<01:14,  3.94s/epoch, Train s2t loss=51.32x10^-2, Val s2t loss=51.69x10^-2, Best val s2t loss=51.60x10^-2, Current muon LR=0.0020][A[A
+
+Training:  64%|██████▍   | 32/50 [01:56<01:08,  3.80s/epoch, Train s2t loss=51.32x10^-2, Val s2t loss=51.69x10^-2, Best val s2t loss=51.60x10^-2, Current muon LR=0.0020][A[A
+
+Training:  64%|██████▍   | 32/50 [01:59<01:08,  3.80s/epoch, Train s2t loss=51.32x10^-2, Val s2t loss=51.62x10^-2, Best val s2t loss=51.60x10^-2, Current muon LR=0.0020][A[A
+
+Training:  66%|██████▌   | 33/50 [01:59<01:03,  3.73s/epoch, Train s2t loss=51.32x10^-2, Val s2t loss=51.62x10^-2, Best val s2t loss=51.60x10^-2, Current muon LR=0.0020][A[A
+
+Training:  66%|██████▌   | 33/50 [02:03<01:03,  3.73s/epoch, Train s2t loss=51.27x10^-2, Val s2t loss=51.58x10^-2, Best val s2t loss=51.58x10^-2, Current muon LR=0.0020][A[A
+
+Training:  68%|██████▊   | 34/50 [02:03<00:58,  3.67s/epoch, Train s2t loss=51.27x10^-2, Val s2t loss=51.58x10^-2, Best val s2t loss=51.58x10^-2, Current muon LR=0.0020][A[A
+
+Training:  68%|██████▊   | 34/50 [02:06<00:58,  3.67s/epoch, Train s2t loss=51.26x10^-2, Val s2t loss=51.62x10^-2, Best val s2t loss=51.58x10^-2, Current muon LR=0.0020][A[A
+
+Training:  70%|███████   | 35/50 [02:06<00:54,  3.63s/epoch, Train s2t loss=51.26x10^-2, Val s2t loss=51.62x10^-2, Best val s2t loss=51.58x10^-2, Current muon LR=0.0020][A[A
+
+Training:  70%|███████   | 35/50 [02:10<00:54,  3.63s/epoch, Train s2t loss=51.25x10^-2, Val s2t loss=51.59x10^-2, Best val s2t loss=51.58x10^-2, Current muon LR=0.0020][A[A
+
+Training:  72%|███████▏  | 36/50 [02:10<00:50,  3.61s/epoch, Train s2t loss=51.25x10^-2, Val s2t loss=51.59x10^-2, Best val s2t loss=51.58x10^-2, Current muon LR=0.0020][A[A
+
+Training:  72%|███████▏  | 36/50 [02:14<00:50,  3.61s/epoch, Train s2t loss=51.24x10^-2, Val s2t loss=51.55x10^-2, Best val s2t loss=51.55x10^-2, Current muon LR=0.0020][A[A
+
+Training:  74%|███████▍  | 37/50 [02:14<00:46,  3.60s/epoch, Train s2t loss=51.24x10^-2, Val s2t loss=51.55x10^-2, Best val s2t loss=51.55x10^-2, Current muon LR=0.0020][A[A
+
+Training:  74%|███████▍  | 37/50 [02:17<00:46,  3.60s/epoch, Train s2t loss=51.23x10^-2, Val s2t loss=51.56x10^-2, Best val s2t loss=51.55x10^-2, Current muon LR=0.0020][A[A
+
+Training:  76%|███████▌  | 38/50 [02:17<00:42,  3.58s/epoch, Train s2t loss=51.23x10^-2, Val s2t loss=51.56x10^-2, Best val s2t loss=51.55x10^-2, Current muon LR=0.0020][A[A
+
+Training:  76%|███████▌  | 38/50 [02:21<00:42,  3.58s/epoch, Train s2t loss=51.21x10^-2, Val s2t loss=51.56x10^-2, Best val s2t loss=51.55x10^-2, Current muon LR=0.0020][A[A
+
+Training:  78%|███████▊  | 39/50 [02:21<00:39,  3.59s/epoch, Train s2t loss=51.21x10^-2, Val s2t loss=51.56x10^-2, Best val s2t loss=51.55x10^-2, Current muon LR=0.0020][A[A
+
+Training:  78%|███████▊  | 39/50 [02:24<00:39,  3.59s/epoch, Train s2t loss=51.22x10^-2, Val s2t loss=51.56x10^-2, Best val s2t loss=51.55x10^-2, Current muon LR=0.0020][A[A
+
+Training:  80%|████████  | 40/50 [02:24<00:36,  3.63s/epoch, Train s2t loss=51.22x10^-2, Val s2t loss=51.56x10^-2, Best val s2t loss=51.55x10^-2, Current muon LR=0.0020][A[A
+
+Training:  80%|████████  | 40/50 [02:28<00:36,  3.63s/epoch, Train s2t loss=51.20x10^-2, Val s2t loss=51.53x10^-2, Best val s2t loss=51.53x10^-2, Current muon LR=0.0020][A[A
+
+Training:  82%|████████▏ | 41/50 [02:28<00:32,  3.59s/epoch, Train s2t loss=51.20x10^-2, Val s2t loss=51.53x10^-2, Best val s2t loss=51.53x10^-2, Current muon LR=0.0020][A[A
+
+Training:  82%|████████▏ | 41/50 [02:31<00:32,  3.59s/epoch, Train s2t loss=51.16x10^-2, Val s2t loss=51.53x10^-2, Best val s2t loss=51.53x10^-2, Current muon LR=0.0020][A[A
+
+Training:  84%|████████▍ | 42/50 [02:31<00:28,  3.56s/epoch, Train s2t loss=51.16x10^-2, Val s2t loss=51.53x10^-2, Best val s2t loss=51.53x10^-2, Current muon LR=0.0020][A[A
+
+Training:  84%|████████▍ | 42/50 [02:35<00:28,  3.56s/epoch, Train s2t loss=51.16x10^-2, Val s2t loss=51.52x10^-2, Best val s2t loss=51.52x10^-2, Current muon LR=0.0020][A[A
+
+Training:  86%|████████▌ | 43/50 [02:35<00:24,  3.56s/epoch, Train s2t loss=51.16x10^-2, Val s2t loss=51.52x10^-2, Best val s2t loss=51.52x10^-2, Current muon LR=0.0020][A[A
+
+Training:  86%|████████▌ | 43/50 [02:38<00:24,  3.56s/epoch, Train s2t loss=51.17x10^-2, Val s2t loss=51.55x10^-2, Best val s2t loss=51.52x10^-2, Current muon LR=0.0020][A[A
+
+Training:  88%|████████▊ | 44/50 [02:38<00:21,  3.56s/epoch, Train s2t loss=51.17x10^-2, Val s2t loss=51.55x10^-2, Best val s2t loss=51.52x10^-2, Current muon LR=0.0020][A[A
+
+Training:  88%|████████▊ | 44/50 [02:42<00:21,  3.56s/epoch, Train s2t loss=51.14x10^-2, Val s2t loss=51.52x10^-2, Best val s2t loss=51.52x10^-2, Current muon LR=0.0020][A[A
+
+Training:  90%|█████████ | 45/50 [02:42<00:17,  3.57s/epoch, Train s2t loss=51.14x10^-2, Val s2t loss=51.52x10^-2, Best val s2t loss=51.52x10^-2, Current muon LR=0.0020][A[A
+
+Training:  90%|█████████ | 45/50 [02:46<00:17,  3.57s/epoch, Train s2t loss=51.14x10^-2, Val s2t loss=51.51x10^-2, Best val s2t loss=51.51x10^-2, Current muon LR=0.0020][A[A
+
+Training:  92%|█████████▏| 46/50 [02:46<00:14,  3.56s/epoch, Train s2t loss=51.14x10^-2, Val s2t loss=51.51x10^-2, Best val s2t loss=51.51x10^-2, Current muon LR=0.0020][A[A
+
+Training:  92%|█████████▏| 46/50 [02:49<00:14,  3.56s/epoch, Train s2t loss=51.16x10^-2, Val s2t loss=51.54x10^-2, Best val s2t loss=51.51x10^-2, Current muon LR=0.0020][A[A
+
+Training:  94%|█████████▍| 47/50 [02:49<00:10,  3.57s/epoch, Train s2t loss=51.16x10^-2, Val s2t loss=51.54x10^-2, Best val s2t loss=51.51x10^-2, Current muon LR=0.0020][A[A
+
+Training:  94%|█████████▍| 47/50 [02:53<00:10,  3.57s/epoch, Train s2t loss=51.16x10^-2, Val s2t loss=51.52x10^-2, Best val s2t loss=51.51x10^-2, Current muon LR=0.0020][A[A
+
+Training:  96%|█████████▌| 48/50 [02:53<00:07,  3.58s/epoch, Train s2t loss=51.16x10^-2, Val s2t loss=51.52x10^-2, Best val s2t loss=51.51x10^-2, Current muon LR=0.0020][A[A
+
+Training:  96%|█████████▌| 48/50 [02:56<00:07,  3.58s/epoch, Train s2t loss=51.15x10^-2, Val s2t loss=51.53x10^-2, Best val s2t loss=51.51x10^-2, Current muon LR=0.0020][A[A
+
+Training:  98%|█████████▊| 49/50 [02:56<00:03,  3.58s/epoch, Train s2t loss=51.15x10^-2, Val s2t loss=51.53x10^-2, Best val s2t loss=51.51x10^-2, Current muon LR=0.0020][A[A
+
+Training:  98%|█████████▊| 49/50 [03:00<00:03,  3.58s/epoch, Train s2t loss=51.15x10^-2, Val s2t loss=51.50x10^-2, Best val s2t loss=51.50x10^-2, Current muon LR=0.0020][A[A
+
+Training: 100%|██████████| 50/50 [03:00<00:00,  3.58s/epoch, Train s2t loss=51.15x10^-2, Val s2t loss=51.50x10^-2, Best val s2t loss=51.50x10^-2, Current muon LR=0.0020][A[A
+
+                                                                                                                                                                         [A[A
+Run 3/3: 100%|██████████| 3/3 [09:55<00:00, 194.76s/run][A
+                                                        [A
+Saved benchmark results to /home/luke/ATOM/benchmark_runs/s4_tg80_dt_sweep_09-Nov-2026_05-20-33/dt_nope_09-Nov-2026_05-20-33/results.json
+Benchmark Results (3 runs, 50 epochs/run):
+  Average S2S Test Loss: 62.35x10^-2 ± 0.15x10^-2
+  Average S2T Test Loss: 51.50x10^-2 ± 0.03x10^-2
+  Average Time per Run: 191.5s
+  Average Time per Epoch: 3.9s
+  Average Best Val Loss Epoch: 48.7

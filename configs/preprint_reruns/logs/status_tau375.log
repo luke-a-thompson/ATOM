@@ -1,0 +1,44 @@
+START s1_md17_atom Sun Nov  8 18:48:46 AEDT 2026
+END s1_md17_atom exit=0 Sun Nov  8 20:37:11 AEDT 2026
+START s1_rmd17_atom Sun Nov  8 20:37:11 AEDT 2026
+END s1_rmd17_atom exit=0 Sun Nov  8 22:33:47 AEDT 2026
+START s1_md22_atom Sun Nov  8 22:33:47 AEDT 2026
+END s1_md22_atom exit=0 Mon Nov  9 00:27:59 AEDT 2026
+START s1_md17_noneq Mon Nov  9 00:27:59 AEDT 2026
+END s1_md17_noneq exit=1 Mon Nov  9 01:42:47 AEDT 2026
+START s2_tg80_atom Mon Nov  9 01:42:47 AEDT 2026
+END s2_tg80_atom exit=0 Mon Nov  9 04:29:54 AEDT 2026
+START s2_tg80_atom_id Mon Nov  9 04:29:54 AEDT 2026
+END s2_tg80_atom_id exit=0 Mon Nov  9 05:04:15 AEDT 2026
+START s3_equivariance_error Mon Nov  9 05:04:15 AEDT 2026
+END s3_equivariance_error exit=0 Mon Nov  9 05:20:32 AEDT 2026
+START s4_tg80_dt_sweep Mon Nov  9 05:20:32 AEDT 2026
+END s4_tg80_dt_sweep exit=0 Mon Nov  9 05:50:04 AEDT 2026
+START s4_tg80_formic Mon Nov  9 05:50:04 AEDT 2026
+END s4_tg80_formic exit=0 Mon Nov  9 06:47:45 AEDT 2026
+START s4_tg80_ablation Mon Nov  9 06:47:45 AEDT 2026
+END s4_tg80_ablation exit=0 Mon Nov  9 09:24:27 AEDT 2026
+START s4_md17_ablation Mon Nov  9 09:24:27 AEDT 2026
+END s4_md17_ablation exit=0 Mon Nov  9 11:09:40 AEDT 2026
+ALL DONE Mon Nov  9 11:09:40 AEDT 2026
+START s5_md17_noneq_rest Mon Nov  9 11:09:55 AEDT 2026
+END s5_md17_noneq_rest exit=0 Mon Nov  9 11:51:12 AEDT 2026
+START s5_toluene_tau3000 Mon Nov  9 11:51:12 AEDT 2026
+END s5_toluene_tau3000 exit=0 Mon Nov  9 12:04:04 AEDT 2026
+S5 DONE Mon Nov  9 12:04:04 AEDT 2026
+START s6_md17_last Mon Nov  9 19:04:11 AEDT 2026
+END s6_md17_last exit=0 Mon Nov  9 21:19:35 AEDT 2026
+START s6_md22_gat Mon Nov  9 21:19:35 AEDT 2026
+S8 DONE Mon Nov  9 21:30:28 AEDT 2026
+END s6_md22_gat exit=0 Mon Nov  9 22:37:44 AEDT 2026
+START s6_tg80_random Mon Nov  9 22:37:44 AEDT 2026
+END s6_tg80_random exit=0 Tue Nov 10 00:25:24 AEDT 2026
+S6 DONE Tue Nov 10 00:25:24 AEDT 2026
+START s7_md17_egno Tue Nov 10 00:25:39 AEDT 2026
+END s7_md17_egno exit=0 Tue Nov 10 02:40:23 AEDT 2026
+START s7_md17_last_egno Tue Nov 10 02:40:23 AEDT 2026
+END s7_md17_last_egno exit=0 Tue Nov 10 04:56:18 AEDT 2026
+S7 DONE Tue Nov 10 04:56:18 AEDT 2026
+START s9_md17_last_rerun Tue Nov 10 04:56:28 AEDT 2026
+END s9_md17_last_rerun exit=0 Tue Nov 10 06:53:26 AEDT 2026
+S9 DONE Tue Nov 10 06:53:26 AEDT 2026

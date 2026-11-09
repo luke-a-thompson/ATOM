@@ -1,0 +1,175 @@
+/home/luke/ATOM/src/atom/training/create_config.py:151: UserWarning: Train and validation molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene
+  warnings.warn(f"Train and validation molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(val_set))}")
+/home/luke/ATOM/src/atom/training/create_config.py:153: UserWarning: Train and test molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene.
+  warnings.warn(f"Train and test molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(test_set))}.")
+/home/luke/ATOM/src/atom/training/create_config.py:155: UserWarning: Validation and test molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene
+  warnings.warn(f"Validation and test molecule sets overlap: {', '.join(str(mol) for mol in val_set.intersection(test_set))}")
+Inferred max_nodes across all molecules as: 9
+Inferred max_edges across all molecules as: 18
+/home/luke/ATOM/src/atom/training/create_config.py:151: UserWarning: Train and validation molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene
+  warnings.warn(f"Train and validation molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(val_set))}")
+/home/luke/ATOM/src/atom/training/create_config.py:153: UserWarning: Train and test molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene.
+  warnings.warn(f"Train and test molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(test_set))}.")
+/home/luke/ATOM/src/atom/training/create_config.py:155: UserWarning: Validation and test molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene
+  warnings.warn(f"Validation and test molecule sets overlap: {', '.join(str(mol) for mol in val_set.intersection(test_set))}")
+Inferred max_nodes across all molecules as: 9
+Inferred max_edges across all molecules as: 18
+/home/luke/ATOM/src/atom/training/create_config.py:151: UserWarning: Train and validation molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene
+  warnings.warn(f"Train and validation molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(val_set))}")
+/home/luke/ATOM/src/atom/training/create_config.py:153: UserWarning: Train and test molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene.
+  warnings.warn(f"Train and test molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(test_set))}.")
+/home/luke/ATOM/src/atom/training/create_config.py:155: UserWarning: Validation and test molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene
+  warnings.warn(f"Validation and test molecule sets overlap: {', '.join(str(mol) for mol in val_set.intersection(test_set))}")
+Inferred max_nodes across all molecules as: 9
+Inferred max_edges across all molecules as: 18
+ATOM 10 [105.845, 104.61, 114.0]
+/home/luke/ATOM/src/atom/training/create_config.py:151: UserWarning: Train and validation molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene
+  warnings.warn(f"Train and validation molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(val_set))}")
+/home/luke/ATOM/src/atom/training/create_config.py:153: UserWarning: Train and test molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene.
+  warnings.warn(f"Train and test molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(test_set))}.")
+/home/luke/ATOM/src/atom/training/create_config.py:155: UserWarning: Validation and test molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene
+  warnings.warn(f"Validation and test molecule sets overlap: {', '.join(str(mol) for mol in val_set.intersection(test_set))}")
+Inferred max_nodes across all molecules as: 9
+Inferred max_edges across all molecules as: 18
+/home/luke/ATOM/src/atom/training/create_config.py:151: UserWarning: Train and validation molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene
+  warnings.warn(f"Train and validation molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(val_set))}")
+/home/luke/ATOM/src/atom/training/create_config.py:153: UserWarning: Train and test molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene.
+  warnings.warn(f"Train and test molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(test_set))}.")
+/home/luke/ATOM/src/atom/training/create_config.py:155: UserWarning: Validation and test molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene
+  warnings.warn(f"Validation and test molecule sets overlap: {', '.join(str(mol) for mol in val_set.intersection(test_set))}")
+Inferred max_nodes across all molecules as: 9
+Inferred max_edges across all molecules as: 18
+/home/luke/ATOM/src/atom/training/create_config.py:151: UserWarning: Train and validation molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene
+  warnings.warn(f"Train and validation molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(val_set))}")
+/home/luke/ATOM/src/atom/training/create_config.py:153: UserWarning: Train and test molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene.
+  warnings.warn(f"Train and test molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(test_set))}.")
+/home/luke/ATOM/src/atom/training/create_config.py:155: UserWarning: Validation and test molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene
+  warnings.warn(f"Validation and test molecule sets overlap: {', '.join(str(mol) for mol in val_set.intersection(test_set))}")
+Inferred max_nodes across all molecules as: 9
+Inferred max_edges across all molecules as: 18
+ATOM 30 [105.533, 104.597, 114.042]
+/home/luke/ATOM/src/atom/training/create_config.py:151: UserWarning: Train and validation molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene
+  warnings.warn(f"Train and validation molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(val_set))}")
+/home/luke/ATOM/src/atom/training/create_config.py:153: UserWarning: Train and test molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene.
+  warnings.warn(f"Train and test molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(test_set))}.")
+/home/luke/ATOM/src/atom/training/create_config.py:155: UserWarning: Validation and test molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene
+  warnings.warn(f"Validation and test molecule sets overlap: {', '.join(str(mol) for mol in val_set.intersection(test_set))}")
+Inferred max_nodes across all molecules as: 9
+Inferred max_edges across all molecules as: 18
+/home/luke/ATOM/src/atom/training/create_config.py:151: UserWarning: Train and validation molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene
+  warnings.warn(f"Train and validation molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(val_set))}")
+/home/luke/ATOM/src/atom/training/create_config.py:153: UserWarning: Train and test molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene.
+  warnings.warn(f"Train and test molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(test_set))}.")
+/home/luke/ATOM/src/atom/training/create_config.py:155: UserWarning: Validation and test molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene
+  warnings.warn(f"Validation and test molecule sets overlap: {', '.join(str(mol) for mol in val_set.intersection(test_set))}")
+Inferred max_nodes across all molecules as: 9
+Inferred max_edges across all molecules as: 18
+/home/luke/ATOM/src/atom/training/create_config.py:151: UserWarning: Train and validation molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene
+  warnings.warn(f"Train and validation molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(val_set))}")
+/home/luke/ATOM/src/atom/training/create_config.py:153: UserWarning: Train and test molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene.
+  warnings.warn(f"Train and test molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(test_set))}.")
+/home/luke/ATOM/src/atom/training/create_config.py:155: UserWarning: Validation and test molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene
+  warnings.warn(f"Validation and test molecule sets overlap: {', '.join(str(mol) for mol in val_set.intersection(test_set))}")
+Inferred max_nodes across all molecules as: 9
+Inferred max_edges across all molecules as: 18
+ATOM 100 [105.961, 104.352, 113.978]
+/home/luke/ATOM/src/atom/training/create_config.py:151: UserWarning: Train and validation molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene
+  warnings.warn(f"Train and validation molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(val_set))}")
+/home/luke/ATOM/src/atom/training/create_config.py:153: UserWarning: Train and test molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene.
+  warnings.warn(f"Train and test molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(test_set))}.")
+/home/luke/ATOM/src/atom/training/create_config.py:155: UserWarning: Validation and test molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene
+  warnings.warn(f"Validation and test molecule sets overlap: {', '.join(str(mol) for mol in val_set.intersection(test_set))}")
+Inferred max_nodes across all molecules as: 9
+Inferred max_edges across all molecules as: 18
+/home/luke/ATOM/src/atom/training/create_config.py:151: UserWarning: Train and validation molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene
+  warnings.warn(f"Train and validation molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(val_set))}")
+/home/luke/ATOM/src/atom/training/create_config.py:153: UserWarning: Train and test molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene.
+  warnings.warn(f"Train and test molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(test_set))}.")
+/home/luke/ATOM/src/atom/training/create_config.py:155: UserWarning: Validation and test molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene
+  warnings.warn(f"Validation and test molecule sets overlap: {', '.join(str(mol) for mol in val_set.intersection(test_set))}")
+Inferred max_nodes across all molecules as: 9
+Inferred max_edges across all molecules as: 18
+/home/luke/ATOM/src/atom/training/create_config.py:151: UserWarning: Train and validation molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene
+  warnings.warn(f"Train and validation molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(val_set))}")
+/home/luke/ATOM/src/atom/training/create_config.py:153: UserWarning: Train and test molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene.
+  warnings.warn(f"Train and test molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(test_set))}.")
+/home/luke/ATOM/src/atom/training/create_config.py:155: UserWarning: Validation and test molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene
+  warnings.warn(f"Validation and test molecule sets overlap: {', '.join(str(mol) for mol in val_set.intersection(test_set))}")
+Inferred max_nodes across all molecules as: 9
+Inferred max_edges across all molecules as: 18
+ATOM 300 [106.379, 104.708, 113.931]
+/home/luke/ATOM/src/atom/training/create_config.py:151: UserWarning: Train and validation molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene
+  warnings.warn(f"Train and validation molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(val_set))}")
+/home/luke/ATOM/src/atom/training/create_config.py:153: UserWarning: Train and test molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene.
+  warnings.warn(f"Train and test molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(test_set))}.")
+/home/luke/ATOM/src/atom/training/create_config.py:155: UserWarning: Validation and test molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene
+  warnings.warn(f"Validation and test molecule sets overlap: {', '.join(str(mol) for mol in val_set.intersection(test_set))}")
+Inferred max_nodes across all molecules as: 9
+Inferred max_edges across all molecules as: 18
+/home/luke/ATOM/src/atom/training/create_config.py:151: UserWarning: Train and validation molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene
+  warnings.warn(f"Train and validation molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(val_set))}")
+/home/luke/ATOM/src/atom/training/create_config.py:153: UserWarning: Train and test molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene.
+  warnings.warn(f"Train and test molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(test_set))}.")
+/home/luke/ATOM/src/atom/training/create_config.py:155: UserWarning: Validation and test molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene
+  warnings.warn(f"Validation and test molecule sets overlap: {', '.join(str(mol) for mol in val_set.intersection(test_set))}")
+Inferred max_nodes across all molecules as: 9
+Inferred max_edges across all molecules as: 18
+/home/luke/ATOM/src/atom/training/create_config.py:151: UserWarning: Train and validation molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene
+  warnings.warn(f"Train and validation molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(val_set))}")
+/home/luke/ATOM/src/atom/training/create_config.py:153: UserWarning: Train and test molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene.
+  warnings.warn(f"Train and test molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(test_set))}.")
+/home/luke/ATOM/src/atom/training/create_config.py:155: UserWarning: Validation and test molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene
+  warnings.warn(f"Validation and test molecule sets overlap: {', '.join(str(mol) for mol in val_set.intersection(test_set))}")
+Inferred max_nodes across all molecules as: 9
+Inferred max_edges across all molecules as: 18
+ATOM 1000 [109.38, 112.009, 117.403]
+/home/luke/ATOM/src/atom/training/create_config.py:151: UserWarning: Train and validation molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene
+  warnings.warn(f"Train and validation molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(val_set))}")
+/home/luke/ATOM/src/atom/training/create_config.py:153: UserWarning: Train and test molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene.
+  warnings.warn(f"Train and test molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(test_set))}.")
+/home/luke/ATOM/src/atom/training/create_config.py:155: UserWarning: Validation and test molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene
+  warnings.warn(f"Validation and test molecule sets overlap: {', '.join(str(mol) for mol in val_set.intersection(test_set))}")
+Inferred max_nodes across all molecules as: 9
+Inferred max_edges across all molecules as: 18
+/home/luke/ATOM/src/atom/training/create_config.py:151: UserWarning: Train and validation molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene
+  warnings.warn(f"Train and validation molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(val_set))}")
+/home/luke/ATOM/src/atom/training/create_config.py:153: UserWarning: Train and test molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene.
+  warnings.warn(f"Train and test molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(test_set))}.")
+/home/luke/ATOM/src/atom/training/create_config.py:155: UserWarning: Validation and test molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene
+  warnings.warn(f"Validation and test molecule sets overlap: {', '.join(str(mol) for mol in val_set.intersection(test_set))}")
+Inferred max_nodes across all molecules as: 9
+Inferred max_edges across all molecules as: 18
+/home/luke/ATOM/src/atom/training/create_config.py:151: UserWarning: Train and validation molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene
+  warnings.warn(f"Train and validation molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(val_set))}")
+/home/luke/ATOM/src/atom/training/create_config.py:153: UserWarning: Train and test molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene.
+  warnings.warn(f"Train and test molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(test_set))}.")
+/home/luke/ATOM/src/atom/training/create_config.py:155: UserWarning: Validation and test molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene
+  warnings.warn(f"Validation and test molecule sets overlap: {', '.join(str(mol) for mol in val_set.intersection(test_set))}")
+Inferred max_nodes across all molecules as: 9
+Inferred max_edges across all molecules as: 18
+ATOM 3000 [6.082, 6.504, 6.267]
+/home/luke/ATOM/src/atom/training/create_config.py:151: UserWarning: Train and validation molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene
+  warnings.warn(f"Train and validation molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(val_set))}")
+/home/luke/ATOM/src/atom/training/create_config.py:153: UserWarning: Train and test molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene.
+  warnings.warn(f"Train and test molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(test_set))}.")
+/home/luke/ATOM/src/atom/training/create_config.py:155: UserWarning: Validation and test molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene
+  warnings.warn(f"Validation and test molecule sets overlap: {', '.join(str(mol) for mol in val_set.intersection(test_set))}")
+Inferred max_nodes across all molecules as: 9
+Inferred max_edges across all molecules as: 18
+/home/luke/ATOM/src/atom/training/create_config.py:151: UserWarning: Train and validation molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene
+  warnings.warn(f"Train and validation molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(val_set))}")
+/home/luke/ATOM/src/atom/training/create_config.py:153: UserWarning: Train and test molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene.
+  warnings.warn(f"Train and test molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(test_set))}.")
+/home/luke/ATOM/src/atom/training/create_config.py:155: UserWarning: Validation and test molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene
+  warnings.warn(f"Validation and test molecule sets overlap: {', '.join(str(mol) for mol in val_set.intersection(test_set))}")
+Inferred max_nodes across all molecules as: 9
+Inferred max_edges across all molecules as: 18
+/home/luke/ATOM/src/atom/training/create_config.py:151: UserWarning: Train and validation molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene
+  warnings.warn(f"Train and validation molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(val_set))}")
+/home/luke/ATOM/src/atom/training/create_config.py:153: UserWarning: Train and test molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene.
+  warnings.warn(f"Train and test molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(test_set))}.")
+/home/luke/ATOM/src/atom/training/create_config.py:155: UserWarning: Validation and test molecule sets overlap: cyclopropane, cyclobutane, 1.3-cyclohexadiene, cyclopentanone, tropane3, uracil1, cyclohexanone, tropane1, tetrahydrofuran, cyclohexanol, 1.4-dioxane, cyclohexane, cyclopentadiene
+  warnings.warn(f"Validation and test molecule sets overlap: {', '.join(str(mol) for mol in val_set.intersection(test_set))}")
+Inferred max_nodes across all molecules as: 9
+Inferred max_edges across all molecules as: 18
+ATOM 10000 [116.82, 122.446, 111.032]
