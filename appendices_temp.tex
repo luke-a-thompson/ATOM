@@ -144,7 +144,7 @@ We present a visualization of a sample trajectory of uracil from three datasets 
     MD17            & \url{https://www.sgdml.org/} & \texttt{CC BY 4.0}\\
     RMD17           & \url{https://archive.materialscloud.org/record/2020.82} & \texttt{CC Zero V1.0 Universal} \\
     MD22           & \url{https://www.sgdml.org/} & \texttt{CC BY 4.0} \\
-    TG80            & To be released at \url{URL} & \texttt{MIT}\\
+    TG80            & \url{https://ses.library.usyd.edu.au/handle/2123/35120} & \texttt{MIT}\\
     \bottomrule
     \end{tabular}}
 \end{table}
@@ -171,12 +171,12 @@ We duplicate all frames \(\mathcal{G}^{(t)} \to \{\mathcal{G}^{(t)}\}^{P}\) duri
 
 \newpage
 \subsection{Numerical Stability}
-We evaluate the numerical stability of MD17, RMD17, and TG80. MD17 benzene exhibits substantial center-of-mass drift in \Cref{fig:MD17_numerical_quality}, which is also partially visible in the consistent motion trails shown in \Cref{fig:MD17_trajectories}. RMD17 exhibits improved stability, with no center-of-mass drift exceeding \(1\times10^4\). TG80 shows the lowest drift of all datasets, and expectedly includes more molecules with high per-step drift (due to more complex sterically hindered geometries).
+We evaluate the numerical stability of MD17, RMD17, and TG80. MD17 benzene exhibits substantially higher position variance in \Cref{fig:MD17_numerical_quality}, which is also partially visible in the consistent motion trails shown in \Cref{fig:MD17_trajectories}. RMD17 exhibits improved stability, with no position variance exceeding \(10\)~\AA{}\(^2\). TG80 shows the lowest median position variance of all datasets, and expectedly includes more molecules with high per-step displacement variance (due to more complex sterically hindered geometries).
 \begin{figure}[H]
     \begin{subfigure}{0.49\textwidth}
         \centering
         \includegraphics[width=\linewidth]{Figures/dataset/md17_molecule_behavior_comparison.pdf}
-        \caption{MD17 molecules are largely consistent, except for benzene, which exhibits substantial drift.}
+        \caption{MD17 molecules are largely consistent, except for benzene, which exhibits substantially higher position variance.}
         \label{fig:MD17_numerical_quality}
     \end{subfigure}
     \hspace{0.02\textwidth}
@@ -189,10 +189,10 @@ We evaluate the numerical stability of MD17, RMD17, and TG80. MD17 benzene exhib
     \begin{subfigure}{\textwidth}
         \centering
         \includegraphics[width=\linewidth]{Figures/dataset/tg80_molecule_behavior_comparison.pdf}
-        \caption{TG80 molecules exhibit the lowest centre-of-mass drift among the evaluated MD datasets.}
+        \caption{TG80 molecules exhibit the lowest position variance among the evaluated MD datasets.}
         \label{fig:TG80_numerical_quality}
     \end{subfigure}
-    \caption{Comparison of numerical stability across MD17, RMD17, and TG80 datasets. Dashed lines denote the mean centre-of-mass drift and per-step motion; datapoints exceeding two standard deviations are annotated.}
+    \caption{Comparison of numerical stability across MD17, RMD17, and TG80 datasets. Each point is one molecule: the x-axis is the variance of all Cartesian coordinates over the trajectory and the y-axis is the mean per-atom variance of the per-step displacement magnitude. Dashed lines denote the medians; datapoints more than two standard deviations from the median are annotated.}
     \label{fig:numerical_stability}
 \end{figure}
 
@@ -220,12 +220,12 @@ To generate TG80, we randomly shuffled the PubChem dataset, then iterated throug
     \item No more than five oxygen atoms
     \item No more than three nitrogen atoms
     \item No disconnected molecular fragments (e.g., salts)
-    \item Tanimoto similarity to at least one seed molecule greater than 0.875, less than 0.925
-    \item Tanimoto similarity to a previously selected molecule is no more than 0.2
+    \item Tanimoto distance \(1-\operatorname{T}\) to at least one seed molecule between 0.875 and 0.925 (similarity between 0.075 and 0.125)
+    \item Tanimoto similarity to any previously selected molecule is no more than 0.2
 \end{enumerate}}
-This controlled selection procedure generates structurally analogous subsets around each seed molecule whilst preventing convergence to highly similar molecules across different seed groups.
+This selection procedure adds molecules that are only weakly similar to the seed set, and prevents convergence to highly similar molecules across selections. The criteria apply to the 40 selected molecules only; the 40 seed molecules include five compounds containing Cl or S (chloroform, 1,2-dichloroethane, chlorobenzene, ethanethiol and benzothiophene).
 
-{Only 2,488 of the 173 million in the PubChem library satisfied the filtration criteria above. This low yield largely reflects the cumulative effect of criterion 8: as more molecules are added, it becomes harder to find candidates sufficiently dissimilar to all prior selections. Given that the average Tanimoto similarity to our seed set was just 0.1492, the 0.875 threshold was highly selective. Dataset generation code is available at ANONYMIZED.}
+{Only 2,488 of the 173 million in the PubChem library satisfied the filtration criteria above. This low yield largely reflects the cumulative effect of criterion 8: as more molecules are added, it becomes harder to find candidates sufficiently dissimilar to all prior selections. Dataset generation code is available at \url{https://github.com/luke-a-thompson/ATOM/blob/main/data/chemical_sieve.py}.}
 % \url{https://github.com/luke-a-thompson/ATOM/blob/main/data/chemical_sieve.py}
 
 \subsection{Molecular Dynamics Simulations}
@@ -280,6 +280,8 @@ Let \(F\) be an arbitrary trunk acting in the canonical frame; with per-atom can
 \end{equation}
 
 This results in exact \(\mathrm{SE}(3)\)-equivariance \citep{kaba_equivariance_2023} and permits non-equivariant trunks.
+
+On TG80 multitask learning (Cluster 1, OOD), the fully-equivariant variant reaches an S2T \gls{mse} of \(32.08{\scriptstyle \pm1.18}\times10^{-2}\), compared to \(35.47{\scriptstyle \pm0.53}\times10^{-2}\) for \gls{atoms}.
 
 \subsection{Random-Walk Positional Encodings}
 \label{sec:positional_encoding}
@@ -372,15 +374,15 @@ We conduct further experiments on single-task and multitask learning. We conside
         \toprule
          & Aspirin & Benzene & Ethanol & Malonaldehyde & Naphthalene & Salicylic & Toluene & Uracil \\
         \midrule
-        \gls{egno} & \(9.66{\scriptstyle \pm0.12}\) & \(39.09{\scriptstyle \pm2.35}\) & \(4.57{\scriptstyle \pm0.01}\) & \(\mathbf{12.92}{\scriptstyle \pm0.00}\) & \(0.39{\scriptstyle \pm0.00}\) & \(0.88{\scriptstyle \pm0.01}\) & \(10.99{\scriptstyle \pm0.00}\) & \(0.60{\scriptstyle \pm0.00}\) \\
-        \gls{atoms} & \(\mathbf{6.38}{\scriptstyle \pm0.17}\) & \(\mathbf{39.03}{\scriptstyle \pm3.32}\) & \(\mathbf{3.62}{\scriptstyle \pm0.08}\) & \(15.26{\scriptstyle \pm0.65}\) & \(\mathbf{0.39}{\scriptstyle \pm0.00}\) & \(\mathbf{0.83}{\scriptstyle \pm0.01}\) & \(\mathbf{5.26}{\scriptstyle \pm0.79}\) & \(\mathbf{0.55}{\scriptstyle \pm0.00}\) \\
+        \gls{egno} & \(9.69{\scriptstyle \pm0.07}\) & \(45.75{\scriptstyle \pm6.28}\) & \(4.56{\scriptstyle \pm0.00}\) & \(\mathbf{12.94}{\scriptstyle \pm0.01}\) & \(0.39{\scriptstyle \pm0.00}\) & \(0.89{\scriptstyle \pm0.01}\) & \(10.99{\scriptstyle \pm0.01}\) & \(0.58{\scriptstyle \pm0.00}\) \\
+        \gls{atoms} & \(\mathbf{6.21}{\scriptstyle \pm0.13}\) & \(\mathbf{45.18}{\scriptstyle \pm1.05}\) & \(\mathbf{3.25}{\scriptstyle \pm0.03}\) & \(14.30{\scriptstyle \pm0.26}\) & \(\mathbf{0.38}{\scriptstyle \pm0.00}\) & \(\mathbf{0.81}{\scriptstyle \pm0.00}\) & \(\mathbf{5.51}{\scriptstyle \pm0.13}\) & \(\mathbf{0.54}{\scriptstyle \pm0.00}\) \\
         \midrule
-        \rowcolor{gray!20} Gap & \(+33.97\%\) & \(+0.15\%\) & \(+20.85\%\) & \(-18.06\%\) & \(+1.62\%\) & \(+4.75\%\) & \(+52.13\%\) & \(+9.28\%\) \\
+        \rowcolor{gray!20} Gap & \(+35.90\%\) & \(+1.25\%\) & \(+28.78\%\) & \(-10.49\%\) & \(+4.94\%\) & \(+9.78\%\) & \(+49.87\%\) & \(+6.33\%\) \\
         \midrule
-        \gls{egno} & \(9.66{\scriptstyle \pm0.11}\) & \(39.15{\scriptstyle \pm2.28}\) & \(4.57{\scriptstyle \pm0.01}\) & \(\mathbf{12.92}{\scriptstyle \pm0.01}\) & \(0.39{\scriptstyle \pm0.00}\) & \(0.88{\scriptstyle \pm0.01}\) & \(10.99{\scriptstyle \pm0.00}\) & \(0.60{\scriptstyle \pm0.00}\) \\
-        \gls{atoms} & \(\mathbf{6.38}{\scriptstyle \pm0.17}\) & \(\mathbf{39.03}{\scriptstyle \pm3.35}\) & \(\mathbf{3.63}{\scriptstyle \pm0.08}\) & \(15.21{\scriptstyle \pm0.60}\) & \(\mathbf{0.38}{\scriptstyle \pm0.00}\) & \(\mathbf{0.83}{\scriptstyle \pm0.01}\) & \(\mathbf{5.27}{\scriptstyle \pm0.79}\) & \(\mathbf{0.55}{\scriptstyle \pm0.00}\) \\
+        \gls{egno} & \(9.68{\scriptstyle \pm0.07}\) & \(45.85{\scriptstyle \pm6.34}\) & \(4.56{\scriptstyle \pm0.01}\) & \(\mathbf{12.94}{\scriptstyle \pm0.01}\) & \(0.39{\scriptstyle \pm0.00}\) & \(0.89{\scriptstyle \pm0.02}\) & \(10.99{\scriptstyle \pm0.00}\) & \(0.58{\scriptstyle \pm0.00}\) \\
+        \gls{atoms} & \(\mathbf{6.22}{\scriptstyle \pm0.14}\) & \(\mathbf{45.16}{\scriptstyle \pm1.05}\) & \(\mathbf{3.25}{\scriptstyle \pm0.03}\) & \(14.31{\scriptstyle \pm0.25}\) & \(\mathbf{0.37}{\scriptstyle \pm0.00}\) & \(\mathbf{0.81}{\scriptstyle \pm0.00}\) & \(\mathbf{5.51}{\scriptstyle \pm0.13}\) & \(\mathbf{0.54}{\scriptstyle \pm0.00}\) \\
         \midrule
-        \rowcolor{gray!20} Gap & \(+33.91\%\) & \(+0.30\%\) & \(+20.66\%\) & \(-17.71\%\) & \(+1.82\%\) & \(+5.02\%\) & \(+52.08\%\) & \(+9.44\%\) \\
+        \rowcolor{gray!20} Gap & \(+35.80\%\) & \(+1.52\%\) & \(+28.66\%\) & \(-10.61\%\) & \(+4.97\%\) & \(+10.01\%\) & \(+49.91\%\) & \(+6.34\%\) \\
         \bottomrule
     \end{tabular}
     }
@@ -389,26 +391,26 @@ We conduct further experiments on single-task and multitask learning. We conside
 
 \textbf{Revised MD17 Dataset}
 \label{sect:rmd17}
-We reach performance parity with \gls{egno} on RMD17, shown in \Cref{tab:rmd17_results}.
+On RMD17, \gls{atoms} reduces the S2S \gls{mse} of \gls{egno} by 19.35\% and the S2T \gls{mse} by 19.89\% on average (\Cref{tab:rmd17_results}), with the largest reductions on toluene, ethanol and paracetamol. \gls{egno} is better only on malonaldehyde. RMD17 stores a random subsample of 100{,}000 frames from each original MD17 trajectory; we sort frames by their original index and only use start frames whose $P$ target frames (at offsets $i\Delta T/P$) are present in the subsample to within 5 frames.
 \nopagebreak
 \begin{table}[H]
     \centering
-    \caption{EGNO and ATOM with final frame sampling. Upper part: S2S \gls{mse}. Lower part: S2T \gls{mse}.}
-    \label{tab:rmd17_finalframe_results}
+    \caption{\gls{mse} (\(\times 10^{-2}\)) of \gls{egno} and \gls{atoms} on RMD17 with uniform sampling. Upper part: S2S \gls{mse}. Lower part: S2T \gls{mse}. Gap is the relative reduction of \gls{atoms} versus \gls{egno}; the last column is the mean gap.}
+    \label{tab:rmd17_results}
     \resizebox{\linewidth}{!}{
-    \begin{tabular}{lcccccccc}
+    \begin{tabular}{lccccccccc}
         \toprule
-         & Azobenzene & Ethanol & Malonaldehyde & Naphthalene & Paracetamol & Salicylic & Toluene & Uracil \\
+         & Azobenzene & Ethanol & Malonaldehyde & Naphthalene & Paracetamol & Salicylic & Toluene & Uracil & Mean \\
         \midrule
-        \gls{egno} & \(8.96{\scriptstyle \pm0.03}\) & \(\mathbf{23.26}{\scriptstyle \pm0.01}\) & \(\mathbf{40.11}{\scriptstyle \pm0.05}\) & \(1.42{\scriptstyle \pm0.00}\) & \(\mathbf{28.08}{\scriptstyle \pm0.01}\) & \(1.06{\scriptstyle \pm0.01}\) & \(\mathbf{28.28}{\scriptstyle \pm0.01}\) & \(0.88{\scriptstyle \pm0.00}\) \\
-        \gls{atoms} & \(\mathbf{8.88}{\scriptstyle \pm0.05}\) & \(23.49{\scriptstyle \pm0.14}\) & \(40.29{\scriptstyle \pm0.13}\) & \(\mathbf{1.36}{\scriptstyle \pm0.00}\) & \(30.12{\scriptstyle \pm0.87}\) & \(\mathbf{1.03}{\scriptstyle \pm0.00}\) & \(28.56{\scriptstyle \pm0.04}\) & \(\mathbf{0.86}{\scriptstyle \pm0.00}\) \\
+        \gls{egno} & \(7.33{\scriptstyle \pm0.06}\) & \(4.80{\scriptstyle \pm0.02}\) & \(\mathbf{13.06}{\scriptstyle \pm0.05}\) & \(0.49{\scriptstyle \pm0.00}\) & \(17.13{\scriptstyle \pm0.55}\) & \(0.90{\scriptstyle \pm0.01}\) & \(11.04{\scriptstyle \pm0.35}\) & \(0.62{\scriptstyle \pm0.00}\) & -- \\
+        \gls{atoms} & \(\mathbf{6.61}{\scriptstyle \pm0.12}\) & \(\mathbf{3.29}{\scriptstyle \pm0.03}\) & \(13.63{\scriptstyle \pm0.07}\) & \(\mathbf{0.37}{\scriptstyle \pm0.01}\) & \(\mathbf{12.24}{\scriptstyle \pm0.15}\) & \(\mathbf{0.81}{\scriptstyle \pm0.01}\) & \(\mathbf{6.27}{\scriptstyle \pm0.06}\) & \(\mathbf{0.54}{\scriptstyle \pm0.01}\) & -- \\
         \midrule
-        \rowcolor{gray!20} Gap & \(+0.90\%\) & \(-0.99\%\) & \(-0.45\%\) & \(+3.93\%\) & \(-7.26\%\) & \(+3.10\%\) & \(-0.99\%\) & \(+1.90\%\) \\
+        \rowcolor{gray!20} Gap & \(+9.88\%\) & \(+31.41\%\) & \(-4.35\%\) & \(+23.91\%\) & \(+28.56\%\) & \(+10.18\%\) & \(+43.19\%\) & \(+11.98\%\) & \(\mathbf{+19.35\%}\) \\
         \midrule
-        \gls{egno} & \(8.51{\scriptstyle \pm0.03}\) & \(\mathbf{23.61}{\scriptstyle \pm0.03}\) & \(\mathbf{40.32}{\scriptstyle \pm0.08}\) & \(1.42{\scriptstyle \pm0.00}\) & \(\mathbf{28.01}{\scriptstyle \pm0.02}\) & \(1.07{\scriptstyle \pm0.01}\) & \(\mathbf{28.23}{\scriptstyle \pm0.00}\) & \(0.87{\scriptstyle \pm0.00}\) \\
-        \gls{atoms} & \(\mathbf{8.38}{\scriptstyle \pm0.05}\) & \(23.90{\scriptstyle \pm0.15}\) & \(40.67{\scriptstyle \pm0.17}\) & \(\mathbf{1.36}{\scriptstyle \pm0.00}\) & \(30.03{\scriptstyle \pm0.78}\) & \(\mathbf{1.04}{\scriptstyle \pm0.00}\) & \(28.58{\scriptstyle \pm0.05}\) & \(\mathbf{0.85}{\scriptstyle \pm0.00}\) \\
+        \gls{egno} & \(6.46{\scriptstyle \pm0.05}\) & \(3.42{\scriptstyle \pm0.02}\) & \(\mathbf{11.32}{\scriptstyle \pm0.02}\) & \(0.43{\scriptstyle \pm0.01}\) & \(13.02{\scriptstyle \pm0.29}\) & \(0.93{\scriptstyle \pm0.02}\) & \(4.85{\scriptstyle \pm0.15}\) & \(0.61{\scriptstyle \pm0.01}\) & -- \\
+        \gls{atoms} & \(\mathbf{5.60}{\scriptstyle \pm0.16}\) & \(\mathbf{2.51}{\scriptstyle \pm0.00}\) & \(11.61{\scriptstyle \pm0.06}\) & \(\mathbf{0.36}{\scriptstyle \pm0.00}\) & \(\mathbf{9.98}{\scriptstyle \pm0.07}\) & \(\mathbf{0.67}{\scriptstyle \pm0.01}\) & \(\mathbf{2.87}{\scriptstyle \pm0.03}\) & \(\mathbf{0.52}{\scriptstyle \pm0.01}\) & -- \\
         \midrule
-        \rowcolor{gray!20} Gap & \(+1.47\%\) & \(-1.27\%\) & \(-0.88\%\) & \(+4.39\%\) & \(-7.21\%\) & \(+2.78\%\) & \(-1.23\%\) & \(+2.00\%\) \\
+        \rowcolor{gray!20} Gap & \(+13.30\%\) & \(+26.80\%\) & \(-2.54\%\) & \(+15.70\%\) & \(+23.37\%\) & \(+27.61\%\) & \(+40.81\%\) & \(+14.11\%\) & \(\mathbf{+19.89\%}\) \\
         \bottomrule
     \end{tabular}
     }
@@ -416,7 +418,7 @@ We reach performance parity with \gls{egno} on RMD17, shown in \Cref{tab:rmd17_r
 % \begin{table}[H]
 %     \centering
 %     \caption{\gls{mse} (\(\times 10^{-2}\)) on RMD17. Upper part: S2S \gls{mse}. Lower part: S2T \gls{mse}}
-%     \label{tab:rmd17_results}
+%     \label{tab:rmd17_results_old}
 %     \resizebox{\linewidth}{!}{
 %     \begin{tabular}{lccccccccc}
 %         \toprule
@@ -441,7 +443,7 @@ We reach performance parity with \gls{egno} on RMD17, shown in \Cref{tab:rmd17_r
 \subsection{Further Multitask Learning Experiments}
 
 \label{sect:random_split}
-\textbf{Random-split cross-validation on TG80.} For completeness, we report multitask results under compound-level random cross-validation, where compounds are randomly assigned to the train, validation, and test sets. Relative to the more challenging out-of-domain (UMAP-based) split in \Cref{tab:tg80_umap}, \gls{egno} is comparatively stronger; nevertheless, \gls{atoms} maintains a consistent lead across folds, with mean improvements of 24.43\% on S2S and 23.93\% on S2T.
+\textbf{Random-split cross-validation on TG80.} For completeness, we report multitask results under compound-level random cross-validation, where compounds are randomly assigned to the train, validation, and test sets. Relative to the more challenging out-of-domain (UMAP-based) split in \Cref{tab:tg80_umap}, \gls{egno} is comparatively stronger; nevertheless, \gls{atoms} maintains a consistent lead across folds, with mean improvements of 25.10\% on S2S and 25.07\% on S2T.
 
 \begin{table}[H]
   \centering
@@ -453,9 +455,9 @@ We reach performance parity with \gls{egno} on RMD17, shown in \Cref{tab:rmd17_r
      \midrule
     \multirow{2}{*}{OOD}
        & \gls{egno} & \(71.83{\scriptstyle \pm0.00}\) & \(76.92{\scriptstyle \pm0.00}\) & \(68.99{\scriptstyle \pm0.00}\) & \(101.27{\scriptstyle \pm0.00}\) & \(83.20{\scriptstyle \pm0.00}\) \\
-       & \gls{atoms} & \(\mathbf{53.93}{\scriptstyle \pm0.00}\) & \(\mathbf{62.40}{\scriptstyle \pm0.00}\) & \(\mathbf{49.37}{\scriptstyle \pm0.00}\) & \(\mathbf{70.75}{\scriptstyle \pm0.00}\) & \(\mathbf{66.75}{\scriptstyle \pm0.00}\) \\
+       & \gls{atoms} & \(\mathbf{56.88}{\scriptstyle \pm0.88}\) & \(\mathbf{59.34}{\scriptstyle \pm0.98}\) & \(\mathbf{54.78}{\scriptstyle \pm1.54}\) & \(\mathbf{67.23}{\scriptstyle \pm6.88}\) & \(\mathbf{60.22}{\scriptstyle \pm2.19}\) \\
       \cmidrule(lr){2-7}
-      \rowcolor{gray!20} & Gap & \(+24.92\%\) & \(+18.88\%\) & \(+28.45\%\) & \(+30.14\%\) & \(+19.77\%\) \\
+      \rowcolor{gray!20} & Gap & \(+20.81\%\) & \(+22.85\%\) & \(+20.60\%\) & \(+33.62\%\) & \(+27.63\%\) \\
     \bottomrule
   \end{tabular}
   }
@@ -472,9 +474,9 @@ We reach performance parity with \gls{egno} on RMD17, shown in \Cref{tab:rmd17_r
      \midrule
     \multirow{2}{*}{OOD}
        & \gls{egno} & \(63.23{\scriptstyle \pm0.00}\) & \(64.49{\scriptstyle \pm0.00}\) & \(59.18{\scriptstyle \pm0.00}\) & \(85.87{\scriptstyle \pm0.00}\) & \(69.46{\scriptstyle \pm0.00}\) \\
-       & \gls{atoms} & \(\mathbf{46.09}{\scriptstyle \pm0.00}\) & \(\mathbf{54.47}{\scriptstyle \pm0.00}\) & \(\mathbf{42.90}{\scriptstyle \pm0.00}\) & \(\mathbf{55.64}{\scriptstyle \pm0.00}\) & \(\mathbf{59.55}{\scriptstyle \pm0.00}\) \\
+       & \gls{atoms} & \(\mathbf{48.61}{\scriptstyle \pm1.89}\) & \(\mathbf{50.96}{\scriptstyle \pm1.34}\) & \(\mathbf{46.54}{\scriptstyle \pm1.36}\) & \(\mathbf{57.72}{\scriptstyle \pm7.32}\) & \(\mathbf{50.66}{\scriptstyle \pm2.14}\) \\
       \cmidrule(lr){2-7}
-      \rowcolor{gray!20} & Gap & \(+27.10\%\) & \(+15.54\%\) & \(+27.51\%\) & \(+35.21\%\) & \(+14.28\%\) \\
+      \rowcolor{gray!20} & Gap & \(+23.13\%\) & \(+20.99\%\) & \(+21.37\%\) & \(+32.79\%\) & \(+27.07\%\) \\
     \bottomrule
   \end{tabular}
   }
@@ -487,25 +489,25 @@ We reach performance parity with \gls{egno} on RMD17, shown in \Cref{tab:rmd17_r
 
 \begin{table}[H]
   \centering
-  \caption{S2S \gls{mse} \((\times10^{-2})\) on TG80 across five UMAP cluster assignments.}
+  \caption{S2S \gls{mse} \((\times10^{-2})\) on TG80 across five UMAP cluster assignments. Gap is the relative reduction of \gls{atoms} versus \gls{egno}.}
   \resizebox{\linewidth}{!}{%
   \begin{tabular}{llccccc}
     \toprule
      &  & \textbf{Cluster 1} & \textbf{Cluster 2} & \textbf{Cluster 3} & \textbf{Cluster 4} & \textbf{Cluster 5} \\
      \midrule
      \multirow{3}{*}{ID}
-      & \gls{egno}  & \(51.98{\scriptstyle \pm0.81}\) & \(95.86{\scriptstyle \pm0.53}\) & \(142.51{\scriptstyle \pm0.58}\) & \(155.25{\scriptstyle \pm0.67}\) & \(109.25{\scriptstyle \pm0.24}\) \\
-      & \gls{atoms} & \(\mathbf{15.49}{\scriptstyle \pm1.04}\) & \(\mathbf{26.55}{\scriptstyle \pm2.13}\) & \(\mathbf{28.74}{\scriptstyle \pm2.40}\) & \(\mathbf{29.81}{\scriptstyle \pm2.72}\) & \(\mathbf{26.33}{\scriptstyle \pm1.98}\) \\
+      & \gls{egno}  & \(51.83{\scriptstyle \pm0.79}\) & \(103.99{\scriptstyle \pm0.22}\) & \(143.61{\scriptstyle \pm0.84}\) & \(154.75{\scriptstyle \pm0.60}\) & \(109.30{\scriptstyle \pm0.33}\) \\
+      & \gls{atoms} & \(\mathbf{6.18}{\scriptstyle \pm0.25}\) & \(\mathbf{9.05}{\scriptstyle \pm0.35}\) & \(\mathbf{5.95}{\scriptstyle \pm0.16}\) & \(\mathbf{5.08}{\scriptstyle \pm0.45}\) & \(\mathbf{6.18}{\scriptstyle \pm0.41}\) \\
       \cmidrule(lr){2-7}
-      \rowcolor{gray!20} & Gap (\%) & \(70.20\%\) & \(72.30\%\) & \(79.83\%\) & \(80.80\%\) & \(75.90\%\) \\
+      \rowcolor{gray!20} & Gap (\%) & \(88.08\%\) & \(91.30\%\) & \(95.86\%\) & \(96.72\%\) & \(94.34\%\) \\
     \midrule
     \multirow{4}{*}{OOD}
-      & \gls{egno}  & \(52.90{\scriptstyle \pm0.72}\) & \(114.14{\scriptstyle \pm13.21}\) & \(149.99{\scriptstyle \pm0.34}\) & \(163.47{\scriptstyle \pm1.00}\) & \(112.36{\scriptstyle \pm1.90}\) \\
-      & EGNN\text{-}S & \(52.39{\scriptstyle \pm0.40}\) & \(16512.07{\scriptstyle \pm12314.09}\) & \(149.41{\scriptstyle \pm0.94}\) & \(663.54{\scriptstyle \pm865.23}\) & \(111.08{\scriptstyle \pm0.62}\) \\
-      & EGNN\text{-}R & \(52.08{\scriptstyle \pm0.79}\) & \(\mathbf{108.89}{\scriptstyle \pm1.60}\) & \(148.67{\scriptstyle \pm0.73}\) & \(163.27{\scriptstyle \pm0.16}\) & \(109.94{\scriptstyle \pm0.31}\) \\
-      & \gls{atoms} & \(\mathbf{41.97}{\scriptstyle \pm1.24}\) & \(127.95{\scriptstyle \pm122.67}\) & \(\mathbf{74.53}{\scriptstyle \pm4.82}\) & \(\mathbf{80.95}{\scriptstyle \pm1.21}\) & \(\mathbf{58.26}{\scriptstyle \pm1.68}\) \\
+      & \gls{egno}  & \(53.19{\scriptstyle \pm0.96}\) & \(1788.34{\scriptstyle \pm2874.88}\) & \(149.38{\scriptstyle \pm1.55}\) & \(163.23{\scriptstyle \pm0.40}\) & \(112.36{\scriptstyle \pm1.70}\) \\
+      & EGNN\text{-}S & \(52.46{\scriptstyle \pm0.43}\) & \(59210.80{\scriptstyle \pm52351.92}\) & \(150.22{\scriptstyle \pm1.10}\) & \(2965.22{\scriptstyle \pm4852.19}\) & \(111.18{\scriptstyle \pm0.57}\) \\
+      & EGNN\text{-}R & \(52.11{\scriptstyle \pm0.93}\) & \(116.96{\scriptstyle \pm0.68}\) & \(151.26{\scriptstyle \pm2.45}\) & \(163.20{\scriptstyle \pm0.27}\) & \(110.88{\scriptstyle \pm1.90}\) \\
+      & \gls{atoms} & \(\mathbf{42.75}{\scriptstyle \pm0.31}\) & \(\mathbf{72.22}{\scriptstyle \pm5.54}\) & \(\mathbf{86.26}{\scriptstyle \pm7.00}\) & \(\mathbf{97.83}{\scriptstyle \pm7.30}\) & \(\mathbf{63.71}{\scriptstyle \pm4.79}\) \\
       \cmidrule(lr){2-7}
-      \rowcolor{gray!20} & Gap (\%) & \(19.41\%\) & \(-17.50\%\) & \(49.87\%\) & \(50.42\%\) & \(47.01\%\) \\
+      \rowcolor{gray!20} & Gap (\%) & \(19.62\%\) & \(95.96\%\) & \(42.25\%\) & \(40.07\%\) & \(43.30\%\) \\
     \bottomrule
   \end{tabular}
   }
@@ -521,21 +523,21 @@ We reach performance parity with \gls{egno} on RMD17, shown in \Cref{tab:rmd17_r
         \toprule
         & Formic Acid \\
         \midrule
-        Single-task \gls{atoms} & 26.40 \\
-        All-data \gls{atoms} & \textbf{22.39} \\
+        Single-task \gls{atoms} & \textbf{26.51} \\
+        All-data \gls{atoms} & 29.37 \\
         \midrule
-        \rowcolor{gray!20} Gap (\%) & \(15.19\%\) \\
+        \rowcolor{gray!20} Gap (\%) & \(-10.79\%\) \\
         \midrule
-        Single-task \gls{atoms} & \textbf{18.10} \\
-        All-data \gls{atoms} & 18.72 \\
+        Single-task \gls{atoms} & \textbf{17.80} \\
+        All-data \gls{atoms} & 19.92 \\
         \midrule
-        \rowcolor{gray!20} Gap (\%) & \(-3.43\%\) \\
+        \rowcolor{gray!20} Gap (\%) & \(-11.91\%\) \\
         \bottomrule
     \end{tabular}
     \label{tab:placeholder}
     \vspace{-0.5\baselineskip}
 \end{wraptable}
-\textbf{Multitask S2S Versus Single Task} We evaluate a multitask \gls{atoms} model trained on all available trajectories, pooling both ID and OOD clusters, against a single-task \gls{atoms} trained separately on each compound. The multitasking model achieves losses comparable to or lower than those of the single-task baselines, despite being trained with the same compute resources.
+\textbf{Multitask S2S Versus Single Task} We evaluate a multitask \gls{atoms} model trained on all available trajectories, pooling both ID and OOD clusters, against a single-task \gls{atoms} trained separately on each compound. On formic acid, the multitask model comes within 12\% of the single-task model on both S2S and S2T \gls{mse}, while also covering every other compound in TG80.
 
 % \begin{table}[H]
 %     \centering
@@ -562,33 +564,31 @@ We reach performance parity with \gls{egno} on RMD17, shown in \Cref{tab:rmd17_r
 
 \subsection[Monte Carlo Estimation of Quasi-equivariance]{Monte Carlo Estimation of\\ Quasi-equivariance}
 \label{app:quasi_equivariance_mc}
-{For both the pretrained \gls{atoms} and the non-equivariant lifting variant, we estimate the quantity in \Cref{def:quasi_equivariance} by Monte Carlo, drawing \(N\) random timesteps \(x_n\) and, for each, \(R\) random rotations \(g_{n,r} \in G\). We approximate
+{For both the pretrained \gls{atoms} and the non-equivariant lifting variant, we estimate the quantity in \Cref{def:quasi_equivariance} by Monte Carlo, drawing \(N\) test states \(x_n\) and, for each, \(R\) rotations \(g_{n,r}\) sampled uniformly (Haar) from \(\mathrm{SO}(3)\). We approximate
 \begin{equation*}
-    \varepsilon \approx \frac{1}{N} \sum_{n=1}^{N} 
+    \varepsilon \approx \frac{1}{N R} \sum_{n=1}^{N} \sum_{r=1}^{R}
     \left\|
-        \frac{1}{R} \sum_{r=1}^{R}
-        \bigl(
             f\bigl(\phi(g_{n,r})(x_n)\bigr)
             - \rho(g_{n,r})\bigl(f(x_n)\bigr)
-        \bigr)
-    \right\|_2 .
+    \right\|_2 ,
 \end{equation*}
-We report our estimates of \(\varepsilon\) for various \gls{atoms} models trained on MD17 single task learning in \Cref{tab:equivariance_defect}. In all cases, \gls{atoms} shows a substantially lower equivariance defect, supporting our claim that our quasi-equivariant design achieves a kind of middle-ground in the trade-off between expressiveness and strict equivariance.
+where the norm is taken over the Cartesian coordinates of each predicted atom position and the result is averaged over atoms and predicted timesteps.
+We report our estimates of \(\varepsilon\) for various \gls{atoms} models trained on MD17 single task learning in \Cref{tab:equivariance_defect}. \gls{atoms} shows a lower equivariance defect than the non-equivariant variant on aspirin, malonaldehyde and toluene, with the largest reduction on toluene (\(2.2\times\)); on ethanol, naphthalene, salicylic acid and uracil the non-equivariant variant has the lower defect.
 }
 
 \begin{table}[H]
 %— Top: Full‐width big table —
 \centering
-\caption{Estimates of Quasi-equivariance \(\varepsilon\) via Monte Carlo over 20 rotations and 10 timesteps with 2SD intervals.}
+\caption{Estimates of the equivariance defect \(\varepsilon\) \((\times10^{-2}\)~\AA{}) via Monte Carlo over 20 Haar-random rotations and 10 test batches with 2SD intervals.}
 \label{tab:equivariance_defect}
 \resizebox{\linewidth}{!}{%
     \begin{tabular}{lccccccc}
         \toprule
          & Aspirin & Ethanol & Malonaldehyde & Naphthalene & Salicylic & Toluene & Uracil \\
         \midrule 
-        Non-equivariant \gls{atoms} & \(120.23\scriptstyle \pm153.71\) & \(102.50{\scriptstyle \pm 45.14}\) & \(26.94{\scriptstyle \pm16.04}\) & \(37.97{\scriptstyle \pm12.65}\) & \(37.81\scriptstyle \pm20.08\) & \(57822.95\scriptstyle \pm42872.97\) & \(32.29{\scriptstyle \pm35.80}\) \\
+        Non-equivariant \gls{atoms} & \(137.72{\scriptstyle \pm85.15}\) & \(\mathbf{35.48}{\scriptstyle \pm18.91}\) & \(57.55{\scriptstyle \pm32.70}\) & \(\mathbf{88.66}{\scriptstyle \pm41.67}\) & \(\mathbf{119.18}{\scriptstyle \pm64.44}\) & \(3750.90{\scriptstyle \pm3815.93}\) & \(\mathbf{108.73}{\scriptstyle \pm78.73}\) \\
 
-        \textbf{\gls{atoms}} & \(\mathbf{28.34}{\scriptstyle \pm25.10}\) & \(\mathbf{11.09}{\scriptstyle \pm9.64}\) & \(\mathbf{9.99}{\scriptstyle \pm9.82}\) & \(\mathbf{17.09}{\scriptstyle \pm13.03}\) & \(\mathbf{25.46}{\scriptstyle \pm21.47}\) & \(\mathbf{2744.07}{\scriptstyle \pm3108.52}\) & \(\mathbf{28.72}{\scriptstyle \pm19.20}\) \\
+        \textbf{\gls{atoms}} & \(\mathbf{130.09}{\scriptstyle \pm95.67}\) & \(37.47{\scriptstyle \pm22.68}\) & \(\mathbf{52.25}{\scriptstyle \pm31.70}\) & \(204.68{\scriptstyle \pm174.68}\) & \(259.44{\scriptstyle \pm188.28}\) & \(\mathbf{1710.83}{\scriptstyle \pm1868.94}\) & \(229.57{\scriptstyle \pm228.08}\) \\
         \bottomrule
     \end{tabular}
 }
@@ -646,11 +646,11 @@ All experiments were conducted using Python 3.12, NumPy 2.2.1 \cite{harris_array
 
 \subsection{Training Times and Compute Requirements}
 \label{sec:model_compute_time}
-\textbf{Single-task training time} We roughly wall-clock normalised our \gls{atoms} and \gls{egno} parameter counts, resulting in respective learnable parameter counts of 754\,468 and 335\,770.
+\textbf{Single-task training time} We roughly wall-clock normalised our \gls{atoms} and \gls{egno} parameter counts, resulting in respective learnable parameter counts of 910\,320 and 335\,770.
 
 \begin{table}[H]
     \centering
-    \caption{Compute cost of single-task training on all MD17 molecules over 1000 epochs. Both \gls{atoms} (335\,770 params) and \gls{egno} (754\,468 params) are under \texttt{torch.compile} on a Titan V.}
+    \caption{Compute cost of single-task training on all RMD17 molecules over 1000 epochs. Both \gls{atoms} (910\,320 params) and \gls{egno} (335\,770 params) are under \texttt{torch.compile} on a Titan V. Total FLOPS is wall-clock time multiplied by the peak FP32 throughput of the GPU.}
     \label{tab:md17_compute_cost}
     \resizebox{\linewidth}{!}{%
     \begin{tabular}{llcccccccc}
@@ -674,11 +674,11 @@ All experiments were conducted using Python 3.12, NumPy 2.2.1 \cite{harris_array
     }
 \end{table}
 
-\textbf{Multitask training time} In multitask training on TG80, our upsized \gls{atoms} model contained 3\,557\,840 parameters, compared to 335 770 for \gls{egno}. Despite this, \gls{atoms} only trained between 5\% and 30\% slower than \gls{egno}. This is perhaps unsurprising given the much higher FLOPS-utilization of the transformer architecture upon which \gls{atoms} is based.
+\textbf{Multitask training time} In multitask training on TG80, our upsized \gls{atoms} model contained 4\,347\,428 parameters, compared to 335\,770 for \gls{egno}. Despite this, \gls{atoms} only trained between 5\% and 30\% slower than \gls{egno}. This is perhaps unsurprising given the much higher FLOPS-utilization of the transformer architecture upon which \gls{atoms} is based.
 
 \begin{table}[H]
     \centering
-    \caption{Compute cost of single task training on five TG80 molecules over 1000 epochs. Both \gls{atoms} (335 770 params) and \gls{egno} (754 468 params) are under \texttt{torch.compile} on a Titan V.}
+    \caption{Compute cost of multitask training on the five TG80 cluster splits over 1000 epochs. Both \gls{atoms} (4\,347\,428 params) and \gls{egno} (335\,770 params) are under \texttt{torch.compile} on a Titan V. Total FLOPS is wall-clock time multiplied by the peak FP32 throughput of the GPU.}
     \label{tab:tg80_compute_cost}
     \resizebox{\linewidth}{!}{%
     \begin{tabular}{llccccc}
@@ -706,7 +706,7 @@ All experiments were conducted using Python 3.12, NumPy 2.2.1 \cite{harris_array
 \begin{table}[H]
     \centering
     \caption{Seconds to produce timestep \(\Delta T = 3000\) of each MD17 trajectory at \texttt{float32} precision.}
-    \label{tab:equivariance_defect}
+    \label{tab:inference_md17}
     \resizebox{\linewidth}{!}{%
         \begin{tabular}{llrrrrrrr}
             \toprule
@@ -793,7 +793,7 @@ All experiments were conducted using Python 3.12, NumPy 2.2.1 \cite{harris_array
     %— Top: Full‐width big table —
     \centering
     \caption{Seconds to produce timestep \(\Delta T = 3000\) of each MD22 trajectory at \texttt{float32} precision.}
-    \label{tab:equivariance_defect}
+    \label{tab:inference_md22}
         \begin{tabular}{lrrr}
             \toprule
              & Ac-Ala3-NHME & DHA & Stachyose \\
@@ -824,7 +824,7 @@ All experiments were conducted using Python 3.12, NumPy 2.2.1 \cite{harris_array
 \newpage
 \subsection{ATOM Hyperparameters}
 \label{appx:my_hyperparams}
-We employ the same dataset splitting and discretization parameters reported in \textcite{xu_equivariant_2024} for the MD17. We set the batch size to \(192\), use the AdamW-AMSGrad optimizer \cite{loshchilov_decoupled_2017} with an \(\epsilon\) of \(1\times10^{-10}\) to avoid instability associated with the small gradients produced by zero-initialised weight matrices in early training \cite{jordan_nanogpt_2025}. During multitask training, we reduce the number of epochs to 250 and employ the Muon optimizer \cite{jordan_muon_2024, kim_pytorch_optimizer_2021}. We present a complete overview of our hyperparameters in \Cref{tab:atom_hparams}.
+We employ the same dataset splitting and discretization parameters reported in \textcite{xu_equivariant_2024} for the MD17. We set the batch size to \(192\), train for 1000 epochs, use the AdamW-AMSGrad optimizer \cite{loshchilov_decoupled_2017} with an \(\epsilon\) of \(1\times10^{-10}\) to avoid instability associated with the small gradients produced by zero-initialised weight matrices in early training \cite{jordan_nanogpt_2025}. For TG80 (single- and multitask), we train for 50 epochs without noise augmentation, sample the horizon \(\Delta T\) log-uniformly from \([8, 24\,000]\) frames, and employ the Muon optimizer \cite{jordan_muon_2024, kim_pytorch_optimizer_2021}. We present a complete overview of our hyperparameters in \Cref{tab:atom_hparams}. For MD17 malonaldehyde we use seven layers, embedding dimension 512, learning rate \(4\times10^{-4}\), input noise \(\sigma=0.15\) and delta (residual) position updates. On MD22 we use batch size 100 and \(\beta_1=0.9\); for stachyose we use seven layers, batch size 64, learning rate \(3.5\times10^{-4}\), 250 epochs and input noise \(\sigma=0.05\).
 
 \begin{table}[h]
     \centering
@@ -832,33 +832,34 @@ We employ the same dataset splitting and discretization parameters reported in \
     \label{tab:atom_hparams}
     \resizebox{\linewidth}{!}{
     \begin{tabular}{cccc}
-        Module & & MD17, RMD17, TG80 & TG80 Multitask \\
+        Module & & MD17, RMD17 & TG80 (single- and multitask) \\
         % Module & & MD17, RMD17 Value & \(N\)-body Value & Multitask \\
         \midrule
         Training & & \\
         & Batch size & \( 192 \) & \( 192 \) \\
-        & Epochs & \( 1000 \) & \(250\) \\
+        & Epochs & \( 1000 \) & \(50\) \\
         & Max grad norm & \( 1.0 \) & \(1.0\) \\
-        & Label noise \(\sigma\) & \( 0.1 \) & \(0.1\) \\
-        & \(\Delta t\) & \( 3000 \) & \( 10\ 000 \) \\
+        & Input noise \(\sigma\) & \( 0.1 \) & \(0\) \\
+        & \(\Delta T\) & \( 3000 \) & \( \mathrm{LogUnif}[8, 24\,000] \) \\
         & Timesteps \(P\) & \( 8 \) & \( 8 \) \\
-        & Train/Val/Test & \( (500,3\,000,3\,000) \) & \( (6\,500,13\,000,13\,000) \) \\
-        & \gls{rwpe} length & 8 & 8 \\
+        & Train/Val/Test & \( (500,2\,000,2\,000) \) & \( (6\,500,13\,000,13\,000) \) \\
+        & \gls{rwpe} length & 0 (unused) & 8 \\
         \midrule
         Optimiser & & \\
         & Optimiser type & AdamW-AMSGrad & Muon  \\
-        & Learning rate & \( 1\times10^{-3} \) & \( 1\times10^{-3} \) \\
-        & \(\beta_1, \beta_2\) & \( 0.9, 0.999 \) & \( (0.9, 0.999) \) \\
+        & Learning rate & \( 1\times10^{-3} \) & \( 2\times10^{-3} \) \\
+        & \(\beta_1, \beta_2\) & \( (0.95, 0.999) \) & \( (0.95, 0.999) \) \\
         & Weight decay & \( 1\times10^{-5} \) & \( 1\times10^{-5} \) \\
-        & \(\epsilon\) & \( 1\times10^{-10} \) & \( 1\times10^{-5} \) \\
+        & \(\epsilon\) & \( 1\times10^{-10} \) & \( 1\times10^{-10} \) \\
         \midrule
         Model & & \\
-        & Embedding dim & \( 128 \) & \( 256 \) \\
-        & No. layers & \( 5 \) & \( 6 \) \\
+        & Embedding dim & \( 256 \) & \( 256 \) \\
+        & No. layers & \( 6 \) & \( 6 \) \\
         & No. attention heads & \( 8 \) & \( 8 \) \\
-        & No. output heads & \(1\) & \(8\) \\
+        & No. output heads & \(1\) & \(1\) \\
         & Attention dropout & \( 0.2 \) & \( 0.2 \) \\
         & RoPE frequency & \( 1000 \) & \( 1000 \)\\
+        & T-RoPE \(\tau\) & \( 375 \) & \( 375 \)\\
         & MLP layers & \( 2 \) & \( 2 \) \\
         & MLP activation & SwiGLU & SwiGLU \\
         & MLP dropout & \( 0.0 \) & \( 0.0 \) \\
@@ -870,7 +871,7 @@ We employ the same dataset splitting and discretization parameters reported in \
 \newpage
 \subsection{EGNO Hyperparameters and Experimental Details}
 \label{appx:egno_hyperparams}
-We generated the \gls{egno} results reported in \Cref{tab:md17_results} with the same discretization parameters and hyperparameters as used in their experiments. We reduce the number of epochs from \(10\ 000\) to \(2\ 500\), use a batch size of 192 with the AdamW-AMSGrad optimizer \cite{loshchilov_decoupled_2017}, and select the best validation loss epoch for testing. In the multitask case, we further reduce the number of epochs to 250 and employ the Muon optimizer \cite{jordan_muon_2024, kim_pytorch_optimizer_2021}. Complete hyperparameters are displayed in \Cref{tab:egno_hparams}.
+We generated the \gls{egno} results reported in \Cref{tab:md17_results} with the same discretization parameters and hyperparameters as used in their experiments. We reduce the number of epochs from \(10\ 000\) to \(1\ 000\), use a batch size of 100 with the AdamW-AMSGrad optimizer \cite{loshchilov_decoupled_2017}, and select the best validation loss epoch for testing. On TG80, we train for 50 epochs with batch size 192, sample \(\Delta T\) log-uniformly from \([3\,000, 24\,000]\) frames, and employ the Muon optimizer \cite{jordan_muon_2024, kim_pytorch_optimizer_2021}. Complete hyperparameters are displayed in \Cref{tab:egno_hparams}.
 
 \begin{table}[H]
     \centering
@@ -878,29 +879,27 @@ We generated the \gls{egno} results reported in \Cref{tab:md17_results} with the
     \label{tab:egno_hparams}
     \resizebox{\linewidth}{!}{
     \begin{tabular}{cccc}
-        Module & & MD17, RMD17, TG80 & TG80 Multitask \\
+        Module & & MD17, RMD17 & TG80 (single- and multitask) \\
         \midrule
         Training & & \\
-        & Batch size & \( 192 \) & \( 192 \) \\
-        & Epochs & \( 2500 \) & \( 250 \) \\
-        & Max grad norm & Uncapped & Uncapped  \\
-        & Label noise \(\sigma\) & \( 0.1 \) & \(0.1\) \\
-        & \(\Delta t\) & \( 3000 \) & \(10\ 000\) \\
+        & Batch size & \( 100 \) & \( 192 \) \\
+        & Epochs & \( 1000 \) & \( 50 \) \\
+        & Max grad norm & \( 1.0 \) & \( 1.0 \) \\
+        & Input noise \(\sigma\) & \( 0 \) & \(0\) \\
+        & \(\Delta T\) & \( 3000 \) & \( \mathrm{LogUnif}[3\,000, 24\,000] \) \\
         & Timesteps \(P\) & \( 8 \) & \(8\) \\
-        & Train/Val/Test & \( (500,3\,000,3\,000) \) & \( (6\,500,13\,000,13\,000) \) \\
+        & Train/Val/Test & \( (500,2\,000,2\,000) \) & \( (6\,500,13\,000,13\,000) \) \\
         & \gls{rwpe} length & 8 & 8 \\
         \midrule
         Optimiser & & \\
         & Optimiser type & AdamW-AMSGrad & Muon \\
-        & Learning rate & \( 1\times10^{-3} \) & \( 1\times10^{-3} \) \\
-        & \(\beta_1, \beta_2\) & \( (0.9, 0.999) \) & \( (0.9, 0.999) \) \\
+        & Learning rate & \( 1\times10^{-3} \) & \( 2\times10^{-3} \) \\
+        & \(\beta_1, \beta_2\) & \( (0.9, 0.999) \) & \( (0.95, 0.999) \) \\
         & Weight decay & \( 1\times10^{-5} \) & \( 1\times10^{-5} \) \\
-        & \(\epsilon\) & \( 1\times10^{-10} \) & \( 1\times10^{-5} \) \\
+        & \(\epsilon\) & \( 1\times10^{-10} \) & \( 1\times10^{-10} \) \\
         \midrule
         Scheduler & & \\
-        & Scheduler type & StepLR & StepLR \\
-        & Step size & 2500 & 2500 \\
-        & \(\gamma\) & 0.5 & 0.5 \\
+        & Scheduler type & None & None \\
         \midrule
         Model & & \\
         & Embedding dim & \( 64 \) & \( 64 \) \\
