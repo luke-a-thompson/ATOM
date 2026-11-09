@@ -100,8 +100,10 @@ def atomic_number(symbol: str) -> int:
     """
     Convert atomic symbol to atomic number.
     """
-    atomic_numbers = {"H": 1, "C": 6, "N": 7, "O": 8}
-    return atomic_numbers.get(symbol, 0)
+    atomic_numbers = {"H": 1, "C": 6, "N": 7, "O": 8, "S": 16, "Cl": 17}
+    if symbol not in atomic_numbers:
+        raise ValueError(f"Unknown element symbol: {symbol}")
+    return atomic_numbers[symbol]
 
 
 def process_all_molecules(data_raw_dir: str, output_dir: str) -> None:

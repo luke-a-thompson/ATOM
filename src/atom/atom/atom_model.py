@@ -538,6 +538,14 @@ class ATOM(nn.Module):
                 _ = nn.init.kaiming_normal_(module.weight, nonlinearity="leaky_relu")
                 if module.bias is not None:
                     _ = nn.init.zeros_(module.bias)
+        # Restore the zero-initialised output layer of each FFN so every block starts as the identity.
+        for module in model.modules():
+            if isinstance(module, MLP):
+                final_layer = module.layers[-1]
+                if isinstance(final_layer, nn.Linear):
+                    _ = nn.init.zeros_(final_layer.weight)
+                    if final_layer.bias is not None:
+                        _ = nn.init.zeros_(final_layer.bias)
 
     def _build_time_positional_encoding(self, num_timesteps: int, dim: int) -> torch.Tensor:
         """Classic transformer sinusoidal positional encoding for time indices.

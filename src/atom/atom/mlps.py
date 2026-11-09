@@ -1,3 +1,5 @@
+import copy
+
 import torch
 import torch.nn as nn
 from e3nn import o3
@@ -42,7 +44,8 @@ class MLP(nn.Module):
         layers = []
         for i in range(hidden_layers):
             in_size = in_dim if i == 0 else hidden_dim
-            layers.extend([nn.Linear(in_size, hidden_dim), activation])
+            # Each position gets its own activation; a parametric one (e.g. SwiGLU) must not share weights.
+            layers.extend([nn.Linear(in_size, hidden_dim), activation if i == 0 else copy.deepcopy(activation)])
         if dropout_p > 0.0:
             layers.append(nn.Dropout(dropout_p))
         layers.append(nn.Linear(hidden_dim, out_dim))
@@ -121,7 +124,7 @@ class EquivariantMLP(nn.Module):
         layers = []
         for i in range(hidden_layers):
             in_size = in_irreps if i == 0 else hidden_irreps
-            layers.extend([o3.Linear(in_size, hidden_irreps), activation])
+            layers.extend([o3.Linear(in_size, hidden_irreps), activation if i == 0 else copy.deepcopy(activation)])
         if dropout_p > 0.0:
             layers.append(nn.Dropout(dropout_p))
         layers.append(o3.Linear(hidden_irreps, out_irreps))

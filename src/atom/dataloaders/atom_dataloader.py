@@ -134,7 +134,7 @@ class MDDataset(Dataset[dict[str, torch.Tensor]]):
                 energy_col = None
             case Datasets.rmd17:
                 full_dir = os.path.join(data_dir, "rmd17_npz", f"rmd17_{molecule_name}.npz")
-                split_dir = os.path.join(split_dir, "rmd17_splits", f"rmd17_{molecule_name}_split.pkl")
+                split_dir = os.path.join(split_dir, "rmd17_splits", f"rmd17_{molecule_name}_chrono_split.pkl")
                 positions_col = "coords"
                 charges_col = "nuclear_charges"
                 self.dft_imprecision_margin = 10_000
@@ -183,6 +183,14 @@ class MDDataset(Dataset[dict[str, torch.Tensor]]):
             # Align forces with trimmed coordinates/velocities
             self.f = self.f[:-1]
         assert self.x.shape == self.v.shape
+
+        self._valid_starts: npt.NDArray[np.int_] | None = None
+        if md17_version == Datasets.rmd17:
+            # rMD17 rows are a shuffled subsample of the original MD17 trajectory. Rebuild a
+            # chronological, frame-indexed grid so that row offsets correspond to MD17 frames.
+            self.x, self.v, self._valid_starts = self._rmd17_chronological_grid(
+                data_file[positions_col], data_file["old_indices"]
+            )
 
         split = self._get_or_generate_split(
             split_dir=Path(split_dir),
@@ -449,6 +457,9 @@ class MDDataset(Dataset[dict[str, torch.Tensor]]):
         start = self.dft_imprecision_margin
         end = x.shape[0] - self.dft_imprecision_margin - self.delta_frame_max + 1
 
+        if self._valid_starts is not None:
+            return self._generate_valid_start_split(split_dir=split_dir, seed=seed, force_regenerate=force_regenerate)
+
         # Try to load existing split file
         if not force_regenerate:
             try:
@@ -470,6 +481,71 @@ class MDDataset(Dataset[dict[str, torch.Tensor]]):
             seed=seed,
             split_dir=split_dir,
         )
+
+    RMD17_FRAME_TOLERANCE: int = 5
+
+    def _rmd17_chronological_grid(
+        self,
+        coords: npt.NDArray[np.float64],
+        old_indices: npt.NDArray[np.int_],
+    ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.int_]]:
+        """Map rMD17 frames onto a regular grid of original MD17 frame indices.
+
+        Grid point k holds the rMD17 frame nearest to MD17 frame t0 + k. Velocities are forward
+        differences to the next rMD17 frame divided by the true frame gap (units: Å per MD17 frame).
+        A start is valid if it is an exact rMD17 frame and every target frame used by the dataset
+        has an rMD17 frame within RMD17_FRAME_TOLERANCE frames.
+        """
+        order = np.argsort(old_indices)
+        t = old_indices[order].astype(np.int64)
+        x_sorted = coords[order]
+        gaps = np.diff(t).astype(np.float64)
+        v_sorted = (x_sorted[1:] - x_sorted[:-1]) / gaps[:, None, None]
+        x_sorted, t = x_sorted[:-1], t[:-1]
+
+        grid = np.arange(t[0], t[-1] + 1)
+        j = np.clip(np.searchsorted(t, grid), 1, len(t) - 1)
+        take_left = np.abs(t[j - 1] - grid) <= np.abs(t[j] - grid)
+        rows = np.where(take_left, j - 1, j)
+        dist = np.abs(t[rows] - grid)
+        within_tol = dist <= self.RMD17_FRAME_TOLERANCE
+
+        offsets = {self.delta_frame_max}
+        if self.num_timesteps > 0:
+            offsets |= {self.delta_frame_max * i // self.num_timesteps for i in range(1, self.num_timesteps + 1)}
+        n = len(grid)
+        valid = dist == 0
+        k = np.arange(n)
+        valid &= (k >= self.dft_imprecision_margin) & (k < n - self.dft_imprecision_margin - self.delta_frame_max)
+        for off in offsets:
+            ok = np.zeros(n, dtype=bool)
+            ok[: n - off] = within_tol[off:]
+            valid &= ok
+        return x_sorted[rows], v_sorted[rows], np.where(valid)[0]
+
+    def _generate_valid_start_split(
+        self,
+        split_dir: Path,
+        seed: int,
+        force_regenerate: bool,
+    ) -> tuple[npt.NDArray[np.int_], npt.NDArray[np.int_], npt.NDArray[np.int_]]:
+        """Random disjoint train/val/test split over valid chronological start frames (20/40/40)."""
+        if not force_regenerate:
+            try:
+                with open(split_dir, "rb") as f:
+                    return pkl.load(f)
+            except FileNotFoundError:
+                pass
+        assert self._valid_starts is not None
+        rng = np.random.default_rng(seed)
+        perm = rng.permutation(self._valid_starts)
+        n_train = int(0.2 * len(perm))
+        n_val = int(0.4 * len(perm))
+        split = (perm[:n_train], perm[n_train : n_train + n_val], perm[n_train + n_val :])
+        split_dir.parent.mkdir(parents=True, exist_ok=True)
+        with open(split_dir, "wb") as f:
+            pkl.dump(split, f)
+        return split
 
     def _generate_new_split(
         self,

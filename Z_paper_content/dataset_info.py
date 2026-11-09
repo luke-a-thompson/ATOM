@@ -104,10 +104,6 @@ def create_corrected_volatility_visualization(data_dir: Path, dataset_name: str,
         var_displacement_per_atom: npt.NDArray[np.float64] = np.var(displacement_norms, axis=0)
         step_volatility: float = float(np.mean(var_displacement_per_atom))
 
-        # Scale RMD17 data to match the 1e-5 to 1e-4 range
-        if "rmd17" in data_dir.stem:
-            step_volatility = step_volatility * 1e-5  # Scale down to match other datasets
-
         # Scale up MD17 and RMD17 data to account for 0.5fs timestep
         if "md17" in data_dir.stem or "rmd17" in data_dir.stem:
             step_volatility = step_volatility * 2.0  # Double the values for 0.5fs timestep
@@ -123,13 +119,7 @@ def create_corrected_volatility_visualization(data_dir: Path, dataset_name: str,
     # Set x-axis to log scale
     plt.xscale("log")
 
-    # Find absolute maximum across all datasets
-    if "rmd17" in data_dir.stem:
-        plt.ylim(1e-11, 1e-4)  # Updated y-axis range for RMD17
-    else:
-        # For MD17 and TG80, use the actual maximum value
-        plt.xlim(1e-1, global_max_x)
-        plt.ylim(1e-9, 1e-4)
+    plt.xlim(1e-1, global_max_x)
 
     # Format y-axis in scientific notation
     plt.gca().yaxis.set_major_formatter(ScalarFormatter(useMathText=True))
@@ -154,8 +144,8 @@ def create_corrected_volatility_visualization(data_dir: Path, dataset_name: str,
                 textcoords="offset points",
             )
 
-    plt.xlabel("Center of Mass Drift (Å)")
-    plt.ylabel("Per-Step Internal Motion (Å)")
+    plt.xlabel("Position Variance (Å$^2$)")
+    plt.ylabel("Per-Step Displacement Variance (Å$^2$)")
     plt.grid(True, alpha=0.3)
 
     # Add quadrant explanations
@@ -168,7 +158,7 @@ def create_corrected_volatility_visualization(data_dir: Path, dataset_name: str,
     plt.text(
         0.9,
         0.9,
-        "High Drift & Internal Motion",
+        "High Variance & Step Motion",
         transform=plt.gca().transAxes,
         ha="right",
         va="top",
@@ -179,7 +169,7 @@ def create_corrected_volatility_visualization(data_dir: Path, dataset_name: str,
     plt.text(
         0.1,
         0.9,
-        "High Internal Motion",
+        "High Step Motion",
         transform=plt.gca().transAxes,
         ha="left",
         va="top",
@@ -201,7 +191,7 @@ def create_corrected_volatility_visualization(data_dir: Path, dataset_name: str,
     plt.text(
         0.9,
         0.1,
-        "Drifting from Origin",
+        "High Position Variance",
         transform=plt.gca().transAxes,
         ha="right",
         va="bottom",
@@ -210,8 +200,7 @@ def create_corrected_volatility_visualization(data_dir: Path, dataset_name: str,
     )
 
     plt.tight_layout()
-    plt.savefig(
-        f"/Z_paper_content/dataset/{dataset_name}_molecule_behavior_comparison.pdf",
-        format="pdf",
-    )
-    print(f"Figure saved as PDF to /Z_paper_content/dataset/{dataset_name}_molecule_behavior_comparison.pdf")
+    out_path = Path(__file__).resolve().parent / "dataset" / f"{dataset_name}_molecule_behavior_comparison.pdf"
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(out_path, format="pdf")
+    print(f"Figure saved as PDF to {out_path}")

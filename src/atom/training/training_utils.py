@@ -235,17 +235,20 @@ def add_brownian_noise(
     Returns:
         Tuple[torch.Tensor, torch.Tensor]: Noised positions and velocities.
     """
-    # Add noise to velocities
-    noise_pos = torch.randn_like(positions) * noise_std
-    noise_vel = torch.randn_like(velocities) * noise_std
-    noise_concat_feats = torch.randn_like(concat) * noise_std
+    # Layouts: positions/velocities = [xyz, |xyz|]; concat = [x xyz, |x|, v xyz, |v|, Z, RRWP...].
+    # Draw one noise sample per atom and share it across the P replicated timestep copies, so every
+    # copy sees the same perturbed initial state. Perturb only the vectors; recompute norms from the
+    # noisy vectors; leave Z and RRWP untouched.
+    noise_x = torch.randn_like(positions[:, :1, :, :3]).expand_as(positions[..., :3]) * noise_std
+    noise_v = torch.randn_like(velocities[:, :1, :, :3]).expand_as(velocities[..., :3]) * noise_std
 
-    # Zero out the last entry along the last dimension
-    noise_concat_feats[..., 9:] = 0
+    x_xyz = positions[..., :3] + noise_x
+    v_xyz = velocities[..., :3] + noise_v
+    x_norm = torch.linalg.vector_norm(x_xyz, dim=-1, keepdim=True)
+    v_norm = torch.linalg.vector_norm(v_xyz, dim=-1, keepdim=True)
 
-    # Apply noise
-    noisy_positions = positions + noise_pos
-    noisy_velocities = velocities + noise_vel
-    noisy_concat_feats = concat + noise_concat_feats
+    noisy_positions = torch.cat([x_xyz, x_norm, positions[..., 4:]], dim=-1)
+    noisy_velocities = torch.cat([v_xyz, v_norm, velocities[..., 4:]], dim=-1)
+    noisy_concat_feats = torch.cat([x_xyz, x_norm, v_xyz, v_norm, concat[..., 8:]], dim=-1)
 
     return noisy_positions, noisy_velocities, noisy_concat_feats

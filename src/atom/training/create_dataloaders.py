@@ -76,6 +76,7 @@ def create_datasets(
         egno_mode=egno_mode,
         max_edges=max_edges,
         use_two_hop_edges=use_two_hop_edges,
+        time_lag_mode=config.dataloader.time_lag_mode,
     )
 
     val_dataset = MDDynamicsDataset(
@@ -96,6 +97,7 @@ def create_datasets(
         egno_mode=egno_mode,
         max_edges=max_edges,
         use_two_hop_edges=use_two_hop_edges,
+        time_lag_mode=config.dataloader.time_lag_mode,
     )
 
     test_dataset = MDDynamicsDataset(
@@ -116,6 +118,7 @@ def create_datasets(
         egno_mode=egno_mode,
         max_edges=max_edges,
         use_two_hop_edges=use_two_hop_edges,
+        time_lag_mode=config.dataloader.time_lag_mode,
     )
 
     return train_dataset, val_dataset, test_dataset

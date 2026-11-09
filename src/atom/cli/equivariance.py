@@ -276,9 +276,10 @@ def test_model_equivariance_defect_mc(
 ) -> None:
     """Monte Carlo estimate of the equivariance defect for the model.
 
-    This approximates the group-averaged equivariance defect
-    E_x [ || (1/|G|) sum_g f(phi(g)(x)) - (1/|G|) sum_g rho(g)(f(x)) || ]
-    using a finite set of sampled rotations.
+    This approximates the equivariance defect
+    E_x E_g [ || f(phi(g)(x)) - rho(g)(f(x)) || ]
+    with g drawn from the Haar measure on SO(3). The norm is taken per rotation,
+    so errors under different rotations cannot cancel.
 
     Args:
         config_path: Path to config file
@@ -296,7 +297,7 @@ def test_model_equivariance_defect_mc(
 
     # Generate random rotations once and move to device
     print(f"Generating {num_rotations} random rotations with seed {rotation_seed} for equivariance defect...")
-    rotation_matrices_np = generate_random_rotations(rotation_seed, num_rotations)
+    rotation_matrices_np = list(Rotation.random(num_rotations, random_state=rotation_seed).as_matrix())
     rotation_matrices_torch: list[torch.Tensor] = [torch.tensor(R_np, device=device, dtype=torch.float32) for R_np in rotation_matrices_np]
 
     all_norms: list[np.ndarray] = []
@@ -321,9 +322,8 @@ def test_model_equivariance_defect_mc(
         dtype: torch.dtype = original_xyz.dtype
         rotation_matrices_batch: list[torch.Tensor] = [R.to(device=device, dtype=dtype) for R in rotation_matrices_torch]
 
-        # Accumulate Monte Carlo estimates of the two group-averaged terms for this batch
-        sum_f_phi: torch.Tensor = torch.zeros_like(original_xyz)
-        sum_rho_fx: torch.Tensor = torch.zeros_like(original_xyz)
+        # Accumulate the per-rotation defect norms for this batch
+        sum_norms: torch.Tensor = torch.zeros(original_xyz.shape[:-1], device=original_xyz.device, dtype=dtype)
 
         for i, R in enumerate(rotation_matrices_batch, 1):
             print(f"  Rotation {i}/{num_rotations}...", end="\r")
@@ -335,23 +335,18 @@ def test_model_equivariance_defect_mc(
                 rotated_output = model(rotated_data_sample)
             rotated_pos = rotated_output["pos"] if isinstance(rotated_output, dict) else rotated_output
             f_phi_R_x: torch.Tensor = rotated_pos[..., xyz_slice]
-            sum_f_phi = sum_f_phi + f_phi_R_x
 
             # 2) rho(R)(f(x)): rotate the original prediction
             original_flat: torch.Tensor = original_xyz.reshape(-1, 3)
             rho_R_fx_flat: torch.Tensor = original_flat @ R.T
             rho_R_fx: torch.Tensor = rho_R_fx_flat.reshape(batch_size, timesteps, nodes, 3)
-            sum_rho_fx = sum_rho_fx + rho_R_fx
 
-        # Compute Monte Carlo averages over sampled rotations for this batch
-        avg_f_phi: torch.Tensor = sum_f_phi / float(num_rotations)
-        avg_rho_fx: torch.Tensor = sum_rho_fx / float(num_rotations)
+            # Pointwise L2 norm over xyz for this rotation: shape [B, T, N]
+            defect: torch.Tensor = f_phi_R_x - rho_R_fx
+            sum_norms = sum_norms + torch.sqrt(torch.sum(defect * defect, dim=-1))
 
-        # Equivariance defect tensor: shape [B, T, N, 3]
-        defect: torch.Tensor = avg_f_phi - avg_rho_fx
-
-        # Pointwise L2 norm over xyz
-        per_point_norm: torch.Tensor = torch.sqrt(torch.sum(defect * defect, dim=-1))
+        # Monte Carlo average of the per-rotation norms
+        per_point_norm: torch.Tensor = sum_norms / float(num_rotations)
         all_norms.append(per_point_norm.detach().cpu().numpy().ravel())
 
     print()  # New line after progress updates

@@ -19,11 +19,15 @@ def set_matplotlib_style(font_size: int = 14) -> None:
         None
     """
     font_path = "/usr/share/fonts/truetype/msttcorefonts/Times_New_Roman.ttf"
-    fm.fontManager.addfont(font_path)
+    font_family = "Times New Roman"
+    try:
+        fm.fontManager.addfont(font_path)
+    except FileNotFoundError:
+        font_family = "STIXGeneral"  # Times-like font bundled with matplotlib
 
     plt.rcParams.update(
         {
-            "font.family": "Times New Roman",  # Directly specify the font family
+            "font.family": font_family,
             "font.size": font_size,
             "mathtext.fontset": "stix",  # Use STIX fonts for math expressions
             "axes.titlesize": font_size,
