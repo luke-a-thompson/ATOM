@@ -1,0 +1,130 @@
+\documentclass{article}
+
+
+\usepackage{PRIMEarxiv}
+
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{wrapfig}
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{amsthm}
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+\usepackage{subcaption}
+\usepackage{lipsum}
+\usepackage{fancyhdr}       % header
+\usepackage{amsmath}
+\usepackage{graphicx}       % graphics
+\usepackage{biblatex}       % Bibliograph & citations, maybe change to cref
+\usepackage{xcolor}
+\usepackage{cleveref}
+\usepackage{dirtytalk}
+\usepackage[acronym]{glossaries}
+\usepackage{float}
+\addbibresource{references.bib}
+\addbibresource{other_citations.bib}
+\graphicspath{{media/}}     % organize your images and other figures under media/ folder
+
+
+% Junbin's commenting suite.
+\newcounter{ToDo}
+\newcounter{gaocomm}
+\newcounter{wangcomm}
+\newcounter{Note}
+\definecolor{blue-violet}{rgb}{0.00,0.75,0.90}
+\definecolor{mygreen}{rgb}{0.0, 0.5, 0.0}
+\definecolor{awesome}{rgb}{1.0, 0.13, 0.32}
+\definecolor{bostonuniversityred}{rgb}{1.0, 0.0, 0.0}
+\newcommand\todo[1]{\textcolor{red}{\stepcounter{ToDo}{\bf [Todo \arabic{ToDo}:}\; #1]}} %\newline}}
+\newcommand{\Gao}[1]{{\color{bostonuniversityred}#1}}
+\newcommand{\GaoR}[1]{{\color{blue}#1}}
+\newcommand{\GaoC}[1]{\textcolor{blue-violet}{\stepcounter{gaocomm}{\bf [Junbin's comment \arabic{gaocomm}: #1]}\;}}
+\newcommand{\WangC}[1]{\textcolor{blue}{\stepcounter{wangcomm}{\bf [Boyue's comment \arabic{wangcomm}: #1]}\;}}
+\newcommand{\GaoA}[1]{{\footnote{\color{mygreen} [Gao answer: #1]}}}
+\renewcommand\thefootnote{\textcolor{blue}{\arabic{footnote}}}
+\newcommand{\note}[1]{\textcolor{awesome}{\stepcounter{Note}{\bf [NOTE \arabic{Note}}:\; #1] \newline}}
+\newcommand{\hcancel}[2][black]{\setbox0=\hbox{$#2$}%
+\rlap{\raisebox{.45\ht0}{\textcolor{#1}{\rule{\wd0}{1pt}}}}#2}
+\DeclareRobustCommand{\hsout}[1]{\texorpdfstring{\sout{#1}}{#1}}
+% end Junbin's commenting suite.
+
+\newcommand{\modelname}{Ours }
+\newcommand{\mymodel}{\textsc{\modelname}}
+
+\newcommand{\datasetname}{Our dataset }
+\newcommand{\mydataset}{\textsc{\datasetname}}
+
+\makeglossaries
+\input{acronyms}
+%Header
+\pagestyle{fancy}
+\thispagestyle{empty}
+\rhead{ \textit{ }} 
+
+% Update your Headers here
+\fancyhead[LO]{\mymodel}
+% \fancyhead[RE]{Firstauthor and Secondauthor} % Firstauthor et al. if more than 2 - must use \documentclass[twoside]{article}
+
+
+
+  
+%% Title
+\title{Graph Transformer Neural Operator
+%%%% Cite as
+%%%% Update your official citation here when published 
+\thanks{\textit{\underline{Citation}}: 
+\textbf{Authors. Title. Pages.... DOI:000000/11111.}} 
+}
+
+\author{
+  Luke Thompson \\
+  The University of Sydney Business School \\
+  The University of Sydney \\
+  Camperdown, NSW 2006, Australia\\
+  \texttt{\{ltho4642\}@uni.sydney.edu.au} \\
+  \And
+  Davy Guan \\
+  Data61 \\
+  CSIRO \\
+  Sydney\\
+  \texttt{email@email} \\
+  \And
+  Andi Han \\
+  Riken AIP \\
+  Japan\\
+  \texttt{email@email} \\
+  \And
+  Dai Shi \\
+The University of Sydney Business School \\
+  The University of Sydney \\
+   Camperdown, NSW 2006, Australia\\
+  \texttt{email@email} \\
+  \And
+  Slade Matthews \\
+  Sydney Pharmacy School \\
+  The University of Sydney \\
+  Camperdown, NSW 2006, Australia\\
+  \texttt{email@email} \\  
+  \And
+  Junbin Gao \\
+  The University of Sydney Business School \\
+  The University of Sydney \\
+   Camperdown, NSW 2006, Australia\\
+  \texttt{email@email} \\
+}
+
+
+\begin{document}
+\maketitle
+
+\input{content}
+
+%Bibliography
+\printbibliography
+\printglossaries
+
+
+\end{document}

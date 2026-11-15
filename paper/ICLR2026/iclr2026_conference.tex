@@ -1,0 +1,145 @@
+\documentclass{article}
+
+\usepackage{ICLR2026/iclr2026_conference,times}
+% \iclrpreprintcopy
+% \usepackage{natbib}
+% \usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{mathtools}
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+\usepackage[table]{xcolor}  % colors
+\usepackage[acronym]{glossaries}
+% \usepackage[utf8]{inputenc} % allow utf-8 input
+% \usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{wrapfig}
+\usepackage{amsthm}
+\usepackage{subcaption}
+\usepackage{lipsum}
+% \usepackage{fancyhdr}       % header
+\usepackage{amsmath}
+\usepackage{graphicx}       % graphics
+\usepackage{cleveref}
+
+% Tell cleveref what to call appendices
+\crefname{appendix}{Appendix}{Appendices}
+\Crefname{appendix}{Appendix}{Appendices}
+
+\makeatletter
+\AddToHook{cmd/appendix/before}{%
+  % From here on, sections/subsections are treated as "appendix" type
+  \def\cref@section@alias{appendix}%
+  \def\cref@subsection@alias{appendix}%
+}
+\makeatother
+
+\usepackage{dirtytalk}
+\usepackage{fp}
+\usepackage{float}
+\usepackage{placeins}
+\usepackage{enumitem}
+
+\usepackage{multirow}
+\usepackage{etoc} % in preamble
+
+
+% If glossaries ends up in PDF strings (bookmarks), disable expansion there:
+\pdfstringdefDisableCommands{%
+  \def\gls#1{#1}\def\Gls#1{#1}\def\glspl#1{#1}\def\Glspl#1{#1}%
+}
+% Also avoid hyperlinking glossary entries during triage:
+\makeatletter
+\@ifpackageloaded{glossaries}{\glsdisablehyper}{}%
+\makeatother
+
+\makeglossaries
+\glsdisablehyper
+
+\input{acronyms}
+
+\let\origcite\cite
+\let\cite\citep
+\let\textcite\citet
+
+
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{corollary}{Corollary}[theorem]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{definition}[theorem]{Definition}
+
+
+\newcommand{\EScomment}[1]{{\color{blue}ES:  #1}}
+\newcommand{\AHcomment}[1]{{\color{purple}AH: #1}}
+
+\newcommand{\revision}[1]{{\color{purple} #1}}
+
+
+\hypersetup{colorlinks=true,linkcolor=red!70!black,linktocpage=false,citebordercolor=blue!70!black,citecolor=blue!70!black,anchorcolor=blue!70!black}
+
+\title{ATOM: A Pretrained Neural Operator for\\ Multitask Molecular Dynamics}
+\author{Luke Thompson \\
+  % The University of Sydney Business School \\
+  The University of Sydney
+  % Camperdown, NSW 2006, Australia\\
+  % \texttt{luke.thompson@sydney.edu.au} \\
+  \And
+  Davy Guan \\
+  Data61 CSIRO 
+  % CSIRO \\
+  % Sydney\\
+  % \texttt{davy.guan@data61.csiro.au} \\
+  \And
+  Dai Shi \\
+  University of Cambridge
+  % The University of Sydney Business School \\
+  % The University of Sydney \\
+  % Camperdown, NSW 2006, Australia\\
+  % \texttt{email@email} \\
+  \And
+  Slade Matthews\thanks{These authors contributed equally as senior authors.} \\
+  % Sydney Pharmacy School \\
+  The University of Sydney 
+  % Camperdown, NSW 2006, Australia\\
+  % \texttt{slade.matthews@sydney.edu.au} \\  
+  \And
+  Junbin Gao\footnotemark[1] \\
+  % The University of Sydney Business School \\
+  The University of Sydney 
+  % Camperdown, NSW 2006, Australia\\
+  % \texttt{junbin.gao@sydney.edu.au} \\
+  \And
+  Andi Han\footnotemark[1] \ \thanks{Correspondence to: \texttt{andi.han@sydney.edu.au}.} \\
+  % School of Mathematics and Statistics \\
+  The University of Sydney 
+  % \texttt{andi.han@sydney.edu.au} \\
+}
+
+
+
+\iclrfinalcopy 
+
+\begin{document}
+
+\maketitle
+\thispagestyle{fancy}
+\pagestyle{fancy}
+\lhead{Published as a conference paper at ICLR 2026}
+\input{content}
+
+
+\section*{Reproducibility Statement}
+We provide experiment details, such as choice of hyperparameters and other training configurations in Appendix \ref{sect:details}. In addition, we will release the TG80 dataset upon acceptance under MIT license for reproducibility.
+\newpage
+
+\bibliographystyle{ICLR2026/iclr2026_conference}
+\bibliography{library}
+
+\appendix
+\input{appendices_temp}
+
+\end{document}

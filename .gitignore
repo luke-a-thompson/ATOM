@@ -27,3 +27,15 @@ __pycache__/
 /data/*md*
 *.pkl
 optuna*configs/preprint_reruns/logs/
+
+# Paper (Overleaf subtree): keep figures/PDFs tracked despite the rules above
+!paper/**/*.pdf
+!paper/**/*.drawio*
+!paper/**/*.json
+paper/**/*.aux
+paper/**/*.bbl
+paper/**/*.blg
+paper/**/*.fdb_latexmk
+paper/**/*.fls
+paper/**/*.synctex.gz
+paper/**/*.out

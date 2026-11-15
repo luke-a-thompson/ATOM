@@ -1,0 +1,140 @@
+\documentclass{article}
+
+\usepackage[preprint]{neurips_2025}
+% \iclrpreprintcopy
+% \usepackage{natbib}
+% \usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{mathtools}
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+\usepackage[table]{xcolor}  % colors
+\usepackage[acronym]{glossaries}
+% \usepackage[utf8]{inputenc} % allow utf-8 input
+% \usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{wrapfig}
+\usepackage{amsthm}
+\usepackage{subcaption}
+\usepackage{lipsum}
+% \usepackage{fancyhdr}       % header
+\usepackage{amsmath}
+\usepackage{graphicx}       % graphics
+\usepackage{cleveref}
+\usepackage{dirtytalk}
+\usepackage{fp}
+\usepackage{float}
+\usepackage{placeins}
+\usepackage{enumitem}
+
+\usepackage{multirow}
+\usepackage{etoc} % in preamble
+
+
+% If glossaries ends up in PDF strings (bookmarks), disable expansion there:
+\pdfstringdefDisableCommands{%
+  \def\gls#1{#1}\def\Gls#1{#1}\def\glspl#1{#1}\def\Glspl#1{#1}%
+}
+% Also avoid hyperlinking glossary entries during triage:
+\makeatletter
+\@ifpackageloaded{glossaries}{\glsdisablehyper}{}%
+\makeatother
+
+\makeglossaries
+\glsdisablehyper
+
+\input{acronyms}
+
+\let\origcite\cite
+\let\cite\citep
+\let\textcite\citet
+
+
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{corollary}{Corollary}[theorem]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+
+
+\newcommand{\EScomment}[1]{{\color{blue}ES:  #1}}
+\newcommand{\AHcomment}[1]{{\color{purple}AH: #1}}
+
+\hypersetup{colorlinks=true,linkcolor=red!70!black,linktocpage=false,citebordercolor=blue!70!black,citecolor=blue!70!black,anchorcolor=blue!70!black}
+
+\title{ATOM: A Pretrained Neural Operator for Multitask Molecular Dynamics}
+% \author{
+%   Luke Thompson \\
+%   The University of Sydney Business School \\
+%   The University of Sydney \\
+%   Camperdown, NSW 2006, Australia\\
+%   % \texttt{luke.thompson@sydney.edu.au} \\
+%   \And
+%   Davy Guan \\
+%   Data61 \\
+%   CSIRO \\
+%   Sydney\\
+%   % \texttt{davy.guan@data61.csiro.au} \\
+%   \And
+%   Dai Shi \\
+%   The University of Sydney Business School \\
+%   The University of Sydney \\
+%   Camperdown, NSW 2006, Australia\\
+%   % \texttt{email@email} \\
+%   \And
+%   Slade Matthews\thanks{These authors contributed equally as senior authors.} \\
+%   Sydney Pharmacy School \\
+%   The University of Sydney \\
+%   Camperdown, NSW 2006, Australia\\
+%   % \texttt{slade.matthews@sydney.edu.au} \\  
+%   \And
+%   Junbin Gao\footnotemark[1] \\
+%   The University of Sydney Business School \\
+%   The University of Sydney \\
+%   Camperdown, NSW 2006, Australia\\
+%   % \texttt{junbin.gao@sydney.edu.au} \\
+%   \And
+%   Andi Han\footnotemark[1] \ \thanks{Correspondence to: \texttt{andi.han@sydney.edu.au}.} \\
+%   School of Mathematics and Statistics \\
+%   The University of Sydney \\
+%   % \texttt{andi.han@sydney.edu.au} \\
+% }
+
+
+\author{%
+\textbf{Luke Thompson }\!\textsuperscript{\textbf{1}}  
+  \quad \textbf{Davy Guan}\! \textsuperscript{\textbf{2}} 
+  \quad \textbf{Dai Shi}\! \textsuperscript{\textbf{1, 3}}
+  \quad \textbf{Slade Matthews}\! \textsuperscript{\textbf{1}} \!\thanks{These authors contributed equally as senior authors. Correspondence to: \texttt{andi.han@sydney.edu.au}.} \\
+  \quad \textbf{Junbin Gao}\! \textsuperscript{\textbf{1}} \!$^*$ 
+  \quad \textbf{Andi Han}\! \textsuperscript{\textbf{1}}$^*$
+  \\
+  \textsuperscript{1} University of Sydney, Australia \\
+  \textsuperscript{2} Data61, CSIRO, Sydney \\
+  \textsuperscript{3} University of Cambridge, United Kingdom\\ 
+}
+
+
+
+
+
+
+\begin{document}
+
+\maketitle
+\input{content}
+
+
+\section*{Reproducibility Statement}
+We provide experiment details, such as choice of hyperparameters and other training configurations in Appendix \ref{sect:details}. In addition, we will release the TG80 dataset upon acceptance under MIT license for reproducibility.
+
+
+\bibliographystyle{ICLR2026/iclr2026_conference}
+\bibliography{library}
+
+\appendix
+\input{appendices_temp}
+
+\end{document}
