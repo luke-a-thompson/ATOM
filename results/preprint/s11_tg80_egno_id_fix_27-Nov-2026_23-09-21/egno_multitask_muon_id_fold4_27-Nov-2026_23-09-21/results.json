@@ -1,0 +1,141 @@
+{
+  "single_run_results": [
+    {
+      "s2t_test_loss": 0.950433013174269,
+      "s2s_test_loss": 1.1223307198948331,
+      "best_val_loss_epoch": 30,
+      "start_time": "2026-11-27T23:20:21.064363",
+      "end_time": "2026-11-27T23:21:43.615689",
+      "model_path": "/tmp/tmp3yjp_xlu/run_1/best_val_model.pth",
+      "run_time": 82.551326,
+      "seconds_per_epoch": 2.751710866666667
+    },
+    {
+      "s2t_test_loss": 0.9330526113510131,
+      "s2s_test_loss": 1.1092252479659186,
+      "best_val_loss_epoch": 48,
+      "start_time": "2026-11-27T23:21:48.043925",
+      "end_time": "2026-11-27T23:23:10.695359",
+      "model_path": "/tmp/tmp3yjp_xlu/run_2/best_val_model.pth",
+      "run_time": 82.651434,
+      "seconds_per_epoch": 1.721904875
+    },
+    {
+      "s2t_test_loss": 0.9624904142485724,
+      "s2s_test_loss": 1.139264667034149,
+      "best_val_loss_epoch": 41,
+      "start_time": "2026-11-27T23:23:15.127718",
+      "end_time": "2026-11-27T23:24:37.732364",
+      "model_path": "/tmp/tmp3yjp_xlu/run_3/best_val_model.pth",
+      "run_time": 82.604646,
+      "seconds_per_epoch": 2.014747463414634
+    }
+  ],
+  "config": {
+    "benchmark": {
+      "benchmark_name": "egno_tg80_multitask_muon_fold4_id",
+      "model_type": "EGNO",
+      "compile": true,
+      "compile_trace": false,
+      "runs": 3,
+      "log_weights": false
+    },
+    "dataloader": {
+      "multitask": true,
+      "dataset": "tg80",
+      "train_molecules": [
+        "aspirin",
+        "benzene1",
+        "benzene2",
+        "benzoicacid",
+        "ethanol1",
+        "p-cresol",
+        "p-xylene",
+        "paracetamol",
+        "salicylicacid3"
+      ],
+      "validation_molecules": [
+        "aspirin",
+        "benzene1",
+        "benzene2",
+        "benzoicacid",
+        "ethanol1",
+        "p-cresol",
+        "p-xylene",
+        "paracetamol",
+        "salicylicacid3"
+      ],
+      "test_molecules": [
+        "aspirin",
+        "benzene1",
+        "benzene2",
+        "benzoicacid",
+        "ethanol1",
+        "p-cresol",
+        "p-xylene",
+        "paracetamol",
+        "salicylicacid3"
+      ],
+      "num_timesteps": 8,
+      "delta_T": [
+        8,
+        24000
+      ],
+      "explicit_hydrogen": false,
+      "explicit_hydrogen_gradients": false,
+      "radius_graph_threshold": 1.6,
+      "rrwp_length": 8,
+      "time_lag_mode": "uniform",
+      "normalize_z": false,
+      "persistent_workers": true,
+      "num_workers": 6,
+      "pin_memory": true,
+      "prefetch_factor": 2,
+      "force_regenerate": true
+    },
+    "training": {
+      "seed": 42,
+      "batch_size": 192,
+      "epochs": 50,
+      "max_grad_norm": 1.0,
+      "label_noise_std": 0.0
+    },
+    "optimizer": {
+      "type": "muon",
+      "learning_rate": 0.002,
+      "weight_decay": 0.00001,
+      "adam_betas": [
+        0.95,
+        0.999
+      ],
+      "adam_eps": 1e-10
+    },
+    "scheduler": {
+      "type": "none"
+    },
+    "atom_config": null,
+    "egno_config": {
+      "num_layers": 5,
+      "lifting_dim": 64,
+      "activation": "silu",
+      "normalise_scalars": true,
+      "use_time_conv": true,
+      "num_fourier_modes": 2,
+      "time_embed_dim": 32
+    },
+    "egnn_config": null
+  },
+  "s2s_test_loss_mean": 1.1236068782983002,
+  "s2s_test_loss_std": 0.015060324221849442,
+  "s2s_test_loss_max": 1.139264667034149,
+  "s2s_test_loss_min": 1.1092252479659186,
+  "latex_s2s": "\\(112.36{\\scriptstyle \\pm1.51}\\)",
+  "s2t_test_loss_mean": 0.9486586795912849,
+  "s2t_test_loss_std": 0.014798912219703197,
+  "s2t_test_loss_max": 0.9624904142485724,
+  "s2t_test_loss_min": 0.9330526113510131,
+  "latex_s2t": "\\(94.87{\\scriptstyle \\pm1.48}\\)",
+  "mean_secs_per_run": 82.60246866666667,
+  "mean_secs_per_epoch": 2.1627877350271003,
+  "mean_best_val_loss_epoch": 39.666666666666664
+}
