@@ -1,0 +1,1173 @@
+/home/luke/ATOM/src/atom/training/create_config.py:151: UserWarning: Train and validation molecule sets overlap: cyclopentadiene, 1.3-cyclohexadiene, cyclopentanone, tetrahydrofuran, cyclohexanol, uracil1, cyclohexanone, cyclobutane, tropane1, 1.4-dioxane, tropane3, cyclopropane, cyclohexane
+  warnings.warn(f"Train and validation molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(val_set))}")
+/home/luke/ATOM/src/atom/training/create_config.py:153: UserWarning: Train and test molecule sets overlap: cyclopentadiene, 1.3-cyclohexadiene, cyclopentanone, tetrahydrofuran, cyclohexanol, uracil1, cyclohexanone, cyclobutane, tropane1, 1.4-dioxane, tropane3, cyclopropane, cyclohexane.
+  warnings.warn(f"Train and test molecule sets overlap: {', '.join(str(mol) for mol in train_set.intersection(test_set))}.")
+/home/luke/ATOM/src/atom/training/create_config.py:155: UserWarning: Validation and test molecule sets overlap: cyclopentadiene, 1.3-cyclohexadiene, cyclopentanone, tetrahydrofuran, cyclohexanol, uracil1, cyclohexanone, cyclobutane, tropane1, 1.4-dioxane, tropane3, cyclopropane, cyclohexane
+  warnings.warn(f"Validation and test molecule sets overlap: {', '.join(str(mol) for mol in val_set.intersection(test_set))}")
+
+  0%|          | 0/3 [00:00<?, ?run/s][A
+Run 1/3:   0%|          | 0/3 [00:00<?, ?run/s][A
+                                               [A
+Run 1/3:   0%|          | 0/3 [00:03<?, ?run/s][A
+                                               [A
+Run 1/3:   0%|          | 0/3 [00:03<?, ?run/s][AInferred max_nodes across all molecules as: 9
+Inferred max_edges across all molecules as: 18
+
+
+Training:   0%|          | 0/50 [00:00<?, ?epoch/s][A[A/home/luke/ATOM/.venv/lib/python3.13/site-packages/torch/_inductor/lowering.py:7007: UserWarning: 
+Online softmax is disabled on the fly since Inductor decides to
+split the reduction. Cut an issue to PyTorch if this is an
+important use case and you want to speed it up with online
+softmax.
+
+  warnings.warn(
+/home/luke/ATOM/.venv/lib/python3.13/site-packages/torch/_inductor/lowering.py:7007: UserWarning: 
+Online softmax is disabled on the fly since Inductor decides to
+split the reduction. Cut an issue to PyTorch if this is an
+important use case and you want to speed it up with online
+softmax.
+
+  warnings.warn(
+In file included from /home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/Python.h:14,
+                 from /tmp/tmphr8b8wws/main.c:4:
+/home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/pyconfig.h:1967:9: warning: ‘_POSIX_C_SOURCE’ redefined
+ 1967 | #define _POSIX_C_SOURCE 200809L
+      |         ^~~~~~~~~~~~~~~
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdlib.h:26,
+                 from /home/luke/ATOM/.venv/lib/python3.13/site-packages/triton/backends/nvidia/include/cuda.h:56,
+                 from /tmp/tmphr8b8wws/main.c:2:
+/usr/include/features.h:319:10: note: this is the location of the previous definition
+  319 | # define _POSIX_C_SOURCE        202405L
+      |          ^~~~~~~~~~~~~~~
+In file included from /home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/Python.h:14,
+                 from /tmp/tmpzs5rnno0/main.c:4:
+/home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/pyconfig.h:1967:9: warning: ‘_POSIX_C_SOURCE’ redefined
+ 1967 | #define _POSIX_C_SOURCE 200809L
+      |         ^~~~~~~~~~~~~~~
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdlib.h:26,
+                 from /home/luke/ATOM/.venv/lib/python3.13/site-packages/triton/backends/nvidia/include/cuda.h:56,
+                 from /tmp/tmpzs5rnno0/main.c:2:
+/usr/include/features.h:319:10: note: this is the location of the previous definition
+  319 | # define _POSIX_C_SOURCE        202405L
+      |          ^~~~~~~~~~~~~~~
+In file included from /home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/Python.h:14,
+                 from /tmp/tmpeq7lp54x/main.c:4:
+/home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/pyconfig.h:1967:9: warning: ‘_POSIX_C_SOURCE’ redefined
+ 1967 | #define _POSIX_C_SOURCE 200809L
+      |         ^~~~~~~~~~~~~~~
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdlib.h:26,
+                 from /home/luke/ATOM/.venv/lib/python3.13/site-packages/triton/backends/nvidia/include/cuda.h:56,
+                 from /tmp/tmpeq7lp54x/main.c:2:
+/usr/include/features.h:319:10: note: this is the location of the previous definition
+  319 | # define _POSIX_C_SOURCE        202405L
+      |          ^~~~~~~~~~~~~~~
+In file included from /home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/Python.h:14,
+                 from /tmp/tmpky6hcvsy/main.c:4:
+/home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/pyconfig.h:1967:9: warning: ‘_POSIX_C_SOURCE’ redefined
+ 1967 | #define _POSIX_C_SOURCE 200809L
+      |         ^~~~~~~~~~~~~~~
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdlib.h:26,
+                 from /home/luke/ATOM/.venv/lib/python3.13/site-packages/triton/backends/nvidia/include/cuda.h:56,
+                 from /tmp/tmpky6hcvsy/main.c:2:
+/usr/include/features.h:319:10: note: this is the location of the previous definition
+  319 | # define _POSIX_C_SOURCE        202405L
+      |          ^~~~~~~~~~~~~~~
+In file included from /home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/Python.h:14,
+                 from /tmp/tmptewtn2q_/main.c:4:
+/home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/pyconfig.h:1967:9: warning: ‘_POSIX_C_SOURCE’ redefined
+ 1967 | #define _POSIX_C_SOURCE 200809L
+      |         ^~~~~~~~~~~~~~~
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdlib.h:26,
+                 from /home/luke/ATOM/.venv/lib/python3.13/site-packages/triton/backends/nvidia/include/cuda.h:56,
+                 from /tmp/tmptewtn2q_/main.c:2:
+/usr/include/features.h:319:10: note: this is the location of the previous definition
+  319 | # define _POSIX_C_SOURCE        202405L
+      |          ^~~~~~~~~~~~~~~
+In file included from /home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/Python.h:14,
+                 from /tmp/tmpeov8riwv/main.c:4:
+/home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/pyconfig.h:1967:9: warning: ‘_POSIX_C_SOURCE’ redefined
+ 1967 | #define _POSIX_C_SOURCE 200809L
+      |         ^~~~~~~~~~~~~~~
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdlib.h:26,
+                 from /home/luke/ATOM/.venv/lib/python3.13/site-packages/triton/backends/nvidia/include/cuda.h:56,
+                 from /tmp/tmpeov8riwv/main.c:2:
+/usr/include/features.h:319:10: note: this is the location of the previous definition
+  319 | # define _POSIX_C_SOURCE        202405L
+      |          ^~~~~~~~~~~~~~~
+In file included from /home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/Python.h:14,
+                 from /tmp/tmpkta4zxxf/main.c:4:
+/home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/pyconfig.h:1967:9: warning: ‘_POSIX_C_SOURCE’ redefined
+ 1967 | #define _POSIX_C_SOURCE 200809L
+      |         ^~~~~~~~~~~~~~~
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdlib.h:26,
+                 from /home/luke/ATOM/.venv/lib/python3.13/site-packages/triton/backends/nvidia/include/cuda.h:56,
+                 from /tmp/tmpkta4zxxf/main.c:2:
+/usr/include/features.h:319:10: note: this is the location of the previous definition
+  319 | # define _POSIX_C_SOURCE        202405L
+      |          ^~~~~~~~~~~~~~~
+In file included from /home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/Python.h:14,
+                 from /tmp/tmpe8ikxg06/main.c:4:
+/home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/pyconfig.h:1967:9: warning: ‘_POSIX_C_SOURCE’ redefined
+ 1967 | #define _POSIX_C_SOURCE 200809L
+      |         ^~~~~~~~~~~~~~~
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdlib.h:26,
+                 from /home/luke/ATOM/.venv/lib/python3.13/site-packages/triton/backends/nvidia/include/cuda.h:56,
+                 from /tmp/tmpe8ikxg06/main.c:2:
+/usr/include/features.h:319:10: note: this is the location of the previous definition
+  319 | # define _POSIX_C_SOURCE        202405L
+      |          ^~~~~~~~~~~~~~~
+In file included from /home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/Python.h:14,
+                 from /tmp/tmpj3b9hfgc/main.c:4:
+/home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/pyconfig.h:1967:9: warning: ‘_POSIX_C_SOURCE’ redefined
+ 1967 | #define _POSIX_C_SOURCE 200809L
+      |         ^~~~~~~~~~~~~~~
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdlib.h:26,
+                 from /home/luke/ATOM/.venv/lib/python3.13/site-packages/triton/backends/nvidia/include/cuda.h:56,
+                 from /tmp/tmpj3b9hfgc/main.c:2:
+/usr/include/features.h:319:10: note: this is the location of the previous definition
+  319 | # define _POSIX_C_SOURCE        202405L
+      |          ^~~~~~~~~~~~~~~
+In file included from /home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/Python.h:14,
+                 from /tmp/tmpdnkzgbc2/main.c:4:
+/home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/pyconfig.h:1967:9: warning: ‘_POSIX_C_SOURCE’ redefined
+ 1967 | #define _POSIX_C_SOURCE 200809L
+      |         ^~~~~~~~~~~~~~~
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdlib.h:26,
+                 from /home/luke/ATOM/.venv/lib/python3.13/site-packages/triton/backends/nvidia/include/cuda.h:56,
+                 from /tmp/tmpdnkzgbc2/main.c:2:
+/usr/include/features.h:319:10: note: this is the location of the previous definition
+  319 | # define _POSIX_C_SOURCE        202405L
+      |          ^~~~~~~~~~~~~~~
+In file included from /home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/Python.h:14,
+                 from /tmp/tmp4owcsq0u/main.c:4:
+/home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/pyconfig.h:1967:9: warning: ‘_POSIX_C_SOURCE’ redefined
+ 1967 | #define _POSIX_C_SOURCE 200809L
+      |         ^~~~~~~~~~~~~~~
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdlib.h:26,
+                 from /home/luke/ATOM/.venv/lib/python3.13/site-packages/triton/backends/nvidia/include/cuda.h:56,
+                 from /tmp/tmp4owcsq0u/main.c:2:
+/usr/include/features.h:319:10: note: this is the location of the previous definition
+  319 | # define _POSIX_C_SOURCE        202405L
+      |          ^~~~~~~~~~~~~~~
+In file included from /home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/Python.h:14,
+                 from /tmp/tmpcjjg_8ql/main.c:4:
+/home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/pyconfig.h:1967:9: warning: ‘_POSIX_C_SOURCE’ redefined
+ 1967 | #define _POSIX_C_SOURCE 200809L
+      |         ^~~~~~~~~~~~~~~
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdlib.h:26,
+                 from /home/luke/ATOM/.venv/lib/python3.13/site-packages/triton/backends/nvidia/include/cuda.h:56,
+                 from /tmp/tmpcjjg_8ql/main.c:2:
+/usr/include/features.h:319:10: note: this is the location of the previous definition
+  319 | # define _POSIX_C_SOURCE        202405L
+      |          ^~~~~~~~~~~~~~~
+In file included from /home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/Python.h:14,
+                 from /tmp/tmpl9vmt7ta/main.c:4:
+/home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/pyconfig.h:1967:9: warning: ‘_POSIX_C_SOURCE’ redefined
+ 1967 | #define _POSIX_C_SOURCE 200809L
+      |         ^~~~~~~~~~~~~~~
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdlib.h:26,
+                 from /home/luke/ATOM/.venv/lib/python3.13/site-packages/triton/backends/nvidia/include/cuda.h:56,
+                 from /tmp/tmpl9vmt7ta/main.c:2:
+/usr/include/features.h:319:10: note: this is the location of the previous definition
+  319 | # define _POSIX_C_SOURCE        202405L
+      |          ^~~~~~~~~~~~~~~
+In file included from /home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/Python.h:14,
+                 from /tmp/tmps3mlb3h6/main.c:4:
+/home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/pyconfig.h:1967:9: warning: ‘_POSIX_C_SOURCE’ redefined
+ 1967 | #define _POSIX_C_SOURCE 200809L
+      |         ^~~~~~~~~~~~~~~
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdlib.h:26,
+                 from /home/luke/ATOM/.venv/lib/python3.13/site-packages/triton/backends/nvidia/include/cuda.h:56,
+                 from /tmp/tmps3mlb3h6/main.c:2:
+/usr/include/features.h:319:10: note: this is the location of the previous definition
+  319 | # define _POSIX_C_SOURCE        202405L
+      |          ^~~~~~~~~~~~~~~
+In file included from /home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/Python.h:14,
+                 from /tmp/tmpal1xbsqt/main.c:4:
+/home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/pyconfig.h:1967:9: warning: ‘_POSIX_C_SOURCE’ redefined
+ 1967 | #define _POSIX_C_SOURCE 200809L
+      |         ^~~~~~~~~~~~~~~
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdlib.h:26,
+                 from /home/luke/ATOM/.venv/lib/python3.13/site-packages/triton/backends/nvidia/include/cuda.h:56,
+                 from /tmp/tmpal1xbsqt/main.c:2:
+/usr/include/features.h:319:10: note: this is the location of the previous definition
+  319 | # define _POSIX_C_SOURCE        202405L
+      |          ^~~~~~~~~~~~~~~
+In file included from /home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/Python.h:14,
+                 from /tmp/tmpcrt3v0x6/main.c:4:
+/home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/pyconfig.h:1967:9: warning: ‘_POSIX_C_SOURCE’ redefined
+ 1967 | #define _POSIX_C_SOURCE 200809L
+      |         ^~~~~~~~~~~~~~~
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdlib.h:26,
+                 from /home/luke/ATOM/.venv/lib/python3.13/site-packages/triton/backends/nvidia/include/cuda.h:56,
+                 from /tmp/tmpcrt3v0x6/main.c:2:
+/usr/include/features.h:319:10: note: this is the location of the previous definition
+  319 | # define _POSIX_C_SOURCE        202405L
+      |          ^~~~~~~~~~~~~~~
+In file included from /home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/Python.h:14,
+                 from /tmp/tmpujly_t0x/main.c:4:
+/home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/pyconfig.h:1967:9: warning: ‘_POSIX_C_SOURCE’ redefined
+ 1967 | #define _POSIX_C_SOURCE 200809L
+      |         ^~~~~~~~~~~~~~~
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdlib.h:26,
+                 from /home/luke/ATOM/.venv/lib/python3.13/site-packages/triton/backends/nvidia/include/cuda.h:56,
+                 from /tmp/tmpujly_t0x/main.c:2:
+/usr/include/features.h:319:10: note: this is the location of the previous definition
+  319 | # define _POSIX_C_SOURCE        202405L
+      |          ^~~~~~~~~~~~~~~
+In file included from /home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/Python.h:14,
+                 from /tmp/tmptfnatiyr/main.c:4:
+/home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/pyconfig.h:1967:9: warning: ‘_POSIX_C_SOURCE’ redefined
+ 1967 | #define _POSIX_C_SOURCE 200809L
+      |         ^~~~~~~~~~~~~~~
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdlib.h:26,
+                 from /home/luke/ATOM/.venv/lib/python3.13/site-packages/triton/backends/nvidia/include/cuda.h:56,
+                 from /tmp/tmptfnatiyr/main.c:2:
+/usr/include/features.h:319:10: note: this is the location of the previous definition
+  319 | # define _POSIX_C_SOURCE        202405L
+      |          ^~~~~~~~~~~~~~~
+In file included from /home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/Python.h:14,
+                 from /tmp/tmpv3rxapqu/main.c:4:
+/home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/pyconfig.h:1967:9: warning: ‘_POSIX_C_SOURCE’ redefined
+ 1967 | #define _POSIX_C_SOURCE 200809L
+      |         ^~~~~~~~~~~~~~~
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdlib.h:26,
+                 from /home/luke/ATOM/.venv/lib/python3.13/site-packages/triton/backends/nvidia/include/cuda.h:56,
+                 from /tmp/tmpv3rxapqu/main.c:2:
+/usr/include/features.h:319:10: note: this is the location of the previous definition
+  319 | # define _POSIX_C_SOURCE        202405L
+      |          ^~~~~~~~~~~~~~~
+In file included from /home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/Python.h:14,
+                 from /tmp/tmp52wjbuqn/main.c:4:
+/home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/pyconfig.h:1967:9: warning: ‘_POSIX_C_SOURCE’ redefined
+ 1967 | #define _POSIX_C_SOURCE 200809L
+      |         ^~~~~~~~~~~~~~~
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdlib.h:26,
+                 from /home/luke/ATOM/.venv/lib/python3.13/site-packages/triton/backends/nvidia/include/cuda.h:56,
+                 from /tmp/tmp52wjbuqn/main.c:2:
+/usr/include/features.h:319:10: note: this is the location of the previous definition
+  319 | # define _POSIX_C_SOURCE        202405L
+      |          ^~~~~~~~~~~~~~~
+/home/luke/ATOM/.venv/lib/python3.13/site-packages/torch/_inductor/lowering.py:7007: UserWarning: 
+Online softmax is disabled on the fly since Inductor decides to
+split the reduction. Cut an issue to PyTorch if this is an
+important use case and you want to speed it up with online
+softmax.
+
+  warnings.warn(
+In file included from /home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/Python.h:14,
+                 from /tmp/tmp_vfa29hh/main.c:4:
+/home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/pyconfig.h:1967:9: warning: ‘_POSIX_C_SOURCE’ redefined
+ 1967 | #define _POSIX_C_SOURCE 200809L
+      |         ^~~~~~~~~~~~~~~
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdlib.h:26,
+                 from /home/luke/ATOM/.venv/lib/python3.13/site-packages/triton/backends/nvidia/include/cuda.h:56,
+                 from /tmp/tmp_vfa29hh/main.c:2:
+/usr/include/features.h:319:10: note: this is the location of the previous definition
+  319 | # define _POSIX_C_SOURCE        202405L
+      |          ^~~~~~~~~~~~~~~
+In file included from /home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/Python.h:14,
+                 from /tmp/tmp6wamg6xh/main.c:4:
+/home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/pyconfig.h:1967:9: warning: ‘_POSIX_C_SOURCE’ redefined
+ 1967 | #define _POSIX_C_SOURCE 200809L
+      |         ^~~~~~~~~~~~~~~
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdlib.h:26,
+                 from /home/luke/ATOM/.venv/lib/python3.13/site-packages/triton/backends/nvidia/include/cuda.h:56,
+                 from /tmp/tmp6wamg6xh/main.c:2:
+/usr/include/features.h:319:10: note: this is the location of the previous definition
+  319 | # define _POSIX_C_SOURCE        202405L
+      |          ^~~~~~~~~~~~~~~
+In file included from /home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/Python.h:14,
+                 from /tmp/tmp2rw04mrs/main.c:4:
+/home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/pyconfig.h:1967:9: warning: ‘_POSIX_C_SOURCE’ redefined
+ 1967 | #define _POSIX_C_SOURCE 200809L
+      |         ^~~~~~~~~~~~~~~
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdlib.h:26,
+                 from /home/luke/ATOM/.venv/lib/python3.13/site-packages/triton/backends/nvidia/include/cuda.h:56,
+                 from /tmp/tmp2rw04mrs/main.c:2:
+/usr/include/features.h:319:10: note: this is the location of the previous definition
+  319 | # define _POSIX_C_SOURCE        202405L
+      |          ^~~~~~~~~~~~~~~
+In file included from /home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/Python.h:14,
+                 from /tmp/tmp2t3554_m/main.c:4:
+/home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/pyconfig.h:1967:9: warning: ‘_POSIX_C_SOURCE’ redefined
+ 1967 | #define _POSIX_C_SOURCE 200809L
+      |         ^~~~~~~~~~~~~~~
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdlib.h:26,
+                 from /home/luke/ATOM/.venv/lib/python3.13/site-packages/triton/backends/nvidia/include/cuda.h:56,
+                 from /tmp/tmp2t3554_m/main.c:2:
+/usr/include/features.h:319:10: note: this is the location of the previous definition
+  319 | # define _POSIX_C_SOURCE        202405L
+      |          ^~~~~~~~~~~~~~~
+In file included from /home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/Python.h:14,
+                 from /tmp/tmp89nic837/main.c:4:
+/home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/pyconfig.h:1967:9: warning: ‘_POSIX_C_SOURCE’ redefined
+ 1967 | #define _POSIX_C_SOURCE 200809L
+      |         ^~~~~~~~~~~~~~~
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdlib.h:26,
+                 from /home/luke/ATOM/.venv/lib/python3.13/site-packages/triton/backends/nvidia/include/cuda.h:56,
+                 from /tmp/tmp89nic837/main.c:2:
+/usr/include/features.h:319:10: note: this is the location of the previous definition
+  319 | # define _POSIX_C_SOURCE        202405L
+      |          ^~~~~~~~~~~~~~~
+In file included from /home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/Python.h:14,
+                 from /tmp/tmpl24zncie/main.c:4:
+/home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/pyconfig.h:1967:9: warning: ‘_POSIX_C_SOURCE’ redefined
+ 1967 | #define _POSIX_C_SOURCE 200809L
+      |         ^~~~~~~~~~~~~~~
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdlib.h:26,
+                 from /home/luke/ATOM/.venv/lib/python3.13/site-packages/triton/backends/nvidia/include/cuda.h:56,
+                 from /tmp/tmpl24zncie/main.c:2:
+/usr/include/features.h:319:10: note: this is the location of the previous definition
+  319 | # define _POSIX_C_SOURCE        202405L
+      |          ^~~~~~~~~~~~~~~
+In file included from /home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/Python.h:14,
+                 from /tmp/tmp12sw7fpm/main.c:4:
+/home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/pyconfig.h:1967:9: warning: ‘_POSIX_C_SOURCE’ redefined
+ 1967 | #define _POSIX_C_SOURCE 200809L
+      |         ^~~~~~~~~~~~~~~
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdlib.h:26,
+                 from /home/luke/ATOM/.venv/lib/python3.13/site-packages/triton/backends/nvidia/include/cuda.h:56,
+                 from /tmp/tmp12sw7fpm/main.c:2:
+/usr/include/features.h:319:10: note: this is the location of the previous definition
+  319 | # define _POSIX_C_SOURCE        202405L
+      |          ^~~~~~~~~~~~~~~
+In file included from /home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/Python.h:14,
+                 from /tmp/tmp8bycbd8m/main.c:4:
+/home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/pyconfig.h:1967:9: warning: ‘_POSIX_C_SOURCE’ redefined
+ 1967 | #define _POSIX_C_SOURCE 200809L
+      |         ^~~~~~~~~~~~~~~
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdlib.h:26,
+                 from /home/luke/ATOM/.venv/lib/python3.13/site-packages/triton/backends/nvidia/include/cuda.h:56,
+                 from /tmp/tmp8bycbd8m/main.c:2:
+/usr/include/features.h:319:10: note: this is the location of the previous definition
+  319 | # define _POSIX_C_SOURCE        202405L
+      |          ^~~~~~~~~~~~~~~
+In file included from /home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/Python.h:14,
+                 from /tmp/tmp8gnyd4ea/main.c:4:
+/home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/pyconfig.h:1967:9: warning: ‘_POSIX_C_SOURCE’ redefined
+ 1967 | #define _POSIX_C_SOURCE 200809L
+      |         ^~~~~~~~~~~~~~~
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdlib.h:26,
+                 from /home/luke/ATOM/.venv/lib/python3.13/site-packages/triton/backends/nvidia/include/cuda.h:56,
+                 from /tmp/tmp8gnyd4ea/main.c:2:
+/usr/include/features.h:319:10: note: this is the location of the previous definition
+  319 | # define _POSIX_C_SOURCE        202405L
+      |          ^~~~~~~~~~~~~~~
+/home/luke/ATOM/.venv/lib/python3.13/site-packages/torch/_inductor/lowering.py:7007: UserWarning: 
+Online softmax is disabled on the fly since Inductor decides to
+split the reduction. Cut an issue to PyTorch if this is an
+important use case and you want to speed it up with online
+softmax.
+
+  warnings.warn(
+In file included from /home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/Python.h:14,
+                 from /tmp/tmprh543t4x/main.c:4:
+/home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/pyconfig.h:1967:9: warning: ‘_POSIX_C_SOURCE’ redefined
+ 1967 | #define _POSIX_C_SOURCE 200809L
+      |         ^~~~~~~~~~~~~~~
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdlib.h:26,
+                 from /home/luke/ATOM/.venv/lib/python3.13/site-packages/triton/backends/nvidia/include/cuda.h:56,
+                 from /tmp/tmprh543t4x/main.c:2:
+/usr/include/features.h:319:10: note: this is the location of the previous definition
+  319 | # define _POSIX_C_SOURCE        202405L
+      |          ^~~~~~~~~~~~~~~
+In file included from /home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/Python.h:14,
+                 from /tmp/tmpf3fz7_un/main.c:4:
+/home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/pyconfig.h:1967:9: warning: ‘_POSIX_C_SOURCE’ redefined
+ 1967 | #define _POSIX_C_SOURCE 200809L
+      |         ^~~~~~~~~~~~~~~
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdlib.h:26,
+                 from /home/luke/ATOM/.venv/lib/python3.13/site-packages/triton/backends/nvidia/include/cuda.h:56,
+                 from /tmp/tmpf3fz7_un/main.c:2:
+/usr/include/features.h:319:10: note: this is the location of the previous definition
+  319 | # define _POSIX_C_SOURCE        202405L
+      |          ^~~~~~~~~~~~~~~
+In file included from /home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/Python.h:14,
+                 from /tmp/tmptwre5sh6/main.c:4:
+/home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/pyconfig.h:1967:9: warning: ‘_POSIX_C_SOURCE’ redefined
+ 1967 | #define _POSIX_C_SOURCE 200809L
+      |         ^~~~~~~~~~~~~~~
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdlib.h:26,
+                 from /home/luke/ATOM/.venv/lib/python3.13/site-packages/triton/backends/nvidia/include/cuda.h:56,
+                 from /tmp/tmptwre5sh6/main.c:2:
+/usr/include/features.h:319:10: note: this is the location of the previous definition
+  319 | # define _POSIX_C_SOURCE        202405L
+      |          ^~~~~~~~~~~~~~~
+In file included from /home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/Python.h:14,
+                 from /tmp/tmpqmccwvfx/main.c:4:
+/home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/pyconfig.h:1967:9: warning: ‘_POSIX_C_SOURCE’ redefined
+ 1967 | #define _POSIX_C_SOURCE 200809L
+      |         ^~~~~~~~~~~~~~~
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdlib.h:26,
+                 from /home/luke/ATOM/.venv/lib/python3.13/site-packages/triton/backends/nvidia/include/cuda.h:56,
+                 from /tmp/tmpqmccwvfx/main.c:2:
+/usr/include/features.h:319:10: note: this is the location of the previous definition
+  319 | # define _POSIX_C_SOURCE        202405L
+      |          ^~~~~~~~~~~~~~~
+In file included from /home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/Python.h:14,
+                 from /tmp/tmpopjx32sh/main.c:4:
+/home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/pyconfig.h:1967:9: warning: ‘_POSIX_C_SOURCE’ redefined
+ 1967 | #define _POSIX_C_SOURCE 200809L
+      |         ^~~~~~~~~~~~~~~
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdlib.h:26,
+                 from /home/luke/ATOM/.venv/lib/python3.13/site-packages/triton/backends/nvidia/include/cuda.h:56,
+                 from /tmp/tmpopjx32sh/main.c:2:
+/usr/include/features.h:319:10: note: this is the location of the previous definition
+  319 | # define _POSIX_C_SOURCE        202405L
+      |          ^~~~~~~~~~~~~~~
+In file included from /home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/Python.h:14,
+                 from /tmp/tmp5h6op17j/main.c:4:
+/home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/pyconfig.h:1967:9: warning: ‘_POSIX_C_SOURCE’ redefined
+ 1967 | #define _POSIX_C_SOURCE 200809L
+      |         ^~~~~~~~~~~~~~~
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdlib.h:26,
+                 from /home/luke/ATOM/.venv/lib/python3.13/site-packages/triton/backends/nvidia/include/cuda.h:56,
+                 from /tmp/tmp5h6op17j/main.c:2:
+/usr/include/features.h:319:10: note: this is the location of the previous definition
+  319 | # define _POSIX_C_SOURCE        202405L
+      |          ^~~~~~~~~~~~~~~
+/home/luke/ATOM/.venv/lib/python3.13/site-packages/torch/_inductor/lowering.py:7007: UserWarning: 
+Online softmax is disabled on the fly since Inductor decides to
+split the reduction. Cut an issue to PyTorch if this is an
+important use case and you want to speed it up with online
+softmax.
+
+  warnings.warn(
+In file included from /home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/Python.h:14,
+                 from /tmp/tmp1hs473cd/main.c:4:
+/home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/pyconfig.h:1967:9: warning: ‘_POSIX_C_SOURCE’ redefined
+ 1967 | #define _POSIX_C_SOURCE 200809L
+      |         ^~~~~~~~~~~~~~~
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdlib.h:26,
+                 from /home/luke/ATOM/.venv/lib/python3.13/site-packages/triton/backends/nvidia/include/cuda.h:56,
+                 from /tmp/tmp1hs473cd/main.c:2:
+/usr/include/features.h:319:10: note: this is the location of the previous definition
+  319 | # define _POSIX_C_SOURCE        202405L
+      |          ^~~~~~~~~~~~~~~
+In file included from /home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/Python.h:14,
+                 from /tmp/tmpd6hz4abr/main.c:4:
+/home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/pyconfig.h:1967:9: warning: ‘_POSIX_C_SOURCE’ redefined
+ 1967 | #define _POSIX_C_SOURCE 200809L
+      |         ^~~~~~~~~~~~~~~
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdlib.h:26,
+                 from /home/luke/ATOM/.venv/lib/python3.13/site-packages/triton/backends/nvidia/include/cuda.h:56,
+                 from /tmp/tmpd6hz4abr/main.c:2:
+/usr/include/features.h:319:10: note: this is the location of the previous definition
+  319 | # define _POSIX_C_SOURCE        202405L
+      |          ^~~~~~~~~~~~~~~
+In file included from /home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/Python.h:14,
+                 from /tmp/tmpondoqyky/main.c:4:
+/home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/pyconfig.h:1967:9: warning: ‘_POSIX_C_SOURCE’ redefined
+ 1967 | #define _POSIX_C_SOURCE 200809L
+      |         ^~~~~~~~~~~~~~~
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdlib.h:26,
+                 from /home/luke/ATOM/.venv/lib/python3.13/site-packages/triton/backends/nvidia/include/cuda.h:56,
+                 from /tmp/tmpondoqyky/main.c:2:
+/usr/include/features.h:319:10: note: this is the location of the previous definition
+  319 | # define _POSIX_C_SOURCE        202405L
+      |          ^~~~~~~~~~~~~~~
+In file included from /home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/Python.h:14,
+                 from /tmp/tmpjb28ygrj/main.c:4:
+/home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/pyconfig.h:1967:9: warning: ‘_POSIX_C_SOURCE’ redefined
+ 1967 | #define _POSIX_C_SOURCE 200809L
+      |         ^~~~~~~~~~~~~~~
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdlib.h:26,
+                 from /home/luke/ATOM/.venv/lib/python3.13/site-packages/triton/backends/nvidia/include/cuda.h:56,
+                 from /tmp/tmpjb28ygrj/main.c:2:
+/usr/include/features.h:319:10: note: this is the location of the previous definition
+  319 | # define _POSIX_C_SOURCE        202405L
+      |          ^~~~~~~~~~~~~~~
+In file included from /home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/Python.h:14,
+                 from /tmp/tmpid9bbzg_/main.c:4:
+/home/luke/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/include/python3.13/pyconfig.h:1967:9: warning: ‘_POSIX_C_SOURCE’ redefined
+ 1967 | #define _POSIX_C_SOURCE 200809L
+      |         ^~~~~~~~~~~~~~~
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdlib.h:26,
+                 from /home/luke/ATOM/.venv/lib/python3.13/site-packages/triton/backends/nvidia/include/cuda.h:56,
+                 from /tmp/tmpid9bbzg_/main.c:2:
+/usr/include/features.h:319:10: note: this is the location of the previous definition
+  319 | # define _POSIX_C_SOURCE        202405L
+      |          ^~~~~~~~~~~~~~~
+
+
+Training:   0%|          | 0/50 [01:11<?, ?epoch/s, Train s2t loss=92.86x10^-2, Val s2t loss=47.13x10^-2, Best val s2t loss=47.13x10^-2, Current muon LR=0.0020][A[A
+
+Training:   2%|▏         | 1/50 [01:11<57:59, 71.01s/epoch, Train s2t loss=92.86x10^-2, Val s2t loss=47.13x10^-2, Best val s2t loss=47.13x10^-2, Current muon LR=0.0020][A[A
+
+Training:   2%|▏         | 1/50 [01:15<57:59, 71.01s/epoch, Train s2t loss=47.30x10^-2, Val s2t loss=46.28x10^-2, Best val s2t loss=46.28x10^-2, Current muon LR=0.0020][A[A
+
+Training:   4%|▍         | 2/50 [01:15<25:17, 31.62s/epoch, Train s2t loss=47.30x10^-2, Val s2t loss=46.28x10^-2, Best val s2t loss=46.28x10^-2, Current muon LR=0.0020][A[A
+
+Training:   4%|▍         | 2/50 [01:28<25:17, 31.62s/epoch, Train s2t loss=46.99x10^-2, Val s2t loss=46.45x10^-2, Best val s2t loss=46.28x10^-2, Current muon LR=0.0020][A[A
+
+Training:   6%|▌         | 3/50 [01:28<18:16, 23.34s/epoch, Train s2t loss=46.99x10^-2, Val s2t loss=46.45x10^-2, Best val s2t loss=46.28x10^-2, Current muon LR=0.0020][A[A
+
+Training:   6%|▌         | 3/50 [01:35<18:16, 23.34s/epoch, Train s2t loss=45.32x10^-2, Val s2t loss=44.49x10^-2, Best val s2t loss=44.49x10^-2, Current muon LR=0.0020][A[A
+
+Training:   8%|▊         | 4/50 [01:35<12:51, 16.77s/epoch, Train s2t loss=45.32x10^-2, Val s2t loss=44.49x10^-2, Best val s2t loss=44.49x10^-2, Current muon LR=0.0020][A[A
+
+Training:   8%|▊         | 4/50 [01:44<12:51, 16.77s/epoch, Train s2t loss=45.02x10^-2, Val s2t loss=45.10x10^-2, Best val s2t loss=44.49x10^-2, Current muon LR=0.0020][A[A
+
+Training:  10%|█         | 5/50 [01:44<10:32, 14.06s/epoch, Train s2t loss=45.02x10^-2, Val s2t loss=45.10x10^-2, Best val s2t loss=44.49x10^-2, Current muon LR=0.0020][A[A
+
+Training:  10%|█         | 5/50 [01:51<10:32, 14.06s/epoch, Train s2t loss=44.36x10^-2, Val s2t loss=44.68x10^-2, Best val s2t loss=44.49x10^-2, Current muon LR=0.0020][A[A
+
+Training:  12%|█▏        | 6/50 [01:51<08:38, 11.78s/epoch, Train s2t loss=44.36x10^-2, Val s2t loss=44.68x10^-2, Best val s2t loss=44.49x10^-2, Current muon LR=0.0020][A[A
+
+Training:  12%|█▏        | 6/50 [02:00<08:38, 11.78s/epoch, Train s2t loss=44.41x10^-2, Val s2t loss=44.32x10^-2, Best val s2t loss=44.32x10^-2, Current muon LR=0.0020][A[A
+
+Training:  14%|█▍        | 7/50 [02:00<07:44, 10.80s/epoch, Train s2t loss=44.41x10^-2, Val s2t loss=44.32x10^-2, Best val s2t loss=44.32x10^-2, Current muon LR=0.0020][A[A
+
+Training:  14%|█▍        | 7/50 [02:05<07:44, 10.80s/epoch, Train s2t loss=43.01x10^-2, Val s2t loss=43.37x10^-2, Best val s2t loss=43.37x10^-2, Current muon LR=0.0020][A[A
+
+Training:  16%|█▌        | 8/50 [02:05<06:20,  9.05s/epoch, Train s2t loss=43.01x10^-2, Val s2t loss=43.37x10^-2, Best val s2t loss=43.37x10^-2, Current muon LR=0.0020][A[A
+
+Training:  16%|█▌        | 8/50 [02:20<06:20,  9.05s/epoch, Train s2t loss=45.22x10^-2, Val s2t loss=44.73x10^-2, Best val s2t loss=43.37x10^-2, Current muon LR=0.0020][A[A
+
+Training:  18%|█▊        | 9/50 [02:20<07:21, 10.77s/epoch, Train s2t loss=45.22x10^-2, Val s2t loss=44.73x10^-2, Best val s2t loss=43.37x10^-2, Current muon LR=0.0020][A[A
+
+Training:  18%|█▊        | 9/50 [02:23<07:21, 10.77s/epoch, Train s2t loss=44.21x10^-2, Val s2t loss=43.46x10^-2, Best val s2t loss=43.37x10^-2, Current muon LR=0.0020][A[A
+
+Training:  20%|██        | 10/50 [02:23<05:33,  8.35s/epoch, Train s2t loss=44.21x10^-2, Val s2t loss=43.46x10^-2, Best val s2t loss=43.37x10^-2, Current muon LR=0.0020][A[A
+
+Training:  20%|██        | 10/50 [02:27<05:33,  8.35s/epoch, Train s2t loss=43.07x10^-2, Val s2t loss=43.61x10^-2, Best val s2t loss=43.37x10^-2, Current muon LR=0.0020][A[A
+
+Training:  22%|██▏       | 11/50 [02:27<04:33,  7.01s/epoch, Train s2t loss=43.07x10^-2, Val s2t loss=43.61x10^-2, Best val s2t loss=43.37x10^-2, Current muon LR=0.0020][A[A
+
+Training:  22%|██▏       | 11/50 [02:41<04:33,  7.01s/epoch, Train s2t loss=44.30x10^-2, Val s2t loss=43.28x10^-2, Best val s2t loss=43.28x10^-2, Current muon LR=0.0020][A[A
+
+Training:  24%|██▍       | 12/50 [02:41<05:54,  9.32s/epoch, Train s2t loss=44.30x10^-2, Val s2t loss=43.28x10^-2, Best val s2t loss=43.28x10^-2, Current muon LR=0.0020][A[A
+
+Training:  24%|██▍       | 12/50 [02:46<05:54,  9.32s/epoch, Train s2t loss=43.47x10^-2, Val s2t loss=43.46x10^-2, Best val s2t loss=43.28x10^-2, Current muon LR=0.0020][A[A
+
+Training:  26%|██▌       | 13/50 [02:46<04:47,  7.77s/epoch, Train s2t loss=43.47x10^-2, Val s2t loss=43.46x10^-2, Best val s2t loss=43.28x10^-2, Current muon LR=0.0020][A[A
+
+Training:  26%|██▌       | 13/50 [02:51<04:47,  7.77s/epoch, Train s2t loss=43.46x10^-2, Val s2t loss=44.11x10^-2, Best val s2t loss=43.28x10^-2, Current muon LR=0.0020][A[A
+
+Training:  28%|██▊       | 14/50 [02:51<04:09,  6.92s/epoch, Train s2t loss=43.46x10^-2, Val s2t loss=44.11x10^-2, Best val s2t loss=43.28x10^-2, Current muon LR=0.0020][A[A
+
+Training:  28%|██▊       | 14/50 [03:01<04:09,  6.92s/epoch, Train s2t loss=43.04x10^-2, Val s2t loss=43.31x10^-2, Best val s2t loss=43.28x10^-2, Current muon LR=0.0020][A[A
+
+Training:  30%|███       | 15/50 [03:01<04:38,  7.96s/epoch, Train s2t loss=43.04x10^-2, Val s2t loss=43.31x10^-2, Best val s2t loss=43.28x10^-2, Current muon LR=0.0020][A[A
+
+Training:  30%|███       | 15/50 [03:11<04:38,  7.96s/epoch, Train s2t loss=43.14x10^-2, Val s2t loss=43.13x10^-2, Best val s2t loss=43.13x10^-2, Current muon LR=0.0020][A[A
+
+Training:  32%|███▏      | 16/50 [03:11<04:48,  8.47s/epoch, Train s2t loss=43.14x10^-2, Val s2t loss=43.13x10^-2, Best val s2t loss=43.13x10^-2, Current muon LR=0.0020][A[A
+
+Training:  32%|███▏      | 16/50 [03:15<04:48,  8.47s/epoch, Train s2t loss=42.80x10^-2, Val s2t loss=43.41x10^-2, Best val s2t loss=43.13x10^-2, Current muon LR=0.0020][A[A
+
+Training:  34%|███▍      | 17/50 [03:15<04:02,  7.34s/epoch, Train s2t loss=42.80x10^-2, Val s2t loss=43.41x10^-2, Best val s2t loss=43.13x10^-2, Current muon LR=0.0020][A[A
+
+Training:  34%|███▍      | 17/50 [03:21<04:02,  7.34s/epoch, Train s2t loss=42.69x10^-2, Val s2t loss=43.70x10^-2, Best val s2t loss=43.13x10^-2, Current muon LR=0.0020][A[A
+
+Training:  36%|███▌      | 18/50 [03:21<03:41,  6.93s/epoch, Train s2t loss=42.69x10^-2, Val s2t loss=43.70x10^-2, Best val s2t loss=43.13x10^-2, Current muon LR=0.0020][A[A
+
+Training:  36%|███▌      | 18/50 [03:35<03:41,  6.93s/epoch, Train s2t loss=43.11x10^-2, Val s2t loss=43.53x10^-2, Best val s2t loss=43.13x10^-2, Current muon LR=0.0020][A[A
+
+Training:  38%|███▊      | 19/50 [03:35<04:34,  8.87s/epoch, Train s2t loss=43.11x10^-2, Val s2t loss=43.53x10^-2, Best val s2t loss=43.13x10^-2, Current muon LR=0.0020][A[A
+
+Training:  38%|███▊      | 19/50 [03:38<04:34,  8.87s/epoch, Train s2t loss=42.76x10^-2, Val s2t loss=43.10x10^-2, Best val s2t loss=43.10x10^-2, Current muon LR=0.0020][A[A
+
+Training:  40%|████      | 20/50 [03:38<03:34,  7.15s/epoch, Train s2t loss=42.76x10^-2, Val s2t loss=43.10x10^-2, Best val s2t loss=43.10x10^-2, Current muon LR=0.0020][A[A
+
+Training:  40%|████      | 20/50 [03:44<03:34,  7.15s/epoch, Train s2t loss=43.39x10^-2, Val s2t loss=42.30x10^-2, Best val s2t loss=42.30x10^-2, Current muon LR=0.0020][A[A
+
+Training:  42%|████▏     | 21/50 [03:44<03:21,  6.95s/epoch, Train s2t loss=43.39x10^-2, Val s2t loss=42.30x10^-2, Best val s2t loss=42.30x10^-2, Current muon LR=0.0020][A[A
+
+Training:  42%|████▏     | 21/50 [03:57<03:21,  6.95s/epoch, Train s2t loss=43.44x10^-2, Val s2t loss=44.20x10^-2, Best val s2t loss=42.30x10^-2, Current muon LR=0.0020][A[A
+
+Training:  44%|████▍     | 22/50 [03:57<03:59,  8.55s/epoch, Train s2t loss=43.44x10^-2, Val s2t loss=44.20x10^-2, Best val s2t loss=42.30x10^-2, Current muon LR=0.0020][A[A
+
+Training:  44%|████▍     | 22/50 [04:03<03:59,  8.55s/epoch, Train s2t loss=43.75x10^-2, Val s2t loss=42.62x10^-2, Best val s2t loss=42.30x10^-2, Current muon LR=0.0020][A[A
+
+Training:  46%|████▌     | 23/50 [04:03<03:30,  7.78s/epoch, Train s2t loss=43.75x10^-2, Val s2t loss=42.62x10^-2, Best val s2t loss=42.30x10^-2, Current muon LR=0.0020][A[A
+
+Training:  46%|████▌     | 23/50 [04:08<03:30,  7.78s/epoch, Train s2t loss=43.55x10^-2, Val s2t loss=42.94x10^-2, Best val s2t loss=42.30x10^-2, Current muon LR=0.0020][A[A
+
+Training:  48%|████▊     | 24/50 [04:08<03:01,  6.99s/epoch, Train s2t loss=43.55x10^-2, Val s2t loss=42.94x10^-2, Best val s2t loss=42.30x10^-2, Current muon LR=0.0020][A[A
+
+Training:  48%|████▊     | 24/50 [04:11<03:01,  6.99s/epoch, Train s2t loss=43.55x10^-2, Val s2t loss=42.98x10^-2, Best val s2t loss=42.30x10^-2, Current muon LR=0.0020][A[A
+
+Training:  50%|█████     | 25/50 [04:11<02:24,  5.76s/epoch, Train s2t loss=43.55x10^-2, Val s2t loss=42.98x10^-2, Best val s2t loss=42.30x10^-2, Current muon LR=0.0020][A[A
+
+Training:  50%|█████     | 25/50 [04:14<02:24,  5.76s/epoch, Train s2t loss=42.99x10^-2, Val s2t loss=42.66x10^-2, Best val s2t loss=42.30x10^-2, Current muon LR=0.0020][A[A
+
+Training:  52%|█████▏    | 26/50 [04:14<01:57,  4.90s/epoch, Train s2t loss=42.99x10^-2, Val s2t loss=42.66x10^-2, Best val s2t loss=42.30x10^-2, Current muon LR=0.0020][A[A
+
+Training:  52%|█████▏    | 26/50 [04:18<01:57,  4.90s/epoch, Train s2t loss=42.77x10^-2, Val s2t loss=43.09x10^-2, Best val s2t loss=42.30x10^-2, Current muon LR=0.0020][A[A
+
+Training:  54%|█████▍    | 27/50 [04:18<01:52,  4.89s/epoch, Train s2t loss=42.77x10^-2, Val s2t loss=43.09x10^-2, Best val s2t loss=42.30x10^-2, Current muon LR=0.0020][A[A
+
+Training:  54%|█████▍    | 27/50 [04:23<01:52,  4.89s/epoch, Train s2t loss=43.39x10^-2, Val s2t loss=42.79x10^-2, Best val s2t loss=42.30x10^-2, Current muon LR=0.0020][A[A
+
+Training:  56%|█████▌    | 28/50 [04:23<01:45,  4.78s/epoch, Train s2t loss=43.39x10^-2, Val s2t loss=42.79x10^-2, Best val s2t loss=42.30x10^-2, Current muon LR=0.0020][A[A
+
+Training:  56%|█████▌    | 28/50 [04:26<01:45,  4.78s/epoch, Train s2t loss=42.76x10^-2, Val s2t loss=42.77x10^-2, Best val s2t loss=42.30x10^-2, Current muon LR=0.0020][A[A
+
+Training:  58%|█████▊    | 29/50 [04:26<01:28,  4.23s/epoch, Train s2t loss=42.76x10^-2, Val s2t loss=42.77x10^-2, Best val s2t loss=42.30x10^-2, Current muon LR=0.0020][A[A
+
+Training:  58%|█████▊    | 29/50 [04:29<01:28,  4.23s/epoch, Train s2t loss=42.78x10^-2, Val s2t loss=42.71x10^-2, Best val s2t loss=42.30x10^-2, Current muon LR=0.0020][A[A
+
+Training:  60%|██████    | 30/50 [04:29<01:17,  3.88s/epoch, Train s2t loss=42.78x10^-2, Val s2t loss=42.71x10^-2, Best val s2t loss=42.30x10^-2, Current muon LR=0.0020][A[A
+
+Training:  60%|██████    | 30/50 [04:34<01:17,  3.88s/epoch, Train s2t loss=42.21x10^-2, Val s2t loss=43.42x10^-2, Best val s2t loss=42.30x10^-2, Current muon LR=0.0020][A[A
+
+Training:  62%|██████▏   | 31/50 [04:34<01:19,  4.17s/epoch, Train s2t loss=42.21x10^-2, Val s2t loss=43.42x10^-2, Best val s2t loss=42.30x10^-2, Current muon LR=0.0020][A[A
+
+Training:  62%|██████▏   | 31/50 [04:38<01:19,  4.17s/epoch, Train s2t loss=42.98x10^-2, Val s2t loss=41.82x10^-2, Best val s2t loss=41.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:  64%|██████▍   | 32/50 [04:38<01:14,  4.16s/epoch, Train s2t loss=42.98x10^-2, Val s2t loss=41.82x10^-2, Best val s2t loss=41.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:  64%|██████▍   | 32/50 [04:41<01:14,  4.16s/epoch, Train s2t loss=43.45x10^-2, Val s2t loss=43.23x10^-2, Best val s2t loss=41.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:  66%|██████▌   | 33/50 [04:41<01:03,  3.76s/epoch, Train s2t loss=43.45x10^-2, Val s2t loss=43.23x10^-2, Best val s2t loss=41.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:  66%|██████▌   | 33/50 [04:44<01:03,  3.76s/epoch, Train s2t loss=43.43x10^-2, Val s2t loss=43.51x10^-2, Best val s2t loss=41.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:  68%|██████▊   | 34/50 [04:44<00:57,  3.62s/epoch, Train s2t loss=43.43x10^-2, Val s2t loss=43.51x10^-2, Best val s2t loss=41.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:  68%|██████▊   | 34/50 [04:49<00:57,  3.62s/epoch, Train s2t loss=43.30x10^-2, Val s2t loss=42.58x10^-2, Best val s2t loss=41.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:  70%|███████   | 35/50 [04:49<00:58,  3.90s/epoch, Train s2t loss=43.30x10^-2, Val s2t loss=42.58x10^-2, Best val s2t loss=41.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:  70%|███████   | 35/50 [04:53<00:58,  3.90s/epoch, Train s2t loss=42.77x10^-2, Val s2t loss=42.01x10^-2, Best val s2t loss=41.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:  72%|███████▏  | 36/50 [04:53<00:55,  3.96s/epoch, Train s2t loss=42.77x10^-2, Val s2t loss=42.01x10^-2, Best val s2t loss=41.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:  72%|███████▏  | 36/50 [04:56<00:55,  3.96s/epoch, Train s2t loss=43.85x10^-2, Val s2t loss=42.52x10^-2, Best val s2t loss=41.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:  74%|███████▍  | 37/50 [04:56<00:47,  3.62s/epoch, Train s2t loss=43.85x10^-2, Val s2t loss=42.52x10^-2, Best val s2t loss=41.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:  74%|███████▍  | 37/50 [04:59<00:47,  3.62s/epoch, Train s2t loss=43.72x10^-2, Val s2t loss=43.01x10^-2, Best val s2t loss=41.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:  76%|███████▌  | 38/50 [04:59<00:43,  3.65s/epoch, Train s2t loss=43.72x10^-2, Val s2t loss=43.01x10^-2, Best val s2t loss=41.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:  76%|███████▌  | 38/50 [05:04<00:43,  3.65s/epoch, Train s2t loss=43.03x10^-2, Val s2t loss=42.55x10^-2, Best val s2t loss=41.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:  78%|███████▊  | 39/50 [05:04<00:43,  3.96s/epoch, Train s2t loss=43.03x10^-2, Val s2t loss=42.55x10^-2, Best val s2t loss=41.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:  78%|███████▊  | 39/50 [05:07<00:43,  3.96s/epoch, Train s2t loss=43.01x10^-2, Val s2t loss=42.43x10^-2, Best val s2t loss=41.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:  80%|████████  | 40/50 [05:07<00:38,  3.83s/epoch, Train s2t loss=43.01x10^-2, Val s2t loss=42.43x10^-2, Best val s2t loss=41.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:  80%|████████  | 40/50 [05:10<00:38,  3.83s/epoch, Train s2t loss=42.88x10^-2, Val s2t loss=43.01x10^-2, Best val s2t loss=41.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:  82%|████████▏ | 41/50 [05:10<00:31,  3.53s/epoch, Train s2t loss=42.88x10^-2, Val s2t loss=43.01x10^-2, Best val s2t loss=41.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:  82%|████████▏ | 41/50 [05:14<00:31,  3.53s/epoch, Train s2t loss=42.50x10^-2, Val s2t loss=43.63x10^-2, Best val s2t loss=41.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:  84%|████████▍ | 42/50 [05:14<00:29,  3.70s/epoch, Train s2t loss=42.50x10^-2, Val s2t loss=43.63x10^-2, Best val s2t loss=41.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:  84%|████████▍ | 42/50 [05:19<00:29,  3.70s/epoch, Train s2t loss=42.58x10^-2, Val s2t loss=42.85x10^-2, Best val s2t loss=41.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:  86%|████████▌ | 43/50 [05:19<00:28,  4.02s/epoch, Train s2t loss=42.58x10^-2, Val s2t loss=42.85x10^-2, Best val s2t loss=41.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:  86%|████████▌ | 43/50 [05:22<00:28,  4.02s/epoch, Train s2t loss=42.99x10^-2, Val s2t loss=42.39x10^-2, Best val s2t loss=41.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:  88%|████████▊ | 44/50 [05:22<00:22,  3.73s/epoch, Train s2t loss=42.99x10^-2, Val s2t loss=42.39x10^-2, Best val s2t loss=41.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:  88%|████████▊ | 44/50 [05:25<00:22,  3.73s/epoch, Train s2t loss=43.58x10^-2, Val s2t loss=42.20x10^-2, Best val s2t loss=41.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:  90%|█████████ | 45/50 [05:25<00:17,  3.47s/epoch, Train s2t loss=43.58x10^-2, Val s2t loss=42.20x10^-2, Best val s2t loss=41.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:  90%|█████████ | 45/50 [05:30<00:17,  3.47s/epoch, Train s2t loss=42.53x10^-2, Val s2t loss=42.53x10^-2, Best val s2t loss=41.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:  92%|█████████▏| 46/50 [05:30<00:15,  3.79s/epoch, Train s2t loss=42.53x10^-2, Val s2t loss=42.53x10^-2, Best val s2t loss=41.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:  92%|█████████▏| 46/50 [05:34<00:15,  3.79s/epoch, Train s2t loss=43.21x10^-2, Val s2t loss=42.89x10^-2, Best val s2t loss=41.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:  94%|█████████▍| 47/50 [05:34<00:12,  4.09s/epoch, Train s2t loss=43.21x10^-2, Val s2t loss=42.89x10^-2, Best val s2t loss=41.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:  94%|█████████▍| 47/50 [05:37<00:12,  4.09s/epoch, Train s2t loss=43.39x10^-2, Val s2t loss=42.57x10^-2, Best val s2t loss=41.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:  96%|█████████▌| 48/50 [05:37<00:07,  3.72s/epoch, Train s2t loss=43.39x10^-2, Val s2t loss=42.57x10^-2, Best val s2t loss=41.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:  96%|█████████▌| 48/50 [05:40<00:07,  3.72s/epoch, Train s2t loss=42.44x10^-2, Val s2t loss=43.08x10^-2, Best val s2t loss=41.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:  98%|█████████▊| 49/50 [05:40<00:03,  3.54s/epoch, Train s2t loss=42.44x10^-2, Val s2t loss=43.08x10^-2, Best val s2t loss=41.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:  98%|█████████▊| 49/50 [05:45<00:03,  3.54s/epoch, Train s2t loss=43.24x10^-2, Val s2t loss=42.99x10^-2, Best val s2t loss=41.82x10^-2, Current muon LR=0.0020][A[A
+
+Training: 100%|██████████| 50/50 [05:45<00:00,  3.93s/epoch, Train s2t loss=43.24x10^-2, Val s2t loss=42.99x10^-2, Best val s2t loss=41.82x10^-2, Current muon LR=0.0020][A[A
+
+                                                                                                                                                                         [A[A
+                                               [A
+Run 1/3:   0%|          | 0/3 [05:52<?, ?run/s][A
+                                               [A
+Run 1/3:   0%|          | 0/3 [05:52<?, ?run/s][A
+Run 1/3:  33%|███▎      | 1/3 [05:52<11:45, 352.83s/run][A
+Run 2/3:  33%|███▎      | 1/3 [05:52<11:45, 352.83s/run][A
+                                                        [A
+Run 2/3:  33%|███▎      | 1/3 [05:55<11:45, 352.83s/run][A
+                                                        [A
+Run 2/3:  33%|███▎      | 1/3 [05:55<11:45, 352.83s/run][ATotal params: 4,347,428
+Total trainable params: 4,347,428
+Inferred max_nodes across all molecules as: 9
+Inferred max_edges across all molecules as: 18
+
+
+Training:   0%|          | 0/50 [00:00<?, ?epoch/s][A[A
+
+Training:   0%|          | 0/50 [00:03<?, ?epoch/s, Train s2t loss=75.64x10^-2, Val s2t loss=48.58x10^-2, Best val s2t loss=48.58x10^-2, Current muon LR=0.0020][A[A
+
+Training:   2%|▏         | 1/50 [00:03<03:09,  3.86s/epoch, Train s2t loss=75.64x10^-2, Val s2t loss=48.58x10^-2, Best val s2t loss=48.58x10^-2, Current muon LR=0.0020][A[A
+
+Training:   2%|▏         | 1/50 [00:07<03:09,  3.86s/epoch, Train s2t loss=46.51x10^-2, Val s2t loss=45.53x10^-2, Best val s2t loss=45.53x10^-2, Current muon LR=0.0020][A[A
+
+Training:   4%|▍         | 2/50 [00:07<02:52,  3.59s/epoch, Train s2t loss=46.51x10^-2, Val s2t loss=45.53x10^-2, Best val s2t loss=45.53x10^-2, Current muon LR=0.0020][A[A
+
+Training:   4%|▍         | 2/50 [00:10<02:52,  3.59s/epoch, Train s2t loss=46.28x10^-2, Val s2t loss=44.74x10^-2, Best val s2t loss=44.74x10^-2, Current muon LR=0.0020][A[A
+
+Training:   6%|▌         | 3/50 [00:10<02:32,  3.24s/epoch, Train s2t loss=46.28x10^-2, Val s2t loss=44.74x10^-2, Best val s2t loss=44.74x10^-2, Current muon LR=0.0020][A[A
+
+Training:   6%|▌         | 3/50 [00:13<02:32,  3.24s/epoch, Train s2t loss=45.74x10^-2, Val s2t loss=46.03x10^-2, Best val s2t loss=44.74x10^-2, Current muon LR=0.0020][A[A
+
+Training:   8%|▊         | 4/50 [00:13<02:30,  3.26s/epoch, Train s2t loss=45.74x10^-2, Val s2t loss=46.03x10^-2, Best val s2t loss=44.74x10^-2, Current muon LR=0.0020][A[A
+
+Training:   8%|▊         | 4/50 [00:16<02:30,  3.26s/epoch, Train s2t loss=44.49x10^-2, Val s2t loss=44.35x10^-2, Best val s2t loss=44.35x10^-2, Current muon LR=0.0020][A[A
+
+Training:  10%|█         | 5/50 [00:16<02:20,  3.12s/epoch, Train s2t loss=44.49x10^-2, Val s2t loss=44.35x10^-2, Best val s2t loss=44.35x10^-2, Current muon LR=0.0020][A[A
+
+Training:  10%|█         | 5/50 [00:19<02:20,  3.12s/epoch, Train s2t loss=44.95x10^-2, Val s2t loss=43.52x10^-2, Best val s2t loss=43.52x10^-2, Current muon LR=0.0020][A[A
+
+Training:  12%|█▏        | 6/50 [00:19<02:13,  3.04s/epoch, Train s2t loss=44.95x10^-2, Val s2t loss=43.52x10^-2, Best val s2t loss=43.52x10^-2, Current muon LR=0.0020][A[A
+
+Training:  12%|█▏        | 6/50 [00:22<02:13,  3.04s/epoch, Train s2t loss=44.11x10^-2, Val s2t loss=44.43x10^-2, Best val s2t loss=43.52x10^-2, Current muon LR=0.0020][A[A
+
+Training:  14%|█▍        | 7/50 [00:22<02:14,  3.12s/epoch, Train s2t loss=44.11x10^-2, Val s2t loss=44.43x10^-2, Best val s2t loss=43.52x10^-2, Current muon LR=0.0020][A[A
+
+Training:  14%|█▍        | 7/50 [00:25<02:14,  3.12s/epoch, Train s2t loss=44.20x10^-2, Val s2t loss=43.48x10^-2, Best val s2t loss=43.48x10^-2, Current muon LR=0.0020][A[A
+
+Training:  16%|█▌        | 8/50 [00:25<02:07,  3.03s/epoch, Train s2t loss=44.20x10^-2, Val s2t loss=43.48x10^-2, Best val s2t loss=43.48x10^-2, Current muon LR=0.0020][A[A
+
+Training:  16%|█▌        | 8/50 [00:28<02:07,  3.03s/epoch, Train s2t loss=43.98x10^-2, Val s2t loss=43.35x10^-2, Best val s2t loss=43.35x10^-2, Current muon LR=0.0020][A[A
+
+Training:  18%|█▊        | 9/50 [00:28<02:02,  2.98s/epoch, Train s2t loss=43.98x10^-2, Val s2t loss=43.35x10^-2, Best val s2t loss=43.35x10^-2, Current muon LR=0.0020][A[A
+
+Training:  18%|█▊        | 9/50 [00:31<02:02,  2.98s/epoch, Train s2t loss=43.85x10^-2, Val s2t loss=43.15x10^-2, Best val s2t loss=43.15x10^-2, Current muon LR=0.0020][A[A
+
+Training:  20%|██        | 10/50 [00:31<02:02,  3.07s/epoch, Train s2t loss=43.85x10^-2, Val s2t loss=43.15x10^-2, Best val s2t loss=43.15x10^-2, Current muon LR=0.0020][A[A
+
+Training:  20%|██        | 10/50 [00:34<02:02,  3.07s/epoch, Train s2t loss=43.68x10^-2, Val s2t loss=43.62x10^-2, Best val s2t loss=43.15x10^-2, Current muon LR=0.0020][A[A
+
+Training:  22%|██▏       | 11/50 [00:34<01:57,  3.00s/epoch, Train s2t loss=43.68x10^-2, Val s2t loss=43.62x10^-2, Best val s2t loss=43.15x10^-2, Current muon LR=0.0020][A[A
+
+Training:  22%|██▏       | 11/50 [00:37<01:57,  3.00s/epoch, Train s2t loss=43.47x10^-2, Val s2t loss=43.48x10^-2, Best val s2t loss=43.15x10^-2, Current muon LR=0.0020][A[A
+
+Training:  24%|██▍       | 12/50 [00:37<01:52,  2.96s/epoch, Train s2t loss=43.47x10^-2, Val s2t loss=43.48x10^-2, Best val s2t loss=43.15x10^-2, Current muon LR=0.0020][A[A
+
+Training:  24%|██▍       | 12/50 [00:40<01:52,  2.96s/epoch, Train s2t loss=42.94x10^-2, Val s2t loss=42.86x10^-2, Best val s2t loss=42.86x10^-2, Current muon LR=0.0020][A[A
+
+Training:  26%|██▌       | 13/50 [00:40<01:53,  3.05s/epoch, Train s2t loss=42.94x10^-2, Val s2t loss=42.86x10^-2, Best val s2t loss=42.86x10^-2, Current muon LR=0.0020][A[A
+
+Training:  26%|██▌       | 13/50 [00:43<01:53,  3.05s/epoch, Train s2t loss=42.67x10^-2, Val s2t loss=44.49x10^-2, Best val s2t loss=42.86x10^-2, Current muon LR=0.0020][A[A
+
+Training:  28%|██▊       | 14/50 [00:43<01:48,  3.01s/epoch, Train s2t loss=42.67x10^-2, Val s2t loss=44.49x10^-2, Best val s2t loss=42.86x10^-2, Current muon LR=0.0020][A[A
+
+Training:  28%|██▊       | 14/50 [00:46<01:48,  3.01s/epoch, Train s2t loss=44.37x10^-2, Val s2t loss=42.82x10^-2, Best val s2t loss=42.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:  30%|███       | 15/50 [00:46<01:43,  2.96s/epoch, Train s2t loss=44.37x10^-2, Val s2t loss=42.82x10^-2, Best val s2t loss=42.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:  30%|███       | 15/50 [00:49<01:43,  2.96s/epoch, Train s2t loss=42.90x10^-2, Val s2t loss=43.73x10^-2, Best val s2t loss=42.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:  32%|███▏      | 16/50 [00:49<01:44,  3.08s/epoch, Train s2t loss=42.90x10^-2, Val s2t loss=43.73x10^-2, Best val s2t loss=42.82x10^-2, Current muon LR=0.0020][A[A
+
+Training:  32%|███▏      | 16/50 [00:52<01:44,  3.08s/epoch, Train s2t loss=43.36x10^-2, Val s2t loss=42.28x10^-2, Best val s2t loss=42.28x10^-2, Current muon LR=0.0020][A[A
+
+Training:  34%|███▍      | 17/50 [00:52<01:40,  3.04s/epoch, Train s2t loss=43.36x10^-2, Val s2t loss=42.28x10^-2, Best val s2t loss=42.28x10^-2, Current muon LR=0.0020][A[A
+
+Training:  34%|███▍      | 17/50 [00:55<01:40,  3.04s/epoch, Train s2t loss=42.67x10^-2, Val s2t loss=43.51x10^-2, Best val s2t loss=42.28x10^-2, Current muon LR=0.0020][A[A
+
+Training:  36%|███▌      | 18/50 [00:55<01:37,  3.04s/epoch, Train s2t loss=42.67x10^-2, Val s2t loss=43.51x10^-2, Best val s2t loss=42.28x10^-2, Current muon LR=0.0020][A[A
+
+Training:  36%|███▌      | 18/50 [00:58<01:37,  3.04s/epoch, Train s2t loss=43.34x10^-2, Val s2t loss=42.66x10^-2, Best val s2t loss=42.28x10^-2, Current muon LR=0.0020][A[A
+
+Training:  38%|███▊      | 19/50 [00:58<01:37,  3.14s/epoch, Train s2t loss=43.34x10^-2, Val s2t loss=42.66x10^-2, Best val s2t loss=42.28x10^-2, Current muon LR=0.0020][A[A
+
+Training:  38%|███▊      | 19/50 [01:01<01:37,  3.14s/epoch, Train s2t loss=43.31x10^-2, Val s2t loss=43.21x10^-2, Best val s2t loss=42.28x10^-2, Current muon LR=0.0020][A[A
+
+Training:  40%|████      | 20/50 [01:01<01:31,  3.04s/epoch, Train s2t loss=43.31x10^-2, Val s2t loss=43.21x10^-2, Best val s2t loss=42.28x10^-2, Current muon LR=0.0020][A[A
+
+Training:  40%|████      | 20/50 [01:04<01:31,  3.04s/epoch, Train s2t loss=43.18x10^-2, Val s2t loss=42.13x10^-2, Best val s2t loss=42.13x10^-2, Current muon LR=0.0020][A[A
+
+Training:  42%|████▏     | 21/50 [01:04<01:26,  2.99s/epoch, Train s2t loss=43.18x10^-2, Val s2t loss=42.13x10^-2, Best val s2t loss=42.13x10^-2, Current muon LR=0.0020][A[A
+
+Training:  42%|████▏     | 21/50 [01:07<01:26,  2.99s/epoch, Train s2t loss=43.67x10^-2, Val s2t loss=42.92x10^-2, Best val s2t loss=42.13x10^-2, Current muon LR=0.0020][A[A
+
+Training:  44%|████▍     | 22/50 [01:07<01:26,  3.07s/epoch, Train s2t loss=43.67x10^-2, Val s2t loss=42.92x10^-2, Best val s2t loss=42.13x10^-2, Current muon LR=0.0020][A[A
+
+Training:  44%|████▍     | 22/50 [01:10<01:26,  3.07s/epoch, Train s2t loss=42.91x10^-2, Val s2t loss=43.00x10^-2, Best val s2t loss=42.13x10^-2, Current muon LR=0.0020][A[A
+
+Training:  46%|████▌     | 23/50 [01:10<01:21,  3.03s/epoch, Train s2t loss=42.91x10^-2, Val s2t loss=43.00x10^-2, Best val s2t loss=42.13x10^-2, Current muon LR=0.0020][A[A
+
+Training:  46%|████▌     | 23/50 [01:13<01:21,  3.03s/epoch, Train s2t loss=42.60x10^-2, Val s2t loss=43.34x10^-2, Best val s2t loss=42.13x10^-2, Current muon LR=0.0020][A[A
+
+Training:  48%|████▊     | 24/50 [01:13<01:17,  2.99s/epoch, Train s2t loss=42.60x10^-2, Val s2t loss=43.34x10^-2, Best val s2t loss=42.13x10^-2, Current muon LR=0.0020][A[A
+
+Training:  48%|████▊     | 24/50 [01:16<01:17,  2.99s/epoch, Train s2t loss=42.43x10^-2, Val s2t loss=42.25x10^-2, Best val s2t loss=42.13x10^-2, Current muon LR=0.0020][A[A
+
+Training:  50%|█████     | 25/50 [01:16<01:16,  3.06s/epoch, Train s2t loss=42.43x10^-2, Val s2t loss=42.25x10^-2, Best val s2t loss=42.13x10^-2, Current muon LR=0.0020][A[A
+
+Training:  50%|█████     | 25/50 [01:19<01:16,  3.06s/epoch, Train s2t loss=43.94x10^-2, Val s2t loss=42.61x10^-2, Best val s2t loss=42.13x10^-2, Current muon LR=0.0020][A[A
+
+Training:  52%|█████▏    | 26/50 [01:19<01:13,  3.05s/epoch, Train s2t loss=43.94x10^-2, Val s2t loss=42.61x10^-2, Best val s2t loss=42.13x10^-2, Current muon LR=0.0020][A[A
+
+Training:  52%|█████▏    | 26/50 [01:22<01:13,  3.05s/epoch, Train s2t loss=43.53x10^-2, Val s2t loss=42.05x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  54%|█████▍    | 27/50 [01:22<01:09,  3.03s/epoch, Train s2t loss=43.53x10^-2, Val s2t loss=42.05x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  54%|█████▍    | 27/50 [01:26<01:09,  3.03s/epoch, Train s2t loss=44.22x10^-2, Val s2t loss=43.05x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  56%|█████▌    | 28/50 [01:26<01:09,  3.14s/epoch, Train s2t loss=44.22x10^-2, Val s2t loss=43.05x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  56%|█████▌    | 28/50 [01:29<01:09,  3.14s/epoch, Train s2t loss=43.11x10^-2, Val s2t loss=42.55x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  58%|█████▊    | 29/50 [01:29<01:06,  3.14s/epoch, Train s2t loss=43.11x10^-2, Val s2t loss=42.55x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  58%|█████▊    | 29/50 [01:32<01:06,  3.14s/epoch, Train s2t loss=42.86x10^-2, Val s2t loss=42.87x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  60%|██████    | 30/50 [01:32<01:02,  3.11s/epoch, Train s2t loss=42.86x10^-2, Val s2t loss=42.87x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  60%|██████    | 30/50 [01:35<01:02,  3.11s/epoch, Train s2t loss=42.46x10^-2, Val s2t loss=43.05x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  62%|██████▏   | 31/50 [01:35<01:00,  3.17s/epoch, Train s2t loss=42.46x10^-2, Val s2t loss=43.05x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  62%|██████▏   | 31/50 [01:38<01:00,  3.17s/epoch, Train s2t loss=43.39x10^-2, Val s2t loss=42.64x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  64%|██████▍   | 32/50 [01:38<00:56,  3.16s/epoch, Train s2t loss=43.39x10^-2, Val s2t loss=42.64x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  64%|██████▍   | 32/50 [01:41<00:56,  3.16s/epoch, Train s2t loss=41.74x10^-2, Val s2t loss=43.01x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  66%|██████▌   | 33/50 [01:41<00:52,  3.11s/epoch, Train s2t loss=41.74x10^-2, Val s2t loss=43.01x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  66%|██████▌   | 33/50 [01:45<00:52,  3.11s/epoch, Train s2t loss=43.59x10^-2, Val s2t loss=42.91x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  68%|██████▊   | 34/50 [01:45<00:50,  3.17s/epoch, Train s2t loss=43.59x10^-2, Val s2t loss=42.91x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  68%|██████▊   | 34/50 [01:48<00:50,  3.17s/epoch, Train s2t loss=43.79x10^-2, Val s2t loss=42.55x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  70%|███████   | 35/50 [01:48<00:47,  3.15s/epoch, Train s2t loss=43.79x10^-2, Val s2t loss=42.55x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  70%|███████   | 35/50 [01:51<00:47,  3.15s/epoch, Train s2t loss=42.99x10^-2, Val s2t loss=43.27x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  72%|███████▏  | 36/50 [01:51<00:43,  3.10s/epoch, Train s2t loss=42.99x10^-2, Val s2t loss=43.27x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  72%|███████▏  | 36/50 [01:54<00:43,  3.10s/epoch, Train s2t loss=43.29x10^-2, Val s2t loss=42.31x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  74%|███████▍  | 37/50 [01:54<00:41,  3.16s/epoch, Train s2t loss=43.29x10^-2, Val s2t loss=42.31x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  74%|███████▍  | 37/50 [01:57<00:41,  3.16s/epoch, Train s2t loss=42.67x10^-2, Val s2t loss=43.01x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  76%|███████▌  | 38/50 [01:57<00:37,  3.15s/epoch, Train s2t loss=42.67x10^-2, Val s2t loss=43.01x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  76%|███████▌  | 38/50 [02:00<00:37,  3.15s/epoch, Train s2t loss=42.87x10^-2, Val s2t loss=43.42x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  78%|███████▊  | 39/50 [02:00<00:34,  3.10s/epoch, Train s2t loss=42.87x10^-2, Val s2t loss=43.42x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  78%|███████▊  | 39/50 [02:03<00:34,  3.10s/epoch, Train s2t loss=44.17x10^-2, Val s2t loss=43.32x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  80%|████████  | 40/50 [02:03<00:31,  3.14s/epoch, Train s2t loss=44.17x10^-2, Val s2t loss=43.32x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  80%|████████  | 40/50 [02:07<00:31,  3.14s/epoch, Train s2t loss=43.50x10^-2, Val s2t loss=42.66x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  82%|████████▏ | 41/50 [02:07<00:28,  3.14s/epoch, Train s2t loss=43.50x10^-2, Val s2t loss=42.66x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  82%|████████▏ | 41/50 [02:10<00:28,  3.14s/epoch, Train s2t loss=43.53x10^-2, Val s2t loss=43.08x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  84%|████████▍ | 42/50 [02:10<00:24,  3.10s/epoch, Train s2t loss=43.53x10^-2, Val s2t loss=43.08x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  84%|████████▍ | 42/50 [02:13<00:24,  3.10s/epoch, Train s2t loss=43.02x10^-2, Val s2t loss=43.26x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  86%|████████▌ | 43/50 [02:13<00:21,  3.14s/epoch, Train s2t loss=43.02x10^-2, Val s2t loss=43.26x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  86%|████████▌ | 43/50 [02:16<00:21,  3.14s/epoch, Train s2t loss=43.66x10^-2, Val s2t loss=43.01x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  88%|████████▊ | 44/50 [02:16<00:18,  3.13s/epoch, Train s2t loss=43.66x10^-2, Val s2t loss=43.01x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  88%|████████▊ | 44/50 [02:19<00:18,  3.13s/epoch, Train s2t loss=42.45x10^-2, Val s2t loss=42.28x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  90%|█████████ | 45/50 [02:19<00:15,  3.09s/epoch, Train s2t loss=42.45x10^-2, Val s2t loss=42.28x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  90%|█████████ | 45/50 [02:22<00:15,  3.09s/epoch, Train s2t loss=43.12x10^-2, Val s2t loss=43.01x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  92%|█████████▏| 46/50 [02:22<00:12,  3.13s/epoch, Train s2t loss=43.12x10^-2, Val s2t loss=43.01x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  92%|█████████▏| 46/50 [02:25<00:12,  3.13s/epoch, Train s2t loss=43.27x10^-2, Val s2t loss=43.21x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  94%|█████████▍| 47/50 [02:25<00:09,  3.13s/epoch, Train s2t loss=43.27x10^-2, Val s2t loss=43.21x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  94%|█████████▍| 47/50 [02:28<00:09,  3.13s/epoch, Train s2t loss=42.37x10^-2, Val s2t loss=42.41x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  96%|█████████▌| 48/50 [02:28<00:06,  3.08s/epoch, Train s2t loss=42.37x10^-2, Val s2t loss=42.41x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  96%|█████████▌| 48/50 [02:31<00:06,  3.08s/epoch, Train s2t loss=42.89x10^-2, Val s2t loss=43.32x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  98%|█████████▊| 49/50 [02:31<00:03,  3.14s/epoch, Train s2t loss=42.89x10^-2, Val s2t loss=43.32x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training:  98%|█████████▊| 49/50 [02:35<00:03,  3.14s/epoch, Train s2t loss=43.44x10^-2, Val s2t loss=42.77x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+Training: 100%|██████████| 50/50 [02:35<00:00,  3.12s/epoch, Train s2t loss=43.44x10^-2, Val s2t loss=42.77x10^-2, Best val s2t loss=42.05x10^-2, Current muon LR=0.0020][A[A
+
+                                                                                                                                                                         [A[A
+Run 2/3:  67%|██████▋   | 2/3 [08:33<04:00, 240.07s/run][A
+Run 3/3:  67%|██████▋   | 2/3 [08:33<04:00, 240.07s/run][A
+                                                        [A
+Run 3/3:  67%|██████▋   | 2/3 [08:36<04:00, 240.07s/run][A
+                                                        [A
+Run 3/3:  67%|██████▋   | 2/3 [08:36<04:00, 240.07s/run][AInferred max_nodes across all molecules as: 9
+Inferred max_edges across all molecules as: 18
+
+
+Training:   0%|          | 0/50 [00:00<?, ?epoch/s][A[A
+
+Training:   0%|          | 0/50 [00:03<?, ?epoch/s, Train s2t loss=82.60x10^-2, Val s2t loss=48.45x10^-2, Best val s2t loss=48.45x10^-2, Current muon LR=0.0020][A[A
+
+Training:   2%|▏         | 1/50 [00:03<02:54,  3.57s/epoch, Train s2t loss=82.60x10^-2, Val s2t loss=48.45x10^-2, Best val s2t loss=48.45x10^-2, Current muon LR=0.0020][A[A
+
+Training:   2%|▏         | 1/50 [00:06<02:54,  3.57s/epoch, Train s2t loss=47.62x10^-2, Val s2t loss=47.17x10^-2, Best val s2t loss=47.17x10^-2, Current muon LR=0.0020][A[A
+
+Training:   4%|▍         | 2/50 [00:06<02:44,  3.42s/epoch, Train s2t loss=47.62x10^-2, Val s2t loss=47.17x10^-2, Best val s2t loss=47.17x10^-2, Current muon LR=0.0020][A[A
+
+Training:   4%|▍         | 2/50 [00:10<02:44,  3.42s/epoch, Train s2t loss=46.64x10^-2, Val s2t loss=46.46x10^-2, Best val s2t loss=46.46x10^-2, Current muon LR=0.0020][A[A
+
+Training:   6%|▌         | 3/50 [00:10<02:39,  3.40s/epoch, Train s2t loss=46.64x10^-2, Val s2t loss=46.46x10^-2, Best val s2t loss=46.46x10^-2, Current muon LR=0.0020][A[A
+
+Training:   6%|▌         | 3/50 [00:13<02:39,  3.40s/epoch, Train s2t loss=45.07x10^-2, Val s2t loss=45.45x10^-2, Best val s2t loss=45.45x10^-2, Current muon LR=0.0020][A[A
+
+Training:   8%|▊         | 4/50 [00:13<02:28,  3.23s/epoch, Train s2t loss=45.07x10^-2, Val s2t loss=45.45x10^-2, Best val s2t loss=45.45x10^-2, Current muon LR=0.0020][A[A
+
+Training:   8%|▊         | 4/50 [00:16<02:28,  3.23s/epoch, Train s2t loss=44.76x10^-2, Val s2t loss=44.86x10^-2, Best val s2t loss=44.86x10^-2, Current muon LR=0.0020][A[A
+
+Training:  10%|█         | 5/50 [00:16<02:24,  3.21s/epoch, Train s2t loss=44.76x10^-2, Val s2t loss=44.86x10^-2, Best val s2t loss=44.86x10^-2, Current muon LR=0.0020][A[A
+
+Training:  10%|█         | 5/50 [00:19<02:24,  3.21s/epoch, Train s2t loss=44.92x10^-2, Val s2t loss=43.73x10^-2, Best val s2t loss=43.73x10^-2, Current muon LR=0.0020][A[A
+
+Training:  12%|█▏        | 6/50 [00:19<02:22,  3.24s/epoch, Train s2t loss=44.92x10^-2, Val s2t loss=43.73x10^-2, Best val s2t loss=43.73x10^-2, Current muon LR=0.0020][A[A
+
+Training:  12%|█▏        | 6/50 [00:22<02:22,  3.24s/epoch, Train s2t loss=44.54x10^-2, Val s2t loss=45.22x10^-2, Best val s2t loss=43.73x10^-2, Current muon LR=0.0020][A[A
+
+Training:  14%|█▍        | 7/50 [00:22<02:16,  3.17s/epoch, Train s2t loss=44.54x10^-2, Val s2t loss=45.22x10^-2, Best val s2t loss=43.73x10^-2, Current muon LR=0.0020][A[A
+
+Training:  14%|█▍        | 7/50 [00:25<02:16,  3.17s/epoch, Train s2t loss=44.44x10^-2, Val s2t loss=44.53x10^-2, Best val s2t loss=43.73x10^-2, Current muon LR=0.0020][A[A
+
+Training:  16%|█▌        | 8/50 [00:25<02:12,  3.16s/epoch, Train s2t loss=44.44x10^-2, Val s2t loss=44.53x10^-2, Best val s2t loss=43.73x10^-2, Current muon LR=0.0020][A[A
+
+Training:  16%|█▌        | 8/50 [00:29<02:12,  3.16s/epoch, Train s2t loss=44.48x10^-2, Val s2t loss=43.47x10^-2, Best val s2t loss=43.47x10^-2, Current muon LR=0.0020][A[A
+
+Training:  18%|█▊        | 9/50 [00:29<02:10,  3.18s/epoch, Train s2t loss=44.48x10^-2, Val s2t loss=43.47x10^-2, Best val s2t loss=43.47x10^-2, Current muon LR=0.0020][A[A
+
+Training:  18%|█▊        | 9/50 [00:31<02:10,  3.18s/epoch, Train s2t loss=43.94x10^-2, Val s2t loss=44.39x10^-2, Best val s2t loss=43.47x10^-2, Current muon LR=0.0020][A[A
+
+Training:  20%|██        | 10/50 [00:31<02:02,  3.05s/epoch, Train s2t loss=43.94x10^-2, Val s2t loss=44.39x10^-2, Best val s2t loss=43.47x10^-2, Current muon LR=0.0020][A[A
+
+Training:  20%|██        | 10/50 [00:34<02:02,  3.05s/epoch, Train s2t loss=44.26x10^-2, Val s2t loss=42.56x10^-2, Best val s2t loss=42.56x10^-2, Current muon LR=0.0020][A[A
+
+Training:  22%|██▏       | 11/50 [00:34<01:55,  2.96s/epoch, Train s2t loss=44.26x10^-2, Val s2t loss=42.56x10^-2, Best val s2t loss=42.56x10^-2, Current muon LR=0.0020][A[A
+
+Training:  22%|██▏       | 11/50 [00:37<01:55,  2.96s/epoch, Train s2t loss=44.41x10^-2, Val s2t loss=43.14x10^-2, Best val s2t loss=42.56x10^-2, Current muon LR=0.0020][A[A
+
+Training:  24%|██▍       | 12/50 [00:37<01:49,  2.87s/epoch, Train s2t loss=44.41x10^-2, Val s2t loss=43.14x10^-2, Best val s2t loss=42.56x10^-2, Current muon LR=0.0020][A[A
+
+Training:  24%|██▍       | 12/50 [00:39<01:49,  2.87s/epoch, Train s2t loss=43.14x10^-2, Val s2t loss=43.92x10^-2, Best val s2t loss=42.56x10^-2, Current muon LR=0.0020][A[A
+
+Training:  26%|██▌       | 13/50 [00:39<01:44,  2.82s/epoch, Train s2t loss=43.14x10^-2, Val s2t loss=43.92x10^-2, Best val s2t loss=42.56x10^-2, Current muon LR=0.0020][A[A
+
+Training:  26%|██▌       | 13/50 [00:42<01:44,  2.82s/epoch, Train s2t loss=43.38x10^-2, Val s2t loss=43.71x10^-2, Best val s2t loss=42.56x10^-2, Current muon LR=0.0020][A[A
+
+Training:  28%|██▊       | 14/50 [00:42<01:40,  2.78s/epoch, Train s2t loss=43.38x10^-2, Val s2t loss=43.71x10^-2, Best val s2t loss=42.56x10^-2, Current muon LR=0.0020][A[A
+
+Training:  28%|██▊       | 14/50 [00:45<01:40,  2.78s/epoch, Train s2t loss=43.18x10^-2, Val s2t loss=43.41x10^-2, Best val s2t loss=42.56x10^-2, Current muon LR=0.0020][A[A
+
+Training:  30%|███       | 15/50 [00:45<01:36,  2.75s/epoch, Train s2t loss=43.18x10^-2, Val s2t loss=43.41x10^-2, Best val s2t loss=42.56x10^-2, Current muon LR=0.0020][A[A
+
+Training:  30%|███       | 15/50 [00:47<01:36,  2.75s/epoch, Train s2t loss=42.89x10^-2, Val s2t loss=42.84x10^-2, Best val s2t loss=42.56x10^-2, Current muon LR=0.0020][A[A
+
+Training:  32%|███▏      | 16/50 [00:47<01:32,  2.72s/epoch, Train s2t loss=42.89x10^-2, Val s2t loss=42.84x10^-2, Best val s2t loss=42.56x10^-2, Current muon LR=0.0020][A[A
+
+Training:  32%|███▏      | 16/50 [00:50<01:32,  2.72s/epoch, Train s2t loss=43.57x10^-2, Val s2t loss=43.51x10^-2, Best val s2t loss=42.56x10^-2, Current muon LR=0.0020][A[A
+
+Training:  34%|███▍      | 17/50 [00:50<01:29,  2.73s/epoch, Train s2t loss=43.57x10^-2, Val s2t loss=43.51x10^-2, Best val s2t loss=42.56x10^-2, Current muon LR=0.0020][A[A
+
+Training:  34%|███▍      | 17/50 [00:53<01:29,  2.73s/epoch, Train s2t loss=43.42x10^-2, Val s2t loss=42.53x10^-2, Best val s2t loss=42.53x10^-2, Current muon LR=0.0020][A[A
+
+Training:  36%|███▌      | 18/50 [00:53<01:26,  2.70s/epoch, Train s2t loss=43.42x10^-2, Val s2t loss=42.53x10^-2, Best val s2t loss=42.53x10^-2, Current muon LR=0.0020][A[A
+
+Training:  36%|███▌      | 18/50 [00:55<01:26,  2.70s/epoch, Train s2t loss=42.67x10^-2, Val s2t loss=43.06x10^-2, Best val s2t loss=42.53x10^-2, Current muon LR=0.0020][A[A
+
+Training:  38%|███▊      | 19/50 [00:55<01:22,  2.67s/epoch, Train s2t loss=42.67x10^-2, Val s2t loss=43.06x10^-2, Best val s2t loss=42.53x10^-2, Current muon LR=0.0020][A[A
+
+Training:  38%|███▊      | 19/50 [00:58<01:22,  2.67s/epoch, Train s2t loss=43.32x10^-2, Val s2t loss=42.99x10^-2, Best val s2t loss=42.53x10^-2, Current muon LR=0.0020][A[A
+
+Training:  40%|████      | 20/50 [00:58<01:19,  2.65s/epoch, Train s2t loss=43.32x10^-2, Val s2t loss=42.99x10^-2, Best val s2t loss=42.53x10^-2, Current muon LR=0.0020][A[A
+
+Training:  40%|████      | 20/50 [01:01<01:19,  2.65s/epoch, Train s2t loss=42.92x10^-2, Val s2t loss=43.05x10^-2, Best val s2t loss=42.53x10^-2, Current muon LR=0.0020][A[A
+
+Training:  42%|████▏     | 21/50 [01:01<01:16,  2.63s/epoch, Train s2t loss=42.92x10^-2, Val s2t loss=43.05x10^-2, Best val s2t loss=42.53x10^-2, Current muon LR=0.0020][A[A
+
+Training:  42%|████▏     | 21/50 [01:03<01:16,  2.63s/epoch, Train s2t loss=43.40x10^-2, Val s2t loss=44.18x10^-2, Best val s2t loss=42.53x10^-2, Current muon LR=0.0020][A[A
+
+Training:  44%|████▍     | 22/50 [01:03<01:13,  2.64s/epoch, Train s2t loss=43.40x10^-2, Val s2t loss=44.18x10^-2, Best val s2t loss=42.53x10^-2, Current muon LR=0.0020][A[A
+
+Training:  44%|████▍     | 22/50 [01:06<01:13,  2.64s/epoch, Train s2t loss=42.76x10^-2, Val s2t loss=43.27x10^-2, Best val s2t loss=42.53x10^-2, Current muon LR=0.0020][A[A
+
+Training:  46%|████▌     | 23/50 [01:06<01:10,  2.61s/epoch, Train s2t loss=42.76x10^-2, Val s2t loss=43.27x10^-2, Best val s2t loss=42.53x10^-2, Current muon LR=0.0020][A[A
+
+Training:  46%|████▌     | 23/50 [01:08<01:10,  2.61s/epoch, Train s2t loss=42.73x10^-2, Val s2t loss=44.22x10^-2, Best val s2t loss=42.53x10^-2, Current muon LR=0.0020][A[A
+
+Training:  48%|████▊     | 24/50 [01:08<01:07,  2.58s/epoch, Train s2t loss=42.73x10^-2, Val s2t loss=44.22x10^-2, Best val s2t loss=42.53x10^-2, Current muon LR=0.0020][A[A
+
+Training:  48%|████▊     | 24/50 [01:11<01:07,  2.58s/epoch, Train s2t loss=42.08x10^-2, Val s2t loss=42.83x10^-2, Best val s2t loss=42.53x10^-2, Current muon LR=0.0020][A[A
+
+Training:  50%|█████     | 25/50 [01:11<01:04,  2.59s/epoch, Train s2t loss=42.08x10^-2, Val s2t loss=42.83x10^-2, Best val s2t loss=42.53x10^-2, Current muon LR=0.0020][A[A
+
+Training:  50%|█████     | 25/50 [01:14<01:04,  2.59s/epoch, Train s2t loss=42.53x10^-2, Val s2t loss=44.73x10^-2, Best val s2t loss=42.53x10^-2, Current muon LR=0.0020][A[A
+
+Training:  52%|█████▏    | 26/50 [01:14<01:01,  2.57s/epoch, Train s2t loss=42.53x10^-2, Val s2t loss=44.73x10^-2, Best val s2t loss=42.53x10^-2, Current muon LR=0.0020][A[A
+
+Training:  52%|█████▏    | 26/50 [01:16<01:01,  2.57s/epoch, Train s2t loss=42.63x10^-2, Val s2t loss=42.01x10^-2, Best val s2t loss=42.01x10^-2, Current muon LR=0.0020][A[A
+
+Training:  54%|█████▍    | 27/50 [01:16<00:58,  2.56s/epoch, Train s2t loss=42.63x10^-2, Val s2t loss=42.01x10^-2, Best val s2t loss=42.01x10^-2, Current muon LR=0.0020][A[A
+
+Training:  54%|█████▍    | 27/50 [01:19<00:58,  2.56s/epoch, Train s2t loss=44.05x10^-2, Val s2t loss=42.90x10^-2, Best val s2t loss=42.01x10^-2, Current muon LR=0.0020][A[A
+
+Training:  56%|█████▌    | 28/50 [01:19<00:56,  2.56s/epoch, Train s2t loss=44.05x10^-2, Val s2t loss=42.90x10^-2, Best val s2t loss=42.01x10^-2, Current muon LR=0.0020][A[A
+
+Training:  56%|█████▌    | 28/50 [01:21<00:56,  2.56s/epoch, Train s2t loss=42.20x10^-2, Val s2t loss=42.67x10^-2, Best val s2t loss=42.01x10^-2, Current muon LR=0.0020][A[A
+
+Training:  58%|█████▊    | 29/50 [01:21<00:54,  2.60s/epoch, Train s2t loss=42.20x10^-2, Val s2t loss=42.67x10^-2, Best val s2t loss=42.01x10^-2, Current muon LR=0.0020][A[A
+
+Training:  58%|█████▊    | 29/50 [01:24<00:54,  2.60s/epoch, Train s2t loss=42.90x10^-2, Val s2t loss=42.41x10^-2, Best val s2t loss=42.01x10^-2, Current muon LR=0.0020][A[A
+
+Training:  60%|██████    | 30/50 [01:24<00:51,  2.59s/epoch, Train s2t loss=42.90x10^-2, Val s2t loss=42.41x10^-2, Best val s2t loss=42.01x10^-2, Current muon LR=0.0020][A[A
+
+Training:  60%|██████    | 30/50 [01:26<00:51,  2.59s/epoch, Train s2t loss=42.23x10^-2, Val s2t loss=42.54x10^-2, Best val s2t loss=42.01x10^-2, Current muon LR=0.0020][A[A
+
+Training:  62%|██████▏   | 31/50 [01:26<00:49,  2.60s/epoch, Train s2t loss=42.23x10^-2, Val s2t loss=42.54x10^-2, Best val s2t loss=42.01x10^-2, Current muon LR=0.0020][A[A
+
+Training:  62%|██████▏   | 31/50 [01:29<00:49,  2.60s/epoch, Train s2t loss=43.35x10^-2, Val s2t loss=43.26x10^-2, Best val s2t loss=42.01x10^-2, Current muon LR=0.0020][A[A
+
+Training:  64%|██████▍   | 32/50 [01:29<00:47,  2.62s/epoch, Train s2t loss=43.35x10^-2, Val s2t loss=43.26x10^-2, Best val s2t loss=42.01x10^-2, Current muon LR=0.0020][A[A
+
+Training:  64%|██████▍   | 32/50 [01:32<00:47,  2.62s/epoch, Train s2t loss=42.62x10^-2, Val s2t loss=42.28x10^-2, Best val s2t loss=42.01x10^-2, Current muon LR=0.0020][A[A
+
+Training:  66%|██████▌   | 33/50 [01:32<00:44,  2.64s/epoch, Train s2t loss=42.62x10^-2, Val s2t loss=42.28x10^-2, Best val s2t loss=42.01x10^-2, Current muon LR=0.0020][A[A
+
+Training:  66%|██████▌   | 33/50 [01:34<00:44,  2.64s/epoch, Train s2t loss=43.08x10^-2, Val s2t loss=43.19x10^-2, Best val s2t loss=42.01x10^-2, Current muon LR=0.0020][A[A
+
+Training:  68%|██████▊   | 34/50 [01:34<00:42,  2.64s/epoch, Train s2t loss=43.08x10^-2, Val s2t loss=43.19x10^-2, Best val s2t loss=42.01x10^-2, Current muon LR=0.0020][A[A
+
+Training:  68%|██████▊   | 34/50 [01:37<00:42,  2.64s/epoch, Train s2t loss=43.42x10^-2, Val s2t loss=42.68x10^-2, Best val s2t loss=42.01x10^-2, Current muon LR=0.0020][A[A
+
+Training:  70%|███████   | 35/50 [01:37<00:39,  2.65s/epoch, Train s2t loss=43.42x10^-2, Val s2t loss=42.68x10^-2, Best val s2t loss=42.01x10^-2, Current muon LR=0.0020][A[A
+
+Training:  70%|███████   | 35/50 [01:40<00:39,  2.65s/epoch, Train s2t loss=42.77x10^-2, Val s2t loss=42.83x10^-2, Best val s2t loss=42.01x10^-2, Current muon LR=0.0020][A[A
+
+Training:  72%|███████▏  | 36/50 [01:40<00:37,  2.66s/epoch, Train s2t loss=42.77x10^-2, Val s2t loss=42.83x10^-2, Best val s2t loss=42.01x10^-2, Current muon LR=0.0020][A[A
+
+Training:  72%|███████▏  | 36/50 [01:43<00:37,  2.66s/epoch, Train s2t loss=43.52x10^-2, Val s2t loss=43.01x10^-2, Best val s2t loss=42.01x10^-2, Current muon LR=0.0020][A[A
+
+Training:  74%|███████▍  | 37/50 [01:43<00:34,  2.69s/epoch, Train s2t loss=43.52x10^-2, Val s2t loss=43.01x10^-2, Best val s2t loss=42.01x10^-2, Current muon LR=0.0020][A[A
+
+Training:  74%|███████▍  | 37/50 [01:45<00:34,  2.69s/epoch, Train s2t loss=42.35x10^-2, Val s2t loss=42.56x10^-2, Best val s2t loss=42.01x10^-2, Current muon LR=0.0020][A[A
+
+Training:  76%|███████▌  | 38/50 [01:45<00:32,  2.68s/epoch, Train s2t loss=42.35x10^-2, Val s2t loss=42.56x10^-2, Best val s2t loss=42.01x10^-2, Current muon LR=0.0020][A[A
+
+Training:  76%|███████▌  | 38/50 [01:48<00:32,  2.68s/epoch, Train s2t loss=43.21x10^-2, Val s2t loss=43.05x10^-2, Best val s2t loss=42.01x10^-2, Current muon LR=0.0020][A[A
+
+Training:  78%|███████▊  | 39/50 [01:48<00:29,  2.68s/epoch, Train s2t loss=43.21x10^-2, Val s2t loss=43.05x10^-2, Best val s2t loss=42.01x10^-2, Current muon LR=0.0020][A[A
+
+Training:  78%|███████▊  | 39/50 [01:51<00:29,  2.68s/epoch, Train s2t loss=42.31x10^-2, Val s2t loss=42.43x10^-2, Best val s2t loss=42.01x10^-2, Current muon LR=0.0020][A[A
+
+Training:  80%|████████  | 40/50 [01:51<00:26,  2.68s/epoch, Train s2t loss=42.31x10^-2, Val s2t loss=42.43x10^-2, Best val s2t loss=42.01x10^-2, Current muon LR=0.0020][A[A
+
+Training:  80%|████████  | 40/50 [01:53<00:26,  2.68s/epoch, Train s2t loss=42.77x10^-2, Val s2t loss=42.62x10^-2, Best val s2t loss=42.01x10^-2, Current muon LR=0.0020][A[A
+
+Training:  82%|████████▏ | 41/50 [01:53<00:24,  2.68s/epoch, Train s2t loss=42.77x10^-2, Val s2t loss=42.62x10^-2, Best val s2t loss=42.01x10^-2, Current muon LR=0.0020][A[A
+
+Training:  82%|████████▏ | 41/50 [01:56<00:24,  2.68s/epoch, Train s2t loss=42.69x10^-2, Val s2t loss=41.99x10^-2, Best val s2t loss=41.99x10^-2, Current muon LR=0.0020][A[A
+
+Training:  84%|████████▍ | 42/50 [01:56<00:21,  2.68s/epoch, Train s2t loss=42.69x10^-2, Val s2t loss=41.99x10^-2, Best val s2t loss=41.99x10^-2, Current muon LR=0.0020][A[A
+
+Training:  84%|████████▍ | 42/50 [01:59<00:21,  2.68s/epoch, Train s2t loss=43.38x10^-2, Val s2t loss=43.10x10^-2, Best val s2t loss=41.99x10^-2, Current muon LR=0.0020][A[A
+
+Training:  86%|████████▌ | 43/50 [01:59<00:18,  2.68s/epoch, Train s2t loss=43.38x10^-2, Val s2t loss=43.10x10^-2, Best val s2t loss=41.99x10^-2, Current muon LR=0.0020][A[A
+
+Training:  86%|████████▌ | 43/50 [02:01<00:18,  2.68s/epoch, Train s2t loss=43.34x10^-2, Val s2t loss=43.17x10^-2, Best val s2t loss=41.99x10^-2, Current muon LR=0.0020][A[A
+
+Training:  88%|████████▊ | 44/50 [02:01<00:16,  2.68s/epoch, Train s2t loss=43.34x10^-2, Val s2t loss=43.17x10^-2, Best val s2t loss=41.99x10^-2, Current muon LR=0.0020][A[A
+
+Training:  88%|████████▊ | 44/50 [02:04<00:16,  2.68s/epoch, Train s2t loss=42.66x10^-2, Val s2t loss=42.37x10^-2, Best val s2t loss=41.99x10^-2, Current muon LR=0.0020][A[A
+
+Training:  90%|█████████ | 45/50 [02:04<00:13,  2.71s/epoch, Train s2t loss=42.66x10^-2, Val s2t loss=42.37x10^-2, Best val s2t loss=41.99x10^-2, Current muon LR=0.0020][A[A
+
+Training:  90%|█████████ | 45/50 [02:07<00:13,  2.71s/epoch, Train s2t loss=42.15x10^-2, Val s2t loss=42.51x10^-2, Best val s2t loss=41.99x10^-2, Current muon LR=0.0020][A[A
+
+Training:  92%|█████████▏| 46/50 [02:07<00:10,  2.69s/epoch, Train s2t loss=42.15x10^-2, Val s2t loss=42.51x10^-2, Best val s2t loss=41.99x10^-2, Current muon LR=0.0020][A[A
+
+Training:  92%|█████████▏| 46/50 [02:09<00:10,  2.69s/epoch, Train s2t loss=42.35x10^-2, Val s2t loss=42.66x10^-2, Best val s2t loss=41.99x10^-2, Current muon LR=0.0020][A[A
+
+Training:  94%|█████████▍| 47/50 [02:09<00:08,  2.70s/epoch, Train s2t loss=42.35x10^-2, Val s2t loss=42.66x10^-2, Best val s2t loss=41.99x10^-2, Current muon LR=0.0020][A[A
+
+Training:  94%|█████████▍| 47/50 [02:12<00:08,  2.70s/epoch, Train s2t loss=43.52x10^-2, Val s2t loss=43.37x10^-2, Best val s2t loss=41.99x10^-2, Current muon LR=0.0020][A[A
+
+Training:  96%|█████████▌| 48/50 [02:12<00:05,  2.71s/epoch, Train s2t loss=43.52x10^-2, Val s2t loss=43.37x10^-2, Best val s2t loss=41.99x10^-2, Current muon LR=0.0020][A[A
+
+Training:  96%|█████████▌| 48/50 [02:15<00:05,  2.71s/epoch, Train s2t loss=43.11x10^-2, Val s2t loss=41.83x10^-2, Best val s2t loss=41.83x10^-2, Current muon LR=0.0020][A[A
+
+Training:  98%|█████████▊| 49/50 [02:15<00:02,  2.70s/epoch, Train s2t loss=43.11x10^-2, Val s2t loss=41.83x10^-2, Best val s2t loss=41.83x10^-2, Current muon LR=0.0020][A[A
+
+Training:  98%|█████████▊| 49/50 [02:18<00:02,  2.70s/epoch, Train s2t loss=42.23x10^-2, Val s2t loss=43.47x10^-2, Best val s2t loss=41.83x10^-2, Current muon LR=0.0020][A[A
+
+Training: 100%|██████████| 50/50 [02:18<00:00,  2.73s/epoch, Train s2t loss=42.23x10^-2, Val s2t loss=43.47x10^-2, Best val s2t loss=41.83x10^-2, Current muon LR=0.0020][A[A
+
+                                                                                                                                                                         [A[A
+Run 3/3: 100%|██████████| 3/3 [10:58<00:00, 196.27s/run][A
+                                                        [A
+Saved benchmark results to /home/luke/ATOM/benchmark_runs/s10_tg80_nope_id_27-Nov-2026_21-15-27/nope_id_fold1_27-Nov-2026_21-15-27/results.json
+Benchmark Results (3 runs, 50 epochs/run):
+  Average S2S Test Loss: 49.96x10^-2 ± 0.43x10^-2
+  Average S2T Test Loss: 43.10x10^-2 ± 0.25x10^-2
+  Average Time per Run: 213.0s
+  Average Time per Epoch: 6.7s
+  Average Best Val Loss Epoch: 35.0

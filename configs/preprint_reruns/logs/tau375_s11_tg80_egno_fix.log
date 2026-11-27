@@ -1,0 +1,12 @@
+
+  0%|          | 0/3 [00:00<?, ?run/s][A
+Run 1/3:   0%|          | 0/3 [00:00<?, ?run/s][A
+                                               [A
+Run 1/3:   0%|          | 0/3 [00:05<?, ?run/s][A
+                                               [A
+Run 1/3:   0%|          | 0/3 [00:05<?, ?run/s][AInferred max_nodes across all molecules as: 15
+Inferred max_edges across all molecules as: 32
+
+
+Training:   0%|          | 0/50 [00:00<?, ?epoch/s][A[A/home/luke/ATOM/.venv/lib/python3.13/site-packages/torch/_inductor/lowering.py:1917: UserWarning: Torchinductor does not support code generation for complex operators. Performance may be worse than eager.
+  warnings.warn(

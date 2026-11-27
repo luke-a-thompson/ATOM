@@ -42,3 +42,7 @@ S7 DONE Tue Nov 10 04:56:18 AEDT 2026
 START s9_md17_last_rerun Tue Nov 10 04:56:28 AEDT 2026
 END s9_md17_last_rerun exit=0 Tue Nov 10 06:53:26 AEDT 2026
 S9 DONE Tue Nov 10 06:53:26 AEDT 2026
+START s10_tg80_nope_id Fri Nov 27 21:15:26 AEDT 2026
+END s10_tg80_nope_id exit=0 Fri Nov 27 21:26:29 AEDT 2026
+S10 DONE Fri Nov 27 21:26:29 AEDT 2026
+START s11_tg80_egno_fix Fri Nov 27 21:31:56 AEDT 2026

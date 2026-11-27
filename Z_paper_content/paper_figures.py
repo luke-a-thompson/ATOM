@@ -42,8 +42,6 @@ def plot_sweep(path: str, out: str) -> None:
         ax.xaxis.set_major_locator(LogLocator(base=10))
         ax.xaxis.set_minor_formatter(NullFormatter())
         ax.set_xlabel(r"Inference $\Delta T$ (fs)")
-        ax.axvline(3000, color=ps.INK_MUTED, linewidth=0.6, linestyle=(0, (2, 2)), zorder=0)
-        ax.annotate("train", (3000, 1.0), xycoords=("data", "axes fraction"), xytext=(-2, -2), textcoords="offset points", ha="right", va="top", color=ps.INK_SECONDARY, fontsize=7)
     else:
         ax.set_xlabel(r"Inference $P$")
         ax.set_xticks(sorted({int(x) for s in series.values() for x in s[0]}))
