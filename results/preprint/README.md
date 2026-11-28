@@ -10,7 +10,7 @@
 | MD22 table | s1_md22_atom, s6_md22_gat (ATOM-GATv2) |
 | TG80 OOD / ID | s2_tg80_atom, s2_tg80_atom_id; baselines fold 1 from tg80_egno, tg80_egno_id, tg80_egnn_r, tg80_egnn_s; folds 2-5 from s11_tg80_*_fix (ΔT [8, 24000]) |
 | TG80 NoPE (ΔT figure) | s10_tg80_nope_id |
-| TG80 random split | s6_tg80_random |
+| TG80 random split | s6_tg80_random (ATOM), s12_tg80_random_egno (EGNO, ΔT [8, 24000]) |
 | Formic acid | s4_tg80_formic |
 | Equivariance defect | s3_equivariance_error, s1_md17_noneq, s5_md17_noneq_rest |
 | Ablations | s4_md17_ablation, s4_tg80_ablation |
